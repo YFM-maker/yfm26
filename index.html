@@ -704,17 +704,10 @@
             if (document.activeElement instanceof HTMLButtonElement) document.activeElement.blur();
         }, true);
       // 정식 베타 테스트 전 기존 버전의 진행 기록을 브라우저별로 한 번 초기화한다.
+      window.yfmHadLocalProgress = !!localStorage.getItem('fm_players');
       const BETA_TEST_SAVE_VERSION = '22';
-      if (localStorage.getItem('fm_beta_test_save_version') !== BETA_TEST_SAVE_VERSION) {
-        const oldKeys = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('fm_')) oldKeys.push(key);
-        }
-        oldKeys.forEach(key => localStorage.removeItem(key));
-        localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
-        localStorage.setItem('fm_tutorial_pending_v1', '1');
-      }
+      // 로그인 도입 시 기존 비회원 진행도를 지우지 않는다.
+      if (!localStorage.getItem('fm_beta_test_save_version')) localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
       const hasExistingGame=!!(localStorage.getItem('fm_players')||localStorage.getItem('fm_save_version')||localStorage.getItem('fm_tokens'));
       window.firstPlayWelcome = !hasExistingGame && localStorage.getItem('fm_first_play_welcome_v1') !== 'seen';
       setTimeout(() => {
@@ -735,6 +728,18 @@
       }, 5500);
     </script>
 
+    <div id="account-gate" role="dialog" aria-modal="true" aria-label="게임 계정 로그인" style="position:fixed;inset:0;z-index:9997;display:none;align-items:center;justify-content:center;padding:20px;background:linear-gradient(145deg,#0d0b1b,#251543);overflow:auto">
+      <form id="account-form" onsubmit="submitGameAccount(event)" style="width:min(100%,420px);padding:28px;border:1px solid #7662a6;border-radius:20px;background:#19132d;color:white;box-shadow:0 20px 70px #0009">
+        <h1 id="account-title" style="font-size:26px;font-weight:900;margin:0 0 8px">게임 로그인</h1>
+        <p style="font-size:13px;color:#d2c5eb;margin-bottom:20px">로그인하면 다른 기기에서도 진행도를 이어서 플레이할 수 있어.</p>
+        <label style="display:block;margin-bottom:14px">아이디 <small>(3~10자)</small><input id="account-id" autocomplete="username" required minlength="3" maxlength="10" pattern="[A-Za-z0-9!@#\^*]{3,10}" style="display:block;width:100%;padding:12px;margin-top:6px;border-radius:9px;background:#100c20;border:1px solid #675788;color:white"></label>
+        <label style="display:block;margin-bottom:8px">비밀번호 <small>(7~15자)</small><span style="display:flex;margin-top:6px"><input id="account-password" type="password" autocomplete="current-password" required minlength="7" maxlength="15" pattern="[A-Za-z0-9!@#\^*]{7,15}" style="flex:1;min-width:0;padding:12px;border-radius:9px 0 0 9px;background:#100c20;border:1px solid #675788;color:white"><button type="button" onclick="toggleAccountPassword()" id="account-eye" aria-label="비밀번호 표시" style="padding:0 12px;background:#342651;border:1px solid #675788;border-radius:0 9px 9px 0">👁</button></span></label>
+        <p style="color:#fbbf24;font-size:12px;line-height:1.5;margin:10px 0 18px;font-weight:800">⚠️ 절대 다른 사이트나 실제 계정에서 쓰는 비밀번호를 사용하지 마. 이 게임만을 위한 새로운 비밀번호를 만들어.</p>
+        <p id="account-error" role="status" style="min-height:24px;color:#fca5a5;font-size:13px"></p>
+        <button id="account-submit" type="submit" style="width:100%;padding:12px;border-radius:9px;background:#7c3aed;color:white;font-weight:900">로그인</button>
+        <button id="account-switch" type="button" onclick="toggleAccountMode()" style="display:block;width:100%;margin-top:15px;color:#c4b5fd">회원이 아니신가? 회원가입</button>
+      </form>
+    </div>
     <!-- 로비 BGM 컨트롤 -->
     <div id="bgm-widget" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex items-end gap-2 sm:gap-3" style="visibility:hidden;pointer-events:none">
         <div id="bgm-controls" class="hidden flex items-center mb-1 border border-white/15 shadow-xl" style="display:none" aria-label="BGM controls">
@@ -1198,6 +1203,7 @@
                 <button onclick="createNewStory()" class="w-full bg-red-800 hover:bg-red-700 border border-red-500 text-white font-black py-3 rounded-xl">🆕 새 파일 만들기</button>
                 <button onclick="replayTutorial()" class="w-full mt-2 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 rounded-xl">📖 튜토리얼 다시 보기</button>
             </div>
+            <button onclick="signOutGameAccount()" class="w-full mt-3 bg-gray-700 text-white font-bold py-2 rounded-lg">계정 로그아웃</button>
             <p id="save-msg" class="text-sm mt-3 font-bold text-emerald-400"></p>
         </div>
     </div>
@@ -1572,14 +1578,14 @@
             if (button) button.setAttribute('aria-label', playing ? '일시정지' : '재생');
         }
         function startLobbyBgmIfReady() {
-            if (!introSequenceReady || document.querySelector('.screen.active')?.id !== 'screen-lobby') return;
+            if (!introSequenceReady || !window.yfmAccountReady || document.querySelector('.screen.active')?.id !== 'screen-lobby') return;
             const widget = document.getElementById('bgm-widget'); if (widget) { widget.style.visibility = 'visible'; widget.style.pointerEvents = ''; }
             if (!isBgmInit) { isBgmInit = true; playNextBgm(); }
         }
         window.completeIntroSequence = function() {
             introSequenceReady = true;
-            startLobbyBgmIfReady();
-            if (typeof maybeStartTutorial === 'function') maybeStartTutorial();
+            if (typeof openAccountGate === 'function') openAccountGate();
+            if (window.yfmAccountReady) { startLobbyBgmIfReady(); if (typeof maybeStartTutorial === 'function') maybeStartTutorial(); }
         };
         function playBgmIndex(index) {
             const request = ++bgmPlaybackRequest;
@@ -2712,6 +2718,129 @@
             finally { if (button) button.disabled = ownerRankRegistered; }
         }
         
+        // Supabase Auth가 비밀번호를 해시·검증한다. 진행도 테이블은 auth.uid() RLS로 격리한다.
+        let accountMode = 'login', accountSaving = false;
+        var accountDirty = false;
+        let accountUser = null, accountLastSnapshot = '', accountLastWrite = 0;
+        const accountDeviceKey = 'yfm_cloud_owner';
+        function accountEmail(id) {
+            const bytes = new TextEncoder().encode(id.toLowerCase());
+            return Array.from(bytes, b => b.toString(16).padStart(2,'0')).join('') + '@yfm-login.example.com';
+        }
+        function toggleAccountMode() {
+            accountMode = accountMode === 'login' ? 'signup' : 'login';
+            document.getElementById('account-title').textContent = accountMode === 'login' ? '게임 로그인' : '회원가입';
+            document.getElementById('account-submit').textContent = accountMode === 'login' ? '로그인' : '회원가입';
+            document.getElementById('account-switch').textContent = accountMode === 'login' ? '회원이 아니신가? 회원가입' : '이미 회원이신가? 로그인';
+            document.getElementById('account-password').autocomplete = accountMode === 'login' ? 'current-password' : 'new-password';
+            document.getElementById('account-error').textContent = '';
+        }
+        function toggleAccountPassword() {
+            const input = document.getElementById('account-password');
+            input.type = input.type === 'password' ? 'text' : 'password';
+            document.getElementById('account-eye').setAttribute('aria-label', input.type === 'password' ? '비밀번호 표시' : '비밀번호 숨기기');
+        }
+        function accountMessage(message) { document.getElementById('account-error').textContent = message; }
+        async function openAccountGate() {
+            const gate = document.getElementById('account-gate'); gate.style.display = 'flex';
+            if (window.yfmAccountReady) { gate.style.display = 'none'; return; }
+            try {
+                const {data:{session},error} = await getOwnerRankClient().auth.getSession();
+                if (error) throw error;
+                if (session?.user && !session.user.is_anonymous) await enterGameAccount(session.user);
+            } catch (error) { accountMessage('서버 연결에 실패했어. 인터넷 연결을 확인해줘.'); }
+        }
+        async function submitGameAccount(event) {
+            event.preventDefault();
+            const id = document.getElementById('account-id').value;
+            const password = document.getElementById('account-password').value;
+            if (!/^[A-Za-z0-9!@#^*]{3,10}$/.test(id) || !/^[A-Za-z0-9!@#^*]{7,15}$/.test(password)) return accountMessage('아이디·비밀번호의 길이와 허용 문자를 확인해줘.');
+            const button = document.getElementById('account-submit'); button.disabled = true;
+            accountMessage('계정 확인 중...');
+            try {
+                const client = getOwnerRankClient(), email = accountEmail(id);
+                const result = accountMode === 'signup'
+                    ? await client.auth.signUp({email,password,options:{data:{username:id}}})
+                    : await client.auth.signInWithPassword({email,password});
+                if (result.error) throw result.error;
+                if (!result.data.session) throw new Error('Supabase Auth의 이메일 확인을 꺼야 아이디 가입 후 바로 로그인할 수 있어.');
+                await enterGameAccount(result.data.user);
+            } catch(error) {
+                console.warn('게임 계정 로그인 실패:',error);
+                accountMessage(accountMode === 'signup' ? '가입에 실패했어. 이미 쓰는 아이디이거나 설정을 확인해야 해.' : '로그인에 실패했어. 아이디·비밀번호 또는 서버 설정을 확인해줘.');
+            } finally { button.disabled = false; }
+        }
+        function accountSnapshot() {
+            const data = {};
+            for (let i=0;i<localStorage.length;i++) {
+                const key=localStorage.key(i);
+                if (key?.startsWith('fm_')) data[key]=localStorage.getItem(key);
+            }
+            return {app:'YFM',v:22,at:new Date().toISOString(),data};
+        }
+        function restoreAccountSnapshot(snapshot) {
+            if (snapshot?.app!=='YFM' || !snapshot.data || !Array.isArray(JSON.parse(snapshot.data.fm_players||'null'))) throw new Error('서버 저장 데이터가 올바르지 않아.');
+            Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
+            Object.entries(snapshot.data).forEach(([k,v])=>{if(k.startsWith('fm_') && typeof v==='string') localStorage.setItem(k,v);});
+        }
+        async function uploadAccountSnapshot(force=false) {
+            if (!accountUser || accountSaving || window.__wiping) return;
+            if (!force && (!accountDirty || Date.now()-accountLastWrite<55000)) return;
+            accountSaving=true;
+            try {
+                const snapshot=accountSnapshot(), serialized=JSON.stringify(snapshot.data);
+                if (serialized===accountLastSnapshot) {accountDirty=false;return;}
+                const {error}=await getOwnerRankClient().from('game_progress').upsert({user_id:accountUser.id,save_data:snapshot},{onConflict:'user_id'});
+                if(error) throw error;
+                accountLastSnapshot=serialized;accountLastWrite=Date.now();accountDirty=false;
+            } catch(error) {accountDirty=true; console.warn('클라우드 저장 실패:',error);}
+            finally {accountSaving=false;}
+        }
+        async function enterGameAccount(user) {
+            const {data,error}=await getOwnerRankClient().from('game_progress').select('save_data').eq('user_id',user.id).maybeSingle();
+            if(error) throw error;
+            const previousOwner=localStorage.getItem(accountDeviceKey);
+            if (data?.save_data) {
+                const remote=JSON.stringify(data.save_data.data);
+                // 계정의 서버 기록을 우선한다. 다른 계정의 로컬 데이터는 업로드하지 않는다.
+                const justRestored=sessionStorage.getItem('yfm_restored_account')===user.id;
+                if (justRestored) sessionStorage.removeItem('yfm_restored_account');
+                if (!justRestored && (previousOwner !== user.id || !window.yfmHadLocalProgress || JSON.stringify(accountSnapshot().data)!==remote)) {
+                    restoreAccountSnapshot(data.save_data);
+                    sessionStorage.setItem('yfm_restored_account',user.id);
+                    localStorage.setItem(accountDeviceKey,user.id);
+                    location.reload(); return;
+                }
+                accountLastSnapshot=remote;
+                accountDirty=JSON.stringify(accountSnapshot().data)!==remote;
+            } else {
+                if (previousOwner && previousOwner!==user.id) {
+                    // 이전 계정 진행도를 새 계정에 복사하지 않는다.
+                    Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
+                    localStorage.setItem(accountDeviceKey,user.id); location.reload(); return;
+                }
+                accountUser=user;accountDirty=true;
+                await uploadAccountSnapshot(true);
+                if (accountDirty) throw new Error('첫 클라우드 저장에 실패했어.');
+            }
+            localStorage.setItem(accountDeviceKey,user.id);
+            accountUser=user;window.yfmAccountReady=true;
+            document.getElementById('account-gate').style.display='none';
+            if (typeof renderLobby==='function') renderLobby();
+            ensureDaily();
+            if (typeof showStarPick==='function') showStarPick();
+            startLobbyBgmIfReady();maybeStartTutorial();
+        }
+        setInterval(()=>uploadAccountSnapshot(true),60000);
+        document.addEventListener('visibilitychange',()=>{if(document.hidden)uploadAccountSnapshot(true);});
+        window.addEventListener('pagehide',()=>{if(accountDirty)uploadAccountSnapshot(true);});
+        async function signOutGameAccount() {
+            await uploadAccountSnapshot(true);
+            await getOwnerRankClient().auth.signOut();
+            accountUser=null;window.yfmAccountReady=false;
+            document.getElementById('account-gate').style.display='flex';
+        }
+
         function saveData() { if (window.__wiping) return; if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.setItem('fm_items', JSON.stringify(items)); 
             localStorage.setItem('fm_players', JSON.stringify(players)); 
             localStorage.setItem('fm_tokens', tokens); 
@@ -2721,6 +2850,7 @@
             if (teamLogoData) localStorage.setItem('fm_team_logo', teamLogoData); else localStorage.removeItem('fm_team_logo');
             updateTokensUI(); 
             queueOwnerRankSync();
+            accountDirty = true;
             updateTeamNameUI();
         }
 
@@ -6771,6 +6901,7 @@
             Object.entries(o.data).forEach(([k, v]) => { if (k.startsWith('fm_')) localStorage.setItem(k, v); });
             localStorage.setItem('fm_has_reset_tokens_v29', 'true');
             localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
+            accountDirty=true;
             location.reload();
         }
         function importSaveFile(inp) {
@@ -6876,12 +7007,12 @@
         function closeMissions(){document.getElementById('mission-modal').classList.replace('flex','hidden')}
         function dailyTick() {
             recoverLeagueSave(); updateNewsBadge(); renderCareerChallengeStatus(); try { renderLobby(); } catch (e) { console.error(e); }
-        ensureDaily(); updateMissionIcon();
+        updateMissionIcon();
             if (!document.getElementById('mission-modal').classList.contains('hidden')) renderMissions();
         }
         if (S.news && S.news.length > NEWS_MAX) { S.news = S.news.slice(0, NEWS_MAX); localStorage.setItem('fm_stats', JSON.stringify(S)); }
         updatePersistentNav(document.querySelector('.screen.active')?.id || 'screen-lobby');
-        recoverLeagueSave(); updateNewsBadge(); if (S.ace === undefined) computeUserAce(); try { renderLobby(); } catch (e) { console.error(e); } showStarPick(); maybeStartTutorial();
+        recoverLeagueSave(); updateNewsBadge(); if (S.ace === undefined) computeUserAce(); try { renderLobby(); } catch (e) { console.error(e); }
         ensureDaily(); updateMissionIcon();
         function preloadGameImages(){
             const urls=new Set([PLAYER_CARD_BACKGROUND, NORMAL_CARD_BG, JONGGEON_CARD_BG]);
