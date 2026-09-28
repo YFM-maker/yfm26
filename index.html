@@ -115,6 +115,11 @@
         .moment-banner .mb-off { display:block; margin:3px auto 0; font-size:10.5px; color:#64748b; background:transparent; }
         @keyframes mbIn { from { transform:translateY(20px); opacity:0; } to { transform:none; opacity:1; } } @keyframes mbT { from { width:100%; } to { width:0; } }
         @media (max-width:640px) { .moment-banner .mb-opts { flex-direction:column; } }
+        .fan-box { background:#0f172a; border:1px solid #334155; border-radius:14px; padding:10px 12px; }
+        .fan-head { font-weight:900; color:#e2e8f0; margin-bottom:6px; } .fan-head small { color:#64748b; font-weight:600; margin-left:6px; font-size:11px; }
+        .fan-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid #1e293b; font-size:13px; } .fan-nick { flex:none; width:118px; color:#93c5fd; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .fan-best { background:#ef4444; color:#fff; border-radius:4px; padding:0 4px; font-size:10px; } .fan-text { flex:1; color:#e5e7eb; } .fan-like { flex:none; color:#fbbf24; font-weight:800; font-size:12px; }
+        @media (max-width:640px) { .fan-row { flex-wrap:wrap; } .fan-nick { width:auto; } }
         .moment-card { position:absolute; inset:0; z-index:40; display:flex; align-items:center; justify-content:center; background:rgba(3,7,18,.55); backdrop-filter:blur(2px); padding:12px; }
         .moment-card.hidden { display:none; }
         .moment-card .mc-box { width:min(560px,100%); max-height:100%; overflow:auto; background:linear-gradient(180deg,#111827,#0b1220); border:2px solid #facc15; border-radius:18px; padding:16px 16px 12px; box-shadow:0 12px 40px rgba(0,0,0,.6); animation: mcIn .25s ease-out; }
@@ -984,6 +989,7 @@
                 </div>
             </div>
             
+            <div id="end-fans" class="w-full max-w-6xl mb-4"></div>
             <p class="text-2xl font-bold text-yellow-400 mb-3" id="match-end-reward"></p>
             <div id="match-end-growth" class="text-lg font-bold text-purple-300 mb-4 text-center"></div>
             <button onclick="endMatchFlow()" class="bg-white text-black font-black text-2xl py-3 px-16 rounded-full hover:bg-gray-200 shadow-xl transition hover:scale-105">확인</button>
@@ -3477,7 +3483,7 @@
             const dx = p.targetX - p.x, dy = p.targetY - p.y, d = Math.hypot(dx, dy);
             const st = currentMatchState, M = st.M || {};
             let wx = 0, wy = 0;
-            if (d > 0.05) { const sp = Math.min(1.4 * (0.4 + A(p, 'pac') / 220) * (p.isHome ? (M.speed || 1) : 1) * (mult || 1) * (p.sprint || 1) * actF(p), Math.max(d * 0.21, 0.1)); wx = dx / d * sp; wy = dy / d * sp; }
+            if (d > 0.05) { const sp = Math.min(1.4 * (0.4 + A(p, 'pac') / 220) * (p.isHome ? (M.speed || 1) : 1) * (mult || 1) * (p.sprint || 1) * (p.trait === 'speedster' ? 1.06 : 1) * actF(p), Math.max(d * 0.21, 0.1)); wx = dx / d * sp; wy = dy / d * sp; }
             p.vx = (p.vx || 0) * 0.55 + wx * 0.45; p.vy = (p.vy || 0) * 0.55 + wy * 0.45;
             p.x += p.vx; p.y += p.vy;
         }
@@ -3669,6 +3675,7 @@
             document.getElementById('end-extra').innerHTML = statBars(st, true);
             { let best = null; [[st.homePlayers.concat(st.homeOut), st.ratings, true], [st.awayPlayers, st.ratingsAway, false]].forEach(([L, R, h]) => L.forEach(p => { const r = parseFloat((R || {})[p.id]); if (r && (!best || r > best.r)) best = { p, r, h }; }));
               document.getElementById('end-potm').innerHTML = best ? `<div class="bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/60 rounded-xl px-4 py-3 mb-3 flex items-center gap-3"><span class="text-3xl">⭐</span><div><div class="text-xs text-yellow-300 font-bold">오늘의 선수</div><div class="text-lg font-black">${best.p.name} <span class="text-sm ${best.h ? 'text-blue-400' : 'text-red-400'}">${best.h ? teamName : st.enemy.name}</span></div></div><span class="ml-auto text-3xl font-black text-yellow-400">${best.r.toFixed(1)}</span></div>` : ''; }
+            try { renderFanReactions(st); } catch (e) { console.error(e); }
             localStorage.setItem('fm_stats', JSON.stringify(S)); saveData();
         }
 
@@ -3794,11 +3801,11 @@
         function rnd(seed, i) { let x = (seed + i * 374761393) >>> 0; x = Math.imul(x ^ (x >>> 13), 1274126177) >>> 0; return ((x ^ (x >>> 16)) >>> 0) / 4294967296; }
         function genAttr(ovr, pos, seed) { const h = hash(seed), a = {}; ATTRS.forEach((k, i) => { a[k] = Math.max(20, Math.round(ovr + PROF[pos][k] + (rnd(h, i) - 0.5) * 10)); }); return a; }
         function natPos(pos, seed) { const r = rnd(hash(seed), 20); if (pos === 'GK') return 'GK'; if (pos === 'DF') return r < 0.6 ? 'CB' : r < 0.8 ? 'LB' : 'RB'; if (pos === 'MF') return r < 0.35 ? 'CM' : r < 0.55 ? 'CDM' : r < 0.75 ? 'CAM' : r < 0.875 ? 'LM' : 'RM'; return r < 0.5 ? 'ST' : r < 0.75 ? 'LW' : 'RW'; }
-        function ensure(p) { if (p.trait === undefined) p.trait = traitOf(p.id, p.position); if (!p.attr) { p.attr = genAttr(p.ovr, p.position, p.id); p.pot = p.ovr + Math.round(3 + rnd(hash(p.id), 30) * 12); } if (p.name === '이주진') p.attr = { pac: 100, sho: 65, pas: 75, dri: 75, def: 10, sta: 72, phy: 72 }; if (!p.pos2) p.pos2 = natPos(p.position, p.id); return p; }
+        function ensure(p) { if (p.trait === undefined) p.trait = traitOf(p.id, p.position); if (p.traitV !== 2) { if (p.trait == null) p.trait = traitOf(p.id + '#v2', p.position); p.traitV = 2; } if (!p.attr) { p.attr = genAttr(p.ovr, p.position, p.id); p.pot = p.ovr + Math.round(3 + rnd(hash(p.id), 30) * 12); } if (p.name === '이주진') p.attr = { pac: 100, sho: 65, pas: 75, dri: 75, def: 10, sta: 72, phy: 72 }; if (!p.pos2) p.pos2 = natPos(p.position, p.id); return p; }
         function effAttrs(p) { ensure(p); const d = getCalculatedOvr(p) - p.ovr, o = {}; ATTRS.forEach(k => o[k] = p.attr[k] + d); return o; }
         function actF(p) { const st = currentMatchState; return st && st.samun && p.isHome && st.time >= st.samun ? 1.08 : 1; }   // 서포터즈 응원: 활동량 +8%
         function talkF(p) { const st = currentMatchState; return st && p.isHome && st.talkF && st.htDone ? st.talkF : 1; }                // 하프타임 팀 토크
-        function A(p, k) { return (p.attr ? p.attr[k] : p.ovr) * stamF(p) * (p.ace && currentMatchState && currentMatchState.time >= 75 ? 1.04 : 1) * talkF(p) * psychFactor(p,k) * (p.mkF || 1) * (p.pf || 1) * (p.mkA && (k === 'sho' || k === 'pas' || k === 'dri') ? p.mkA : 1); }
+        function A(p, k) { return (p.attr ? p.attr[k] : p.ovr) * stamF(p) * (p.ace && currentMatchState && currentMatchState.time >= 75 ? 1.04 : 1) * talkF(p) * psychFactor(p,k) * (p.mkF || 1) * (p.pf || 1) * (p.tF || 1) * (p.mkA && (k === 'sho' || k === 'pas' || k === 'dri') ? p.mkA : 1); }
         function mor(p) { return p.morale === undefined ? 70 : p.morale; }
         function moraleF(p) { return 0.97 + mor(p) / 100 * 0.06; }
         function moodEmoji(p) { const m = mor(p); return m >= 85 ? '😊' : m >= 70 ? '🙂' : m >= 50 ? '😐' : m >= 30 ? '😕' : '😡'; }
@@ -3937,7 +3944,7 @@
             let f = fitF(styleFitOf(st, isHome));
             if (isHome) { const fm = st.famV || 0; f *= 1 + 0.03 * fm / 100; } else { const fm = st.famV || 0; f *= 1 - 0.02 * fm / 100; }
             liveBoosts(st).forEach(b => f *= isHome ? b.h : b.a);
-            f *= piTeamF(st, isHome);
+            f *= piTeamF(st, isHome) * leaderF(st, isHome);
             if (st.mode === 'rogue' && typeof roguePerkF === 'function') f *= roguePerkF(st, isHome);
             return f;
         }
@@ -4275,11 +4282,11 @@
             all.forEach(p => {
                 if (st.mode === 'saudi') { p.stam = 100; return; }
                 if (p.stam === undefined) p.stam = 100;
-                const base = (p.role === 'GK' ? 0.008 : 0.23 + (100 - rawA(p, 'sta')) / 100 * 0.32) * (p.trait === 'engine' ? 0.8 : 1) * (p.piFat || 1) / actF(p) / actF(p);
+                const base = (p.role === 'GK' ? 0.008 : 0.23 + (100 - rawA(p, 'sta')) / 100 * 0.32) * (p.trait === 'engine' ? 0.8 : p.trait === 'ironman' ? 0.92 : 1) * (p.piFat || 1) / actF(p) / actF(p);
                 const run = Math.min(1.3, 0.85 + Math.hypot(p.vx || 0, p.vy || 0) / 1.6);   // 많이 뛰어도 소모 증가폭은 완만하게
                 const passionFatigue=p.isHome&&p.psychEffects?.some(e=>e.until>st.time)?1+Math.max(0,psychValue(p,'motivation',st)-p.psych.motivation)*.003:1;
                 p.stam = Math.max(0, p.stam - base * run * (p.isHome ? (st.M.fat || 1) : 1) * passionFatigue * MIN_PER_TICK);
-                if (p.role !== 'GK' && p.stam < 25 && Math.random() < 0.00006) injure(st, p);
+                if (p.role !== 'GK' && p.stam < 25 && Math.random() < 0.00006 * (tr(p, 'glass') ? 2.5 : 1)) injure(st, p);
                 if (p.isHome && !p.tiredWarned && p.stam < 35) { p.tiredWarned = true; comm(st, `⚠️ ${p.name} 선수가 많이 지쳐 보입니다 (체력 ${Math.round(p.stam)}%)`, 'warn'); }
             });
         }
@@ -4313,7 +4320,7 @@
         const inBoxOf = (isHomeAttacking, x, y) => Math.abs((isHomeAttacking ? 97 : 3) - x) < 14.8 && Math.abs(y - 50) < 27.3;
         function pickTaker(st, sp, all) {
             const T = all.filter(p => p.isHome === sp.team && !p.isRedCarded && !p.injured), out = T.filter(p => p.role !== 'GK');
-            const best = L => L.reduce((b, p) => !b || A(p, 'sho') * (p.trait === 'bold' ? 1.05 : 1) > A(b, 'sho') * (b.trait === 'bold' ? 1.05 : 1) ? p : b, null);
+            const tw = p => (p.trait === 'bold' ? 1.05 : 1) * (sp.kind === 'fk' && tr(p, 'fk') ? 1.4 : sp.kind === 'pen' && tr(p, 'pk') ? 1.3 : 1), best = L => L.reduce((b, p) => !b || A(p, 'sho') * tw(p) > A(b, 'sho') * tw(b) ? p : b, null);
             const near = L => L.reduce((b, p) => !b || Math.hypot(p.x - sp.x, p.y - sp.y) < Math.hypot(b.x - sp.x, b.y - sp.y) ? p : b, null);
             const assignedRole = sp.kind === 'pen' ? 'penalty' : sp.kind === 'fk' ? 'freekick' : sp.kind === 'corner' ? (sp.side === 'left' ? 'cornerLeft' : 'cornerRight') : null;
             const assigned = assignedRole && teamRoles[assignedRole] ? out.find(p => p.id === teamRoles[assignedRole]) : null;
@@ -4331,8 +4338,8 @@
             const dogso = cover.length === 0 && Math.abs(gx - victim.x) < 30;
             const r = Math.random(); let card = null;
             if (dogso && !inBox) card = r < 0.4 ? 'red' : 'yellow';
-            else card = fouler.name === '이주진' ? (r < 0.025 ? 'red' : r < 0.48 ? 'yellow' : null) : (r < 0.008 ? 'red' : r < 0.2 ? 'yellow' : null);
-            if (Math.random() < 0.04) injure(st, victim);
+            else card = fouler.name === '이주진' ? (r < 0.025 ? 'red' : r < 0.48 ? 'yellow' : null) : (tr(fouler, 'hothead') ? (r < 0.02 ? 'red' : r < 0.32 ? 'yellow' : null) : (r < 0.008 ? 'red' : r < 0.2 ? 'yellow' : null));
+            if (Math.random() < 0.04 * (tr(victim, 'glass') ? 2.5 : 1)) injure(st, victim);
             st.ball.fl = null; st.ball.ownerId = null;
             const spot = inBox ? { x: gx - dir * 9.85, y: 50 } : { x: victim.x, y: victim.y };
             st.sp = { kind: inBox ? 'pen' : 'fk', team: victim.isHome, x: spot.x, y: spot.y, t: 0, victim: victim.id, fresh: true };
@@ -4429,7 +4436,7 @@
             const shotStat = q => { if (tk.isHome) { st.stats.homeShots++; st.stats.homeXG += q; } else { st.stats.awayShots++; st.stats.awayXG += q; } };
             if (sp.kind === 'corner') { deliverCorner(st, tk, all, sp); return; }
             if (sp.kind === 'pen') {
-                const q = Math.min(0.9, 0.76 * Math.exp((A(tk, 'sho') - gkv) / 60) * (tk.trait === 'finisher' ? 1.04 : 1)) * damp; shotStat(q);
+                const q = Math.min(0.93, 0.76 * Math.exp((A(tk, 'sho') - gkv) / 60) * (tk.trait === 'finisher' ? 1.04 : 1) * (tr(tk, 'pk') ? 1.1 : 1) * (tr(gk, 'penSaver') ? 0.82 : 1)) * damp; shotStat(q);
                 comm(st, `🎯 ${tk.name}, 페널티킥을 찹니다...`);
                 if (Math.random() < q) { st.playerStats[tk.id].goals++; launchShot(st, tk, 'goal', gk, null, 'pk'); }
                 else { const r = Math.random(); launchShot(st, tk, r < 0.7 ? 'save' : r < 0.8 ? 'post' : 'wide', gk); if (st.ball.fl) st.ball.fl.txt = '🎯 페널티킥 실축! ' + st.ball.fl.txt; }
@@ -4437,8 +4444,8 @@
             }
             if (sp.kind === 'fk') {
                 const d = Math.hypot(((tk.isHome ? 97 : 3) - sp.x) * MX, (50 - sp.y) * MY), dy = Math.abs(sp.y - 50) * MY;
-                if (d < 32 && dy < 16 && Math.random() < (d < 25 ? 0.75 : 0.4)) { // 직접 프리킥
-                    const q = Math.min(0.3, 0.075 * Math.exp((A(tk, 'sho') - gkv) / 30) * (tk.trait === 'bold' || tk.trait === 'finisher' ? 1.25 : 1) * (d < 20 ? 1.3 : 1)) * damp; shotStat(q);
+                if (d < 32 && dy < 16 && Math.random() < (tr(tk, 'fk') ? (d < 25 ? 0.95 : 0.7) : (d < 25 ? 0.75 : 0.4))) { // 직접 프리킥
+                    const q = Math.min(0.36, 0.075 * Math.exp((A(tk, 'sho') - gkv) / 30) * (tk.trait === 'bold' || tk.trait === 'finisher' ? 1.25 : 1) * (tr(tk, 'fk') ? 1.6 : 1) * (d < 20 ? 1.3 : 1)) * damp; shotStat(q);
                     if (Math.random() < q) { st.playerStats[tk.id].goals++; launchShot(st, tk, 'goal', gk, null, 'fk'); }
                     else { const r = Math.random(); launchShot(st, tk, r < 0.35 ? 'block' : r < 0.7 ? 'save' : r < 0.78 ? 'post' : 'wide', gk); if (st.ball.fl) st.ball.fl.txt = `🎯 ${tk.name}의 직접 프리킥! ` + (r < 0.35 ? '수비벽에 막힙니다' : st.ball.fl.txt.replace(`${tk.name}의 슈팅`, '슈팅')); }
                     return;
@@ -4450,6 +4457,7 @@
         function injure(st, p) {
             if (st.mode === 'saudi') return;
             if (p.injured || p.isRedCarded) return;
+            if (tr(p, 'ironman') && Math.random() < 0.7) return;
             const r = Math.random(), n = r < 0.7 ? 1 : r < 0.92 ? 2 + Math.round(Math.random()) : 4 + Math.floor(Math.random() * 3);
             p.injured = n; p.injLabel = n <= 1 ? '경미' : n <= 3 ? '보통' : '심각';
             if (p.attr) Object.keys(p.attr).forEach(k => p.attr[k] = Math.round(p.attr[k] * 0.85)); p.ovr = Math.round(p.ovr * 0.85);
@@ -4612,12 +4620,12 @@
             st.cornerHold = null;
             const enemies = all.filter(e => e.isHome !== r.isHome && !e.isRedCarded), gk = enemies.find(e => e.role === 'GK'), gkv = gk ? gk.ovr * stamF(gk) : 45;
             const taker = all.find(p => p.id === lastAssistId);
-            const rt = r.isHome ? st.cornerRt : null; if (gk && Math.random() < (rt === 'near' ? 0.07 : rt === 'far' ? 0.17 : 0.12)) { gkClaim(st, gk, r.x, r.y); comm(st, `🧤 ${gk.name}가 뛰어나와 코너킥을 잡아냅니다`); return; }
+            const rt = r.isHome ? st.cornerRt : null; if (gk && Math.random() < (rt === 'near' ? 0.07 : rt === 'far' ? 0.17 : 0.12) * (tr(gk, 'sweeperK') ? 1.6 : 1)) { gkClaim(st, gk, r.x, r.y); comm(st, `🧤 ${gk.name}가 뛰어나와 코너킥을 잡아냅니다`); return; }
             const d = enemies.filter(e => e.role !== 'GK').reduce((b, e) => !b || getDistance(e, r) < getDistance(b, r) ? e : b, null);
-            if (d && getDistance(d, r) < 3.5 && Math.random() > 1 / (1 + Math.exp(-((A(r, 'phy') - A(d, 'phy')) / 12 + 0.1 + (rt === 'near' ? 0.35 : 0))))) { addStat(st, d, 'aerialWon'); clearBall(st, d, r); comm(st, `🛡️ ${d.name}가 헤더로 걷어냅니다`); return; }
+            if (d && getDistance(d, r) < 3.5 && Math.random() > 1 / (1 + Math.exp(-((A(r, 'phy') - A(d, 'phy')) / 12 + 0.1 + (rt === 'near' ? 0.35 : 0) + (tr(r, 'aerial') ? 0.6 : 0) - (tr(d, 'aerial') ? 0.6 : 0))))) { addStat(st, d, 'aerialWon'); clearBall(st, d, r); comm(st, `🛡️ ${d.name}가 헤더로 걷어냅니다`); return; }
             const dm = Math.hypot(((r.isHome ? 97 : 3) - r.x) * MX, (50 - r.y) * MY), df = dm < 7 ? 1.25 : dm > 12 ? 0.65 : 1;
             const damp = st.damp && st.fav === (r.isHome ? 'home' : 'away') ? st.damp : 1;
-            const q = Math.min(0.45, 0.22 * Math.exp((A(r, 'phy') - gkv) / FIN_S) * df * (r.isHome && st.mode === 'rogue' && rogueHas('r_setp') ? 1.35 : 1) * (r.isHome ? liveBoosts(st).reduce((x, b) => x * (b.setp || 1), 1) * (st.cornerRt === 'far' ? 1.15 : 1) : 1)) * damp;
+            const q = Math.min(0.45, 0.22 * Math.exp((A(r, 'phy') - gkv) / FIN_S) * df * (tr(r, 'aerial') ? 1.15 : 1) * clutchF(st, r) * (r.isHome && st.mode === 'rogue' && rogueHas('r_setp') ? 1.35 : 1) * (r.isHome ? liveBoosts(st).reduce((x, b) => x * (b.setp || 1), 1) * (st.cornerRt === 'far' ? 1.15 : 1) : 1)) * damp;
             if (r.isHome) { st.stats.homeShots++; st.stats.homeXG += q; } else { st.stats.awayShots++; st.stats.awayXG += q; }
             st.ball.x = r.x; st.ball.y = r.y;
             if (Math.random() < q) {
@@ -4669,7 +4677,7 @@
         function aerialDuel(st, r, all) {
             const d = all.filter(e => e.isHome !== r.isHome && e.role !== 'GK' && !e.isRedCarded).reduce((b, e) => !b || getDistance(e, r) < getDistance(b, r) ? e : b, null);
             const contested = d && getDistance(d, r) < 5;
-            const win = !contested || Math.random() < 1 / (1 + Math.exp(-((A(r, 'phy') - A(d, 'phy')) / 12 + 0.4)));
+            const win = !contested || Math.random() < 1 / (1 + Math.exp(-((A(r, 'phy') - A(d, 'phy')) / 12 + 0.4 + (tr(r, 'aerial') ? 0.6 : 0) - (tr(d, 'aerial') ? 0.6 : 0))));
             if (!win) { addStat(st, d, 'aerialWon'); comm(st, `🛡️ ${d.name}가 롱볼 경합에서 이깁니다`); const dir = d.isHome ? 1 : -1; st.ball.ownerId = null; st.lastPoss = d.isHome; st.ball.fl = { sx: r.x, sy: r.y, ex: Math.max(4, Math.min(96, r.x + dir * (8 + Math.random() * 8))), ey: Math.max(8, Math.min(92, r.y + (Math.random() - 0.5) * 24)), t: 0, n: 4, to: null, kind: 'pass', lob: true }; return; }
             if (contested) addStat(st, r, 'aerialWon');
             const mate = all.filter(p => p.isHome === r.isHome && p !== r && p.role !== 'GK' && !p.isRedCarded && getDistance(p, r) < 14 && (p.x - r.x) * (r.isHome ? 1 : -1) > -8).sort((a, b) => getDistance(a, r) - getDistance(b, r))[0];
@@ -5196,12 +5204,24 @@
             st.isPaused = false; st.last = performance.now(); st.acc = 0;
         }
 
-        const TRAITS = { bold: { n: '과감한 슈터', d: '먼 거리에서도 망설임 없이 슈팅' }, finisher: { n: '침착한 마무리', d: '결정력 +20%' }, dribbler: { n: '드리블러', d: '돌파 시도와 성공률 증가' }, playmaker: { n: '플레이메이커', d: '전진 패스 선호 · 패스 정확도 +' }, engine: { n: '엔진', d: '체력 소모 -20%' } };
-        function traitOf(id, pos) {
-            if (pos === 'GK') return null;
-            const pool = pos === 'FW' ? ['bold', 'finisher', 'dribbler', 'finisher', 'bold', null] : pos === 'MF' ? ['playmaker', 'bold', 'dribbler', 'engine', 'playmaker', null] : ['engine', 'playmaker', null, null];
-            return pool[Math.floor(rnd(hash(id), 44) * pool.length)];
-        }
+        const TRAITS = {
+            bold: { n: '과감한 슈터', d: '20~30m 중거리를 망설임 없이 시도 (최대 약 30m)' }, finisher: { n: '침착한 마무리', d: '결정력 +20%' }, dribbler: { n: '드리블러', d: '돌파 시도와 성공률 증가' }, playmaker: { n: '플레이메이커', d: '전진 패스 선호 · 패스 정확도 +' }, engine: { n: '엔진', d: '체력 소모 -20%' },
+            speedster: { n: '⚡ 스피드스타', d: '전력 질주·드리블 속도 +6%' }, clutch: { n: '🧊 해결사', d: '75분 이후 슈팅 결정력 +15%' }, aerial: { n: '🗼 제공권 장악', d: '공중볼 경합 승률↑ · 헤더 결정력 +15%' }, selfish: { n: '🙄 욕심쟁이', d: '슈팅 시도↑ · 패스↓ (동료가 답답해함)' },
+            trickster: { n: '🪄 테크니션', d: '좁은 공간 돌파 성공률↑ · 가끔 알까기' }, pk: { n: '🥶 PK 장인', d: '페널티킥 성공률 +10%' }, fk: { n: '🎩 프리킥 스페셜리스트', d: '직접 프리킥 결정력 +60% · 프리킥 키커 우선' }, crosser: { n: '🎯 택배 크로스', d: '크로스 정확도·선호도↑' },
+            leader: { n: '🦁 리더십', d: '경기장에 있으면 팀 슈팅 +3% · 상대 슈팅 -2%' }, hothead: { n: '😤 다혈질', d: '태클 적극↑ · 대신 파울·카드 위험↑' }, tackler: { n: '🦾 태클 마스터', d: '태클 시도·성공률↑ · 파울↓' }, wall: { n: '🧱 통곡의 벽', d: '1대1 수비 시 상대 돌파 성공률↓' },
+            bigGame: { n: '🏟️ 빅매치 체질', d: '강팀 상대로 능력치 +5%' }, ironman: { n: '🛡️ 강철 몸', d: '부상 확률 -70% · 체력 소모 -8%' }, glass: { n: '🩹 유리몸', d: '부상 확률 2.5배' },
+            reflex: { n: '🧤 반사신경', d: '골키퍼 선방 능력 +5%' }, penSaver: { n: '🧱 PK 킬러', d: '상대 페널티킥 성공률 -18%' }, sweeperK: { n: '🧹 스위퍼 키퍼', d: '크로스·코너킥을 뛰어나와 잡아내는 빈도↑' }
+        };
+        const TRAIT_POOL = {
+            FW: ['bold', 'finisher', 'dribbler', 'finisher', 'bold', 'speedster', 'clutch', 'aerial', 'selfish', 'trickster', 'pk', 'bigGame', 'glass', null],
+            MF: ['playmaker', 'bold', 'dribbler', 'engine', 'playmaker', 'crosser', 'fk', 'leader', 'speedster', 'trickster', 'hothead', 'bigGame', 'clutch', null],
+            DF: ['engine', 'playmaker', 'tackler', 'aerial', 'wall', 'leader', 'hothead', 'speedster', 'crosser', 'ironman', 'tackler', null, null],
+            GK: ['reflex', 'penSaver', 'sweeperK', 'leader', 'reflex', null, null]
+        };
+        function traitOf(id, pos) { const pool = TRAIT_POOL[pos] || TRAIT_POOL.MF; return pool[Math.floor(rnd(hash(id), 44) * pool.length)]; }
+        function tr(p, k) { return !!p && p.trait === k; }
+        function clutchF(st, p) { return tr(p, 'clutch') && st.time >= 75 ? 1.15 : 1; }
+        function leaderF(st, isHome) { const own = (isHome ? st.homePlayers : st.awayPlayers).some(p => tr(p, 'leader') && !p.isRedCarded), opp = (isHome ? st.awayPlayers : st.homePlayers).some(p => tr(p, 'leader') && !p.isRedCarded); return (own ? 1.03 : 1) * (opp ? 0.98 : 1); }
         const MX = 1.117, MY = 0.739; // % → m
         function shotQ(p, pressure, gkv, key) {
             const gx = p.isHome ? 97 : 3, dx = Math.abs(gx - p.x) * MX, dy = Math.abs(50 - p.y) * MY, d = Math.hypot(dx, dy);
@@ -5263,7 +5283,7 @@
                 if (wideO && oU < (sty === 'wing' ? 42 : 30) && tU < 26 && gU < 20 && Math.abs(t.targetY - 50) < 18) {
                     const spot = { x: (t.isHome ? 97 : 3) - (t.isHome ? 1 : -1) * Math.max(6, Math.min(gU - 4, 12)), y: t.targetY }, near = enemies.filter(e => e.role !== 'GK' && getDistance(e, spot) < 4).length;
                     const sU = Math.abs((t.isHome ? 97 : 3) - spot.x), qs = 0.95 * Math.exp(-Math.hypot(sU * MX, (50 - spot.y) * MY) / 6.8);
-                    out.push({ t, s: 9 - offP + (sty === 'wing' ? 14 : 0) + qs * 60 + (rawA(t, 'phy') - 70) / 6 - near * 3, lane: 99, lp: null, dist: getDistance(owner, spot), cross: spot });
+                    out.push({ t, s: 9 - offP + (tr(owner, 'crosser') ? 6 : 0) + (sty === 'wing' ? 14 : 0) + qs * 60 + (rawA(t, 'phy') - 70) / 6 - near * 3, lane: 99, lp: null, dist: getDistance(owner, spot), cross: spot });
                 }
                 // 컷백: 골라인 근처에서 페널티 스폿 쪽으로 낮게 내줌
                 if (oU < (sty === 'wing' ? 20 : 15) && Math.abs(owner.y - 50) > 10 && tU >= 5 && tU < 18 && tU > oU - 3 && Math.abs(t.y - 50) < 14 && Math.abs(t.y - 50) < Math.abs(owner.y - 50) - 6) {
@@ -5283,7 +5303,7 @@
             if (o.thr && !owner.isHome && st.M.trap) z += 0.3; // 트랩을 뚫으면 뒷공간이 넓다
             if (o.thr) { racer = enemies.filter(e => e.role !== 'GK').reduce((b, e) => !b || getDistance(e, o.thr) < getDistance(b, o.thr) ? e : b, null); z -= 0.5; if (racer) z += (A(o.t, 'pac') - A(racer, 'pac')) / 20; }
             const wingP = styleOf(st, owner.isHome) === 'wing';
-            if (o.cross) z -= wingP ? -0.1 : 1.0; if (o.cut) z += 0.3; if (o.aerial) z -= 0.2;
+            if (o.cross) z -= (wingP ? -0.1 : 1.0) - (tr(owner, 'crosser') ? 0.8 : 0); if (o.cut) z += 0.3; if (o.aerial) z -= 0.2;
             if (counterOn(st, owner.isHome)) z += o.thr ? 0.5 : 0.25; // 역습 순간엔 상대 수비가 정돈되지 않음
             addStat(st, owner, 'pass');
             if (Math.random() < 1 / (1 + Math.exp(-z))) {
@@ -5332,17 +5352,17 @@
             let how = 'cut', q;
             if (fin === 'cross') {
                 const u = p.isHome ? 97 - p.x : p.x - 3;
-                if (gk && u < 7 && Math.random() < (styleOf(st, p.isHome) === 'wing' ? 0.1 : 0.15)) { gkClaim(st, gk, p.x, p.y); comm(st, `🧤 ${gk.name}가 뛰어나와 크로스를 잡아냅니다`); return; }
+                if (gk && u < 7 && Math.random() < (styleOf(st, p.isHome) === 'wing' ? 0.1 : 0.15) * (tr(gk, 'sweeperK') ? 1.6 : 1)) { gkClaim(st, gk, p.x, p.y); comm(st, `🧤 ${gk.name}가 뛰어나와 크로스를 잡아냅니다`); return; }
                 const d = enemies.filter(e => e.role !== 'GK').reduce((b, e) => !b || getDistance(e, p) < getDistance(b, p) ? e : b, null);
                 if (d && getDistance(d, p) < 3.5) {
-                    const win = 1 / (1 + Math.exp(-((A(p, 'phy') - A(d, 'phy')) / 12 + (styleOf(st, p.isHome) === 'wing' ? 1.0 : 0.4))));
+                    const win = 1 / (1 + Math.exp(-((A(p, 'phy') - A(d, 'phy')) / 12 + (styleOf(st, p.isHome) === 'wing' ? 1.0 : 0.4) + (tr(p, 'aerial') ? 0.6 : 0) - (tr(d, 'aerial') ? 0.6 : 0))));
                     if (Math.random() > win) { clearBall(st, d, p); comm(st, `🛡️ ${d.name}가 헤딩으로 걷어냅니다`); return; }
                 }
                 how = Math.random() < (rawA(p, 'phy') >= rawA(p, 'sho') - 5 ? 0.75 : 0.45) ? 'header' : 'volley';
                 const dm = Math.hypot(((p.isHome ? 97 : 3) - p.x) * MX, (50 - p.y) * MY), df = dm < 8 ? 1.2 : dm > 13 ? 0.7 : 1;
-                q = how === 'header' ? 0.34 * Math.exp((A(p, 'phy') - gkv) / FIN_S) * df : 0.32 * Math.exp((A(p, 'sho') - gkv) / FIN_S) * df * (0.6 + Math.random() * 0.8);
+                q = how === 'header' ? 0.34 * Math.exp((A(p, 'phy') - gkv) / FIN_S) * df * (tr(p, 'aerial') ? 1.15 : 1) : 0.32 * Math.exp((A(p, 'sho') - gkv) / FIN_S) * df * (0.6 + Math.random() * 0.8);
             } else q = 0.45 * Math.exp((A(p, 'sho') - gkv) / FIN_S) * (p.trait === 'finisher' ? 1.15 : 1);
-            const qq = Math.min(0.8, FT_K * q * (styleOf(st, p.isHome) === 'wing' ? 1.4 : 1) * matchupF(st, p.isHome) * formQ(st, p.isHome)) * (st.damp && st.fav === (p.isHome ? 'home' : 'away') ? st.damp : 1);
+            const qq = Math.min(0.8, FT_K * q * clutchF(st, p) * (styleOf(st, p.isHome) === 'wing' ? 1.4 : 1) * matchupF(st, p.isHome) * formQ(st, p.isHome)) * (st.damp && st.fav === (p.isHome ? 'home' : 'away') ? st.damp : 1);
             if (p.isHome) { st.stats.homeShots++; st.stats.homeXG += qq; } else { st.stats.awayShots++; st.stats.awayXG += qq; }
             const lead = how === 'header' ? `🎯 ${p.name}의 헤딩슛! ` : how === 'volley' ? `💥 ${p.name}의 발리슛! ` : `↩️ 컷백! ${p.name}의 원터치 슈팅! `;
             if (Math.random() < qq) {
@@ -5799,7 +5819,13 @@
             };
             
             [...homePlayers, ...awayPlayers].forEach(p => { currentMatchState.playerStats[p.id] = { goals: 0 }; });
-            applyAces(currentMatchState); { const st0 = currentMatchState; st0.markId = homePlayers.some(p => String(p.id) === String(nextMatchMark) && p.role !== 'GK') ? homePlayers.find(p => String(p.id) === String(nextMatchMark)).id : null; nextMatchMark = ''; st0.cpuMarkId = pickCpuMarker(st0); st0.famV = famOf(matchFormation, styleOf(st0, true)); if (mode === 'rogue') rogueMatchSetup(st0); st0.homePlayers.forEach(applyPI); } { const sb = document.getElementById('samun-badge'); if (sb) sb.classList.add('hidden'); }
+            applyAces(currentMatchState); { const st0 = currentMatchState; st0.markId = homePlayers.some(p => String(p.id) === String(nextMatchMark) && p.role !== 'GK') ? homePlayers.find(p => String(p.id) === String(nextMatchMark)).id : null; nextMatchMark = ''; st0.cpuMarkId = pickCpuMarker(st0); st0.famV = famOf(matchFormation, styleOf(st0, true)); if (mode === 'rogue') rogueMatchSetup(st0); st0.homePlayers.forEach(applyPI);
+                const avg = L => L.reduce((x, p) => x + p.ovr, 0) / Math.max(1, L.length), ha = avg(st0.homePlayers), aa = avg(st0.awayPlayers);
+                [...st0.homePlayers, ...st0.awayPlayers].forEach(p => {   // 성향: 빅매치 체질(강팀 상대 +5%) · 반사신경 골키퍼(+5%)
+                    const under = p.isHome ? aa - ha >= 4 : ha - aa >= 4; p.tF = tr(p, 'bigGame') && under ? 1.05 : 1;
+                    if (tr(p, 'reflex') && p.role === 'GK') p.ovr = Math.round(p.ovr * 1.05 * 10) / 10;
+                });
+                const bg = st0.homePlayers.filter(p => p.tF > 1).map(p => p.name); if (bg.length) setTimeout(() => comm(st0, `🏟️ 빅매치 체질 ${bg.join(', ')}의 눈빛이 달라졌습니다!`, 'info'), 0); } { const sb = document.getElementById('samun-badge'); if (sb) sb.classList.add('hidden'); }
             if (mode === 'league') { currentMatchState.leagueRound = leagueState.round; currentMatchState.leagueSeason = leagueState.season; currentMatchState.leaguePlayoff = !!enemyData.playoff; }
             currentMatchState.forms = forms; currentMatchState.venue = venue; currentMatchState.formBase = matchFormation; currentMatchState.formF = { h: formationFactor(homeLayout, matchFormation), a: formationFactor(awayLayout, enemyFormation) }; setupMiracle(currentMatchState);
 
@@ -5939,16 +5965,16 @@
 
             // 1:1 경합 — 능력치 차이가 확률에 지수적으로 반영
             if (closestEnemy && minEnmD < 5) {
-                const dv = A(owner, 'dri') * (owner.trait === 'dribbler' ? 1.08 : 1) + (owner.pi === 'dribble' ? 5 : 0) - A(closestEnemy, 'def');
-                const pBreak = Math.min(0.45, 0.07 * Math.exp(dv / 26)) * (owner.trait === 'dribbler' ? 1.3 : 1) * (owner.pi === 'dribble' ? 1.2 : 1) * (owner.isHome ? 1 : st.M.breakOpp);
-                if (Math.random() < pBreak) { if (Math.random() < 0.025 * (closestEnemy.name === '이주진' ? 3 : 1) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * psychFoulRisk(closestEnemy,st)) { commitFoul(st, closestEnemy, owner, allPlayers); return; } owner.dash = 6; closestEnemy.stun = 4; lastAssistId = null; } // 뚫리면 전술적 파울 가능
+                const dv = A(owner, 'dri') * (owner.trait === 'dribbler' ? 1.08 : 1) + (owner.pi === 'dribble' ? 5 : 0) + (tr(owner, 'trickster') ? 6 : 0) - A(closestEnemy, 'def') - (tr(closestEnemy, 'wall') ? 7 : 0);
+                const pBreak = Math.min(0.45, 0.07 * Math.exp(dv / 26)) * (owner.trait === 'dribbler' ? 1.3 : 1) * (owner.pi === 'dribble' ? 1.2 : 1) * (tr(owner, 'trickster') ? 1.15 : 1) * (owner.isHome ? 1 : st.M.breakOpp);
+                if (Math.random() < pBreak) { if (Math.random() < 0.025 * (closestEnemy.name === '이주진' ? 3 : 1) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * psychFoulRisk(closestEnemy,st)) { commitFoul(st, closestEnemy, owner, allPlayers); return; } owner.dash = 6; closestEnemy.stun = 4; lastAssistId = null; if (tr(owner, 'trickster') && Math.random() < 0.25 && st.time - (st.nutSaid ?? -99) > 8) { st.nutSaid = st.time; comm(st, `🪄 ${owner.name}의 알까기! ${closestEnemy.name}를 가랑이 사이로 제칩니다`); } } // 뚫리면 전술적 파울 가능
                 else {
                     { const lx = (owner.x - closestEnemy.x) * 0.2, ly = (owner.y - closestEnemy.y) * 0.2, lm = Math.hypot(lx, ly) || 1, c = Math.min(1, 0.9 / lm); closestEnemy.x += lx * c; closestEnemy.y += ly * c; }
-                    const ta = closestEnemy.isHome ? st.M.tackAtt : 0.25, dv2 = (A(owner, 'dri') + A(owner, 'phy')) / 2 - A(closestEnemy, 'def');
+                    const ta = (closestEnemy.isHome ? st.M.tackAtt : 0.25) + (tr(closestEnemy, 'tackler') ? 0.1 : tr(closestEnemy, 'hothead') ? 0.12 : 0), dv2 = (A(owner, 'dri') + A(owner, 'phy')) / 2 - A(closestEnemy, 'def');
                     if (Math.random() < ta) {
                         addStat(st, closestEnemy, 'tackle');
-                        if (Math.random() < Math.min(closestEnemy.name === '이주진' ? 0.4 : 0.11, FOUL_BASE * Math.exp(dv2 / 70) * (closestEnemy.name === '이주진' ? 3 : 1)) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * (inBoxOf(owner.isHome, owner.x, owner.y) ? 4 : 1) * psychFoulRisk(closestEnemy,st)) { commitFoul(st, closestEnemy, owner, allPlayers); return; }
-                        if (Math.random() < Math.min(0.9, 0.28 * Math.exp(-dv2 / 26))) { addStat(st, closestEnemy, 'tackleWon'); st.ball.ownerId = closestEnemy.id; st.lastPoss = closestEnemy.isHome; return; }
+                        if (Math.random() < Math.min(closestEnemy.name === '이주진' ? 0.4 : 0.11, FOUL_BASE * Math.exp(dv2 / 70) * (closestEnemy.name === '이주진' ? 3 : 1)) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * (inBoxOf(owner.isHome, owner.x, owner.y) ? 4 : 1) * psychFoulRisk(closestEnemy,st) * (tr(closestEnemy, 'hothead') ? 1.8 : tr(closestEnemy, 'tackler') ? 0.8 : 1)) { commitFoul(st, closestEnemy, owner, allPlayers); return; }
+                        if (Math.random() < Math.min(0.9, 0.28 * Math.exp(-dv2 / 26) * (tr(closestEnemy, 'tackler') ? 1.25 : 1))) { addStat(st, closestEnemy, 'tackleWon'); st.ball.ownerId = closestEnemy.id; st.lastPoss = closestEnemy.isHome; return; }
                     }
                 }
             }
@@ -5965,10 +5991,10 @@
             if (solo) {
                 if (!owner.oneOn) { owner.oneOn = true; comm(st, `⚡ ${owner.name}, 골키퍼와 1대1!`); }
                 const chaser = enemies.some(e => e.role !== 'GK' && getDistance(e, owner) < 3);
-                if (d <= 13 || chaser || (d <= 18 && Math.random() < 0.12)) {
+                if (d <= 13 || (chaser && d <= 19) || (d <= 16 && Math.random() < 0.12)) {   // 1대1: 추격 수비가 붙어도 20m 밖에선 슈팅하지 않고 더 치고 들어감
                     // 현실 1대1 결정력: 동급 기준 약 40%, 결정력·거리·추격 수비에 따라 변동
                     let q1 = 0.32 * Math.exp((A(owner, 'sho') - gkv) / FIN_S) * (owner.trait === 'finisher' ? 1.15 : 1) * (d > 16 ? 0.75 : d < 9 ? 1.1 : 1) * (chaser ? 0.85 : 1);
-                    q1 = Math.min(0.8, q1 * matchupF(st, owner.isHome) * formQ(st, owner.isHome)) * (st.damp && st.fav === (owner.isHome ? 'home' : 'away') ? st.damp : 1);
+                    q1 = Math.min(0.8, q1 * clutchF(st, owner) * matchupF(st, owner.isHome) * formQ(st, owner.isHome)) * (st.damp && st.fav === (owner.isHome ? 'home' : 'away') ? st.damp : 1);
                     if (owner.isHome) { st.stats.homeShots++; st.stats.homeXG += q1; } else { st.stats.awayShots++; st.stats.awayXG += q1; }
                     owner.oneOn = false;
                     if (Math.random() < q1) {
@@ -5980,17 +6006,18 @@
                     return;
                 }
             }
-            const maxD = solo ? -1 : (owner.trait === 'bold' ? 33 : 27) * (owner.role === 'DF' ? 0.7 : 1) * SHOT_RG * ((piV(owner) || {}).range || 1);
+            const maxD = solo ? -1 : Math.min(32, ((owner.trait === 'bold' ? 30 : 26) + ((piV(owner) || {}).range > 1 ? 3 : 0)) * (owner.role === 'DF' ? 0.8 : 1));   // 중거리는 최대 30m 안팎 (하프라인 난사 방지)
             if (d <= maxD) {
-                const will = (owner.trait === 'bold' ? 1.7 : 1) * ((piV(owner) || {}).will || 1) * (owner.role === 'FW' ? 1.15 : owner.role === 'DF' ? 0.5 : 1) * (owner.isHome ? st.M.freq : awayStyleMod(st, 'freq') * aiV(st, 'freq'));
+                const will = (owner.trait === 'bold' ? 1.4 : 1) * (owner.trait === 'selfish' ? 1.35 : 1) * ((piV(owner) || {}).will || 1) * (owner.role === 'FW' ? 1.15 : owner.role === 'DF' ? 0.5 : 1) * (owner.isHome ? st.M.freq : awayStyleMod(st, 'freq') * aiV(st, 'freq'));
                 let pShot = Math.min(0.92, 0.9 * will / (1 + Math.exp(-(q - SHOT_TH) * 45)));
                 if (d > 17) {                                                              // 더 몰고 들어갈 수 있으면 참고 전진 (무리한 중거리 억제)
                     const laneFree = !enemies.some(e => e.role !== 'GK' && (e.x - owner.x) * dir > 0 && (e.x - owner.x) * dir < 10 && Math.abs(e.y - owner.y) < 7);
-                    if (laneFree && minEnmD > 3) pShot *= owner.trait === 'bold' ? 0.35 : 0.15;
-                    else if (d > 22) pShot *= owner.trait === 'bold' ? 0.8 : 0.55;
+                    if (laneFree && minEnmD > 3) pShot *= owner.trait === 'bold' ? 0.25 : 0.12;
+                    else if (d > 22) pShot *= owner.trait === 'bold' ? 0.55 : 0.4;
+                    if (d > 26) pShot *= 0.5;                                              // 26m 이상은 정말 각이 날 때만
                 }
                 if (Math.random() < pShot) {
-                    const qq = Math.min(0.9, q * SHOT_K * (owner.isHome ? st.M.own * awayStyleMod(st, 'opp') * aiV(st, 'block') : st.M.opp * awayStyleMod(st, 'own') * (AWAY_OWN[st.awayStyle] || 1) * aiV(st, 'own')) * matchupF(st, owner.isHome) * formQ(st, owner.isHome)) * (st.damp && st.fav === (owner.isHome ? 'home' : 'away') ? st.damp : 1);
+                    const qq = Math.min(0.9, q * SHOT_K * clutchF(st, owner) * (owner.isHome ? st.M.own * awayStyleMod(st, 'opp') * aiV(st, 'block') : st.M.opp * awayStyleMod(st, 'own') * (AWAY_OWN[st.awayStyle] || 1) * aiV(st, 'own')) * matchupF(st, owner.isHome) * formQ(st, owner.isHome)) * (st.damp && st.fav === (owner.isHome ? 'home' : 'away') ? st.damp : 1);
                     if (owner.isHome) { st.stats.homeShots++; st.stats.homeXG += qq; } else { st.stats.awayShots++; st.stats.awayXG += qq; }
                     if (Math.random() < qq) {
                         st.playerStats[owner.id].goals++;
@@ -6012,6 +6039,7 @@
             if (styO === 'long' && oUo > 50 && owner.role !== 'FW') pPass += 0.25;                                                                    // 롱볼: 후방에서 오래 끌지 않음
             if (ctrO && Math.max(0, topS) > 10) pPass += 0.12;
             if (styO === 'poss') pPass += 0.05;
+            if (tr(owner, 'selfish')) pPass *= 0.75;
             if (owner.pi === 'dribble') pPass *= 0.7; else if (owner.pi === 'dropdeep') pPass *= 1.3; else if (owner.pi === 'hugline' && Math.abs(owner.y - 50) > 20 && oUo < 38) pPass += 0.15;   // 개인 지시
             // 역습·전환 중 전방 선수: 앞에 공간이 있거나 뒤로 주는 선택지밖에 없으면 볼을 몰고 간다 (추격 수비는 패스 이유가 아님)
             const transO = (justWon(st, owner.isHome) || ctrO) && oUo < 70 && owner.role !== 'DF';
@@ -6084,6 +6112,47 @@
             overlay.style.display = 'flex'; setTimeout(() => { overlay.style.display = 'none'; st.isPaused = false; }, 2000);
         }
 
+        // ===== 💬 팬 커뮤니티 반응 (경기 결과·기록에 따라 매번 다른 댓글) =====
+        const FAN_NICKS = ['축잘알', '직관러', '10년차팬', '눈팅러', '전술충', '새벽축구', '유니폼수집가', '시즌권보유', '원정석고인물', '하이라이트만봄', '풋매니아', '코너킥장인', '엠블럼문신', '주말직관', 'xG신봉자', '응원가반장'];
+        function fanReactions(st) {
+            const H = st.scoreHome, Aw = st.scoreAway, win = H > Aw || (H === Aw && st.penWinner === 'home'), lose = Aw > H || (H === Aw && st.penWinner === 'away'), draw = !win && !lose;
+            const X = st.stats, tp = (X.homePos + X.awayPos) || 1, pos = Math.round(X.homePos / tp * 100), en = st.enemy.name, gl = st.goalLog || [];
+            const mine = [...st.homePlayers, ...(st.homeOut || [])], R = st.ratings || {}, rt = p => parseFloat(R[p.id]) || 0;
+            const best = mine.reduce((b, p) => !b || rt(p) > rt(b) ? p : b, null), worst = mine.filter(p => !p.subIn).reduce((b, p) => !b || rt(p) < rt(b) ? p : b, null);
+            const scorers = mine.filter(p => (st.playerStats[p.id] || {}).goals > 0), hat = scorers.find(p => st.playerStats[p.id].goals >= 3);
+            const longG = gl.find(g => g.home && g.how === 'long'), lateW = win && gl.some(g => g.home && g.time >= 85 && g.homeBefore === g.awayBefore) && H - Aw === 1, comeback = win && gl.length && !gl[0].home;
+            const under = st.fav === 'away' && (st.gap || 0) >= 8, favL = st.fav === 'home' && (st.gap || 0) >= 8;
+            const L = [], add = (t, w = 1) => L.push({ t, w });
+            if (hat) add(`${hat.name} 해트트릭 실화냐 ㄷㄷ 오늘 경기공 가져가라`, 5);
+            if (longG) add(`${longG.scorer} 중거리 원더골 방금 몇 번 돌려봤는지 모르겠음 🚀`, 4);
+            if (lateW) add('후반 막판 결승골 ㅋㅋㅋ 이 맛에 축구 본다', 4);
+            if (comeback) add('선제골 먹고 뒤집는 거 보고 소름 돋음. 정신력 인정', 4);
+            if (win && under) add(`${en} 상대로 이긴다고? 오늘 전술 짠 감독 연봉 올려줘라`, 5);
+            if (lose && favL) add(`${en}한테 지는 건 좀… 오늘 경기는 반성해야 함`, 5);
+            if (best && rt(best) >= 8) add(`오늘 MOM은 무조건 ${best.name}. 평점 ${R[best.id]} 납득 완료`, 3);
+            if (worst && rt(worst) > 0 && rt(worst) < 5.8 && lose) add(`${worst.name} 오늘 컨디션 안 좋았나… 다음 경기는 벤치에서 쉬자`, 3);
+            if (win && Aw === 0) add('무실점 승리 ㅋㅋ 수비진 오늘 벽 세웠네', 3);
+            if (lose && pos >= 58) add(`점유율 ${pos}%인데 짐 ㅋㅋ 공만 돌리다 끝났다`, 3);
+            if (X.homeXG - X.awayXG > 0.8 && !win) add(`xG ${X.homeXG.toFixed(1)} vs ${X.awayXG.toFixed(1)}인데 못 이김… 결정력 무슨 일이야`, 3);
+            if (X.awayXG - X.homeXG > 0.8 && win) add('솔직히 오늘은 운이 좋았다. xG 보면 털린 경기', 3);
+            if ((X.home_rc || 0) > 0) add('퇴장 나온 순간 망한 줄 알았다… 카드 관리 좀', 3);
+            if (draw) add(pick(['무승부면 뭐… 나쁘지 않은데 아쉽다', '이길 수 있었던 경기 같은데 1% 부족', '승점 1점 가져온 걸로 만족하자']), 2);
+            if (win) add(pick(['오늘 경기 보니까 우승 각 나온다 ㄹㅇ', '이 폼 유지하면 된다 진짜', '경기력 미쳤다 오늘 치킨 시킴 🍗', '감독님 전술 이제 좀 알겠다']), 2);
+            if (lose) add(pick(['아 오늘 경기는 그냥 잊자… 다음 경기 이기면 됨', '전술 누가 짰냐 교체 타이밍 너무 늦음', '경기력은 괜찮았는데 결과가 아쉽다', '이 정도면 로테이션 좀 돌리자']), 2);
+            if (scorers.length && !hat) add(`${scorers.map(p => p.name).slice(0, 2).join(', ')} 골 넣을 때 소리 질러서 옆집에서 벽 침 ㅋㅋ`, 2);
+            add(pick(['경기장 분위기 미쳤었음 직관 추천', '하이라이트 언제 올라옴?', '다음 경기도 선발 이대로 가자', `${en} 팬들 반응 궁금하다 ㅋㅋ`]), 1);
+            const out = [], pool = [...L];
+            while (out.length < 4 && pool.length) { const tot = pool.reduce((a, x) => a + x.w, 0); let r = Math.random() * tot, i = 0; while ((r -= pool[i].w) > 0) i++; out.push(pool.splice(i, 1)[0]); }
+            return out.map((c, i) => ({ n: FAN_NICKS[Math.floor(Math.random() * FAN_NICKS.length)], t: c.t, like: Math.round((c.w * 40 + Math.random() * 120) * (i === 0 ? 2.2 : 1)) })).sort((a, b) => b.like - a.like);
+        }
+        function renderFanReactions(st) {
+            const el = document.getElementById('end-fans'); if (!el) return;
+            if (st.forfeit) { el.innerHTML = ''; return; }
+            const L = fanReactions(st);
+            el.innerHTML = `<div class="fan-box"><div class="fan-head">💬 팬 커뮤니티 반응 <small>${leagueEsc(teamName)} 갤러리 · 실시간</small></div>${L.map((c, i) => `<div class="fan-row"><span class="fan-nick">${i === 0 ? '<b class="fan-best">BEST</b> ' : ''}${c.n}</span><span class="fan-text">${leagueEsc(c.t)}</span><span class="fan-like">👍 ${c.like}</span></div>`).join('')}</div>`;
+        }
+        // 골 세리머니 멘트
+        const CELEB = ['무릎 슬라이딩 세리머니!', '관중석으로 달려가 팬들과 하이파이브!', '유니폼을 가리키며 엠블럼에 입맞춤!', '동료들이 한데 엉켜 기뻐합니다!', '코너 플래그 앞에서 춤을 춥니다 🕺', '손가락을 입에 대고 원정석을 조용히 시킵니다 🤫', '하늘을 가리키는 세리머니', '벤치로 달려가 감독과 포옹!'];
         function triggerGoal(isHome, scorer, time, assist, how) {
             let st = currentMatchState; st.isPaused = true;
             if (isHome && (how === 'volley' || how === 'header')) dailyOnGoal(how);
@@ -6102,6 +6171,7 @@
             [...st.homePlayers, ...st.awayPlayers].forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; });
             kickoff(st, !isHome); snapAll(st);
             comm(st, `⚽ ${how ? HOW[how] + '! ' : '골! '}${scorer} (${isHome ? teamName : st.enemy.name})${assist ? ' · 도움 ' + assist : ''} — ${st.scoreHome} : ${st.scoreAway}`, 'goal');
+            setTimeout(() => { if (currentMatchState === st) comm(st, how === 'long' ? `🚀 원더골! ${scorer}의 중거리포가 골망 상단을 찢어버립니다! ${pick(CELEB)}` : `🎉 ${scorer}, ${pick(CELEB)}`, 'goal'); }, 0);
 
             const overlay = document.getElementById('match-goal-overlay'); const info = document.getElementById('match-goal-info');
             info.innerHTML = `${how ? '<span class="text-yellow-300">' + HOW[how] + '!</span><br>' : ''}⚽ ${scorer} (${time}') <br> <span class="text-lg text-gray-400">${assist ? '도움: '+assist : ''}</span>`;
