@@ -197,7 +197,7 @@ export class MatchRoom extends DurableObject {
       const existing = await this.load();
       if (existing && existing.expiresAt > Date.now()) return this.reply({ error: 'occupied' }, 409);
       const { user, code } = await request.json();
-      const room = { kind: 'room', createdAt: Date.now(), expiresAt: Date.now() + 90 * 60_000, phase: 'waiting', half: 1, players: [{ id: user.id, ownerName: user.ownerName, ready: false }], pauseCounts: {}, pausedBy: null, tickets: {} };
+      const room = { kind: 'room', createdAt: Date.now(), expiresAt: Date.now() + 90 * 60_000, phase: 'waiting', half: 1, players: [{ id: user.id, ownerName: user.ownerName, ready: false }], pauseCounts: {}, pausedBy: null, pauseUsers: [], tickets: {} };
       room.code = code;
       await this.save(room); await this.ctx.storage.setAlarm(room.expiresAt);
       return this.reply({ ok: true, code, room: this.publicRoom(room) }, 201);
@@ -231,7 +231,7 @@ export class MatchRoom extends DurableObject {
       delete room.tickets[ticket]; await this.save(room);
       const pair = new WebSocketPair(); const client = pair[0], server = pair[1];
       this.ctx.acceptWebSocket(server); server.serializeAttachment({ userId: grant.userId });
-      server.send(JSON.stringify({ type: 'hello', room: this.publicRoom(room), role: room.players[0].id === grant.userId ? 'home' : 'away' }));
+      server.send(JSON.stringify({ type: 'hello', room: this.publicRoom(room), role: room.players[0].id === grant.userId ? 'home' : 'away' });
       return new Response(null, { status: 101, webSocket: client });
     }
     return this.reply({ error: 'unknown route' }, 404);
@@ -279,20 +279,35 @@ export class MatchRoom extends DurableObject {
       return this.broadcast({ type: 'emoji', userId: member.userId, emoji: event.emoji, at: now });
     }
     if (event.type === 'pause') {
-      if (room.phase !== 'playing' || room.pausedBy) return;
+      if (room.phase !== 'playing') return;
+      const pauseUsers = Array.isArray(room.pauseUsers) ? room.pauseUsers : (room.pausedBy ? [room.pausedBy] : []);
+      if (pauseUsers.includes(member.userId)) return;
+      // If the other player already paused, let this player join the same pause
+      // so both managers can edit tactics and substitutions at once.
+      if (room.pausedBy) {
+        pauseUsers.push(member.userId); room.pauseUsers = pauseUsers;
+        await this.save(room);
+        return this.broadcast({ type: 'pause_joined', userId: member.userId, pausedBy: room.pausedBy, pauseUsers });
+      }
       const counts = room.pauseCounts[room.half] || (room.pauseCounts[room.half] = {});
       const used = Number(counts[member.userId] || 0);
       if (used >= 3) return ws.send(JSON.stringify({ type: 'error', error: `이번 ${room.half === 1 ? '전반' : '후반'} 전술 정지 횟수를 다 썼어.` }));
-      counts[member.userId] = used + 1; room.pausedBy = member.userId; await this.save(room);
-      return this.broadcast({ type: 'paused', userId: member.userId, half: room.half, remaining: 3 - used - 1 });
+      counts[member.userId] = used + 1; room.pausedBy = member.userId; room.pauseUsers = [member.userId]; await this.save(room);
+      return this.broadcast({ type: 'paused', userId: member.userId, pausedBy: member.userId, pauseUsers: room.pauseUsers, half: room.half, remaining: 3 - used - 1 });
     }
     if (event.type === 'resume') {
-      if (room.pausedBy !== member.userId) return;
+      const pauseUsers = Array.isArray(room.pauseUsers) ? room.pauseUsers : (room.pausedBy ? [room.pausedBy] : []);
+      if (!pauseUsers.includes(member.userId)) return;
+      room.pauseUsers = pauseUsers.filter(id => id !== member.userId);
+      if (room.pauseUsers.length) {
+        room.pausedBy = room.pauseUsers[0]; await this.save(room);
+        return this.broadcast({ type: 'pause_left', userId: member.userId, pausedBy: room.pausedBy, pauseUsers: room.pauseUsers });
+      }
       room.pausedBy = null; await this.save(room); return this.broadcast({ type: 'resumed', userId: member.userId });
     }
     if (event.type === 'half' && player.id === room.players[0]?.id) {
       const next = Number(event.half);
-      if (next === 2 && room.half === 1) { room.half = 2; room.pausedBy = null; await this.save(room); return this.broadcast({ type: 'half', half: 2, pauseCounts: room.pauseCounts }); }
+      if (next === 2 && room.half === 1) { room.half = 2; room.pausedBy = null; room.pauseUsers = []; await this.save(room); return this.broadcast({ type: 'half', half: 2, pauseCounts: room.pauseCounts }); }
       return;
     }
     if (event.type === 'ready') {
@@ -307,6 +322,14 @@ export class MatchRoom extends DurableObject {
     if (event.type === 'state' && player.id === room.players[0]?.id) {
       if (JSON.stringify(event.state ?? {}).length > 12_000) return;
       return this.broadcast({ type: 'state', state: event.state, at: Date.now() }, member.userId);
+    }
+    if (event.type === 'goal' && player.id === room.players[0]?.id) {
+      const data = event.data || {};
+      const scorer = String(data.scorer || '').slice(0, 80), assist = String(data.assist || '').slice(0, 80);
+      const time = Number(data.time), scoreHome = Number(data.scoreHome), scoreAway = Number(data.scoreAway);
+      if (!scorer || !Number.isFinite(time) || !Number.isFinite(scoreHome) || !Number.isFinite(scoreAway)) return;
+      const allowedHow = new Set(['pk', 'fk', '1v1', 'header', 'volley', 'cut', 'long']);
+      return this.broadcast({ type: 'goal', userId: member.userId, data: { isHome: !!data.isHome, scorer, assist, time: Math.max(0, Math.min(120, time)), how: allowedHow.has(data.how) ? data.how : '', scoreHome: Math.max(0, scoreHome), scoreAway: Math.max(0, scoreAway) } }, member.userId);
     }
     if (event.type === 'tactic' || event.type === 'sub') {
       const payload = JSON.stringify(event.data ?? {}); if (payload.length > 2_000) return;
@@ -333,4 +356,4 @@ export class RateLimiter extends DurableObject {
     bucket.count++; await this.ctx.storage.put('bucket', bucket); return new Response('ok');
   }
   async alarm() { await this.ctx.storage.delete('bucket'); }
-    }
+                                              }
