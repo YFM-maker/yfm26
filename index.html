@@ -799,7 +799,7 @@
                 <div class="mt-score" id="match-score-away">0</div>
                 <div class="mt-name"><span id="match-enemy-name">적 팀</span><img id="match-enemy-logo" class="club-crest hidden" alt="상대 구단 엠블럼"><span class="kit" style="background:#dc2626"></span></div>
             </div>
-            <div class="mt-actions"><button id="btn-forfeit" class="mt-btn" onclick="forfeitMatch()" title="0:3 패배 처리">🏳️ 나가기</button><button id="btn-speed" class="mt-btn" onclick="toggleSpeed()">배속 x1</button><button id="btn-shout" class="mt-btn" onclick="openShouts()" title="10분간 효과가 이어지는 터치라인 지시 (경기당 3번)">📣 지시 3</button><button id="btn-tactics" class="mt-btn primary" onclick="openTactics()">⚙️ 전술 / 교체</button></div>
+            <div class="mt-actions"><button id="btn-forfeit" class="mt-btn" onclick="forfeitMatch()" title="0:3 패배 처리">🏳️ 나가기</button><button id="btn-speed" class="mt-btn" onclick="toggleSpeed()">배속 x1</button><button id="btn-shout" class="mt-btn" onclick="openShouts()" title="선수 심리에 따라 다른 반응 · 경기 시간 10분 쿨타임">📣 터치라인 외침</button><button id="btn-tactics" class="mt-btn primary" onclick="openTactics()">⚙️ 전술 / 교체</button></div>
         </div>
         <div class="poss-bar"><i id="poss-home" style="width:50%;background:#3b82f6"></i><i id="poss-away" style="width:50%;background:#ef4444"></i></div>
         <div class="mom-bar" title="경기 흐름(모멘텀): 최근 공격 점유·슈팅·득점으로 계산"><span class="mom-mid"></span><i id="mom-fill"></i><em id="mom-label"></em></div>
@@ -1183,7 +1183,22 @@
             'https://github.com/user-attachments/files/32595778/bgm4.mp3',
             'https://github.com/user-attachments/files/32595779/bgm5.mp3',
             'https://github.com/user-attachments/files/32595773/bgm6.mp3',
-            'https://github.com/user-attachments/files/32595775/bgm7.mp3'
+            'https://github.com/user-attachments/files/32595775/bgm7.mp3',
+            'https://github.com/user-attachments/files/32739730/Blur.-.Song.2.Lyrics.-.riot.wav.mp3',
+            'https://github.com/user-attachments/files/32739731/Jason.Derulo.-.Colors.Lyrics.-.Unique.Vibes.1.mp3',
+            'https://github.com/user-attachments/files/32739734/Glass.Animals.-.Heat.Waves.-.LatinHype.mp3',
+            'https://github.com/user-attachments/files/32739727/twenty.one.pilots.-.Midwest.Indigo.Lyrics.-.Strain.Music.mp3',
+            'https://github.com/user-attachments/files/32739733/Imagine.Dragons.-.On.Top.Of.The.World.Lyric.Video.-.ImagineDragonsVEVO.mp3',
+            'https://github.com/user-attachments/files/32739729/Celeste.-.Stop.This.Flame.Official.Lyric._.Audio.-.Celeste.mp3',
+            'https://github.com/user-attachments/files/32739735/No.More.s.-.Eazy-E.mp3',
+            'https://github.com/user-attachments/files/32739736/Portugal.The.Man.-.Feel.It.Still.Lyrics.-.cold.boy.mp3',
+            'https://github.com/user-attachments/files/32739732/The.White.Stripes.-.Seven.Nation.Army.Lyrics.-.EDM.Music.mp3',
+            'https://github.com/user-attachments/files/32739728/Love.Me.-.JMSN.mp3',
+            'https://github.com/user-attachments/files/32739738/60.S.CARDIN.-.Glen.Check.mp3',
+            'https://github.com/user-attachments/files/32739741/JUNGLE.-.TALK.ABOUT.IT.Lyrics.-.Sonic.Lyric.mp3',
+            'https://github.com/user-attachments/files/32739737/Jason.Derulo.-.Colors.Lyrics.-.Unique.Vibes.mp3',
+            'https://github.com/user-attachments/files/32739739/Bell.Biv.DeVoe.-.Poison.Lyrics.Tiktok.Song.Yo.Slick.blow.it.s.driving.me.out.of.my.mind.-.Twins.Lyrics.mp3',
+            'https://github.com/user-attachments/files/32739740/Garage.-.Kyan.Enzo.from.the.Block.ft.MU540.FC27.Soundtrack.-.favelamarek.mp3'
         ];
         let bgmPlayer = new Audio();
         bgmPlayer.volume = 0.3; 
@@ -1234,8 +1249,20 @@
             });
             updateBgmStateImage();
         }
-        function playNextBgm() { playBgmIndex(lastBgmIndex < 0 ? 0 : lastBgmIndex + 1); }
-        function playPreviousBgm() { playBgmIndex(lastBgmIndex < 0 ? bgmUrls.length - 1 : lastBgmIndex - 1); }
+        function bgmSongKey(index) {
+            const url = bgmUrls[index];
+            return url.includes('/Jason.Derulo.-.Colors.') ? 'jason-derulo-colors' : url;
+        }
+        function playNextBgm() {
+            const previousKey = lastBgmIndex < 0 ? null : bgmSongKey(lastBgmIndex);
+            const choices = bgmUrls.map((_, index) => index).filter(index => bgmSongKey(index) !== previousKey);
+            playBgmIndex(choices[Math.floor(Math.random() * choices.length)] ?? 0);
+        }
+        function playPreviousBgm() {
+            let index = lastBgmIndex < 0 ? Math.floor(Math.random() * bgmUrls.length) : (lastBgmIndex - 1 + bgmUrls.length) % bgmUrls.length;
+            while (bgmUrls.length > 1 && bgmSongKey(index) === bgmSongKey(lastBgmIndex)) index = (index - 1 + bgmUrls.length) % bgmUrls.length;
+            playBgmIndex(index);
+        }
         function hideBgmControls() {
             const panel = document.getElementById('bgm-controls'), toggle = document.getElementById('btn-bgm-toggle');
             if (panel) { panel.classList.add('hidden'); panel.style.display = 'none'; }
@@ -1292,7 +1319,7 @@
                 bgmPlayer.pause();
                 isBgmPlaying = false;
             } else {
-                if (!bgmPlayer.src) playBgmIndex(lastBgmIndex < 0 ? 0 : lastBgmIndex);
+                if (!bgmPlayer.src) { if (lastBgmIndex < 0) playNextBgm(); else playBgmIndex(lastBgmIndex); }
                 else { isBgmPlaying = true; bgmPlayer.play().catch(() => playNextBgm()); }
             }
             updateBgmStateImage();
@@ -3180,7 +3207,7 @@
         function effAttrs(p) { ensure(p); const d = getCalculatedOvr(p) - p.ovr, o = {}; ATTRS.forEach(k => o[k] = p.attr[k] + d); return o; }
         function actF(p) { const st = currentMatchState; return st && st.samun && p.isHome && st.time >= st.samun ? 1.08 : 1; }   // 사문쌤 응원: 활동량 +8%
         function talkF(p) { const st = currentMatchState; return st && p.isHome && st.talkF && st.htDone ? st.talkF : 1; }                // 하프타임 팀 토크
-        function A(p, k) { return (p.attr ? p.attr[k] : p.ovr) * stamF(p) * (p.ace && currentMatchState && currentMatchState.time >= 75 ? 1.04 : 1) * talkF(p) * (p.mkF || 1) * (p.pf || 1) * (p.mkA && (k === 'sho' || k === 'pas' || k === 'dri') ? p.mkA : 1); }
+        function A(p, k) { return (p.attr ? p.attr[k] : p.ovr) * stamF(p) * (p.ace && currentMatchState && currentMatchState.time >= 75 ? 1.04 : 1) * talkF(p) * psychFactor(p,k) * (p.mkF || 1) * (p.pf || 1) * (p.mkA && (k === 'sho' || k === 'pas' || k === 'dri') ? p.mkA : 1); }
         function mor(p) { return p.morale === undefined ? 70 : p.morale; }
         function moraleF(p) { return 0.97 + mor(p) / 100 * 0.06; }
         function moodEmoji(p) { const m = mor(p); return m >= 85 ? '😊' : m >= 70 ? '🙂' : m >= 50 ? '😐' : m >= 30 ? '😕' : '😡'; }
@@ -3477,7 +3504,7 @@
             if (!st.breakKind) return startSecondHalf();
             const kind = st.breakKind; st.breakKind = null;
             document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
-            if (kind === 'et') { st.maxTime = 120; st.subsLeft += 1; st.shouts = shoutsLeft(st) + 1; updateShoutBtn(st); }
+            if (kind === 'et') { st.maxTime = 120; st.subsLeft += 1; updateShoutBtn(st); }
             allOf(st).forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; p.stam = Math.min(100, (p.stam ?? 100) + (kind === 'et' ? 6 : 3)); });
             kickoff(st, kind === 'et'); snapAll(st); SFX.whistle(); comm(st, kind === 'et' ? '▶ 연장 전반 시작 (교체 1명 추가)' : '▶ 연장 후반 시작', 'info');
             st.isPaused = false; st.last = performance.now(); st.acc = 0;
@@ -3659,7 +3686,8 @@
                 if (p.stam === undefined) p.stam = 100;
                 const base = (p.role === 'GK' ? 0.008 : 0.23 + (100 - rawA(p, 'sta')) / 100 * 0.32) * (p.trait === 'engine' ? 0.8 : 1) * (p.piFat || 1) / actF(p) / actF(p);
                 const run = Math.min(1.3, 0.85 + Math.hypot(p.vx || 0, p.vy || 0) / 1.6);   // 많이 뛰어도 소모 증가폭은 완만하게
-                p.stam = Math.max(0, p.stam - base * run * (p.isHome ? (st.M.fat || 1) : 1) * MIN_PER_TICK);
+                const passionFatigue=p.isHome&&p.psychEffects?.some(e=>e.until>st.time)?1+Math.max(0,psychValue(p,'motivation',st)-p.psych.motivation)*.003:1;
+                p.stam = Math.max(0, p.stam - base * run * (p.isHome ? (st.M.fat || 1) : 1) * passionFatigue * MIN_PER_TICK);
                 if (p.role !== 'GK' && p.stam < 25 && Math.random() < 0.00006) injure(st, p);
                 if (p.isHome && !p.tiredWarned && p.stam < 35) { p.tiredWarned = true; comm(st, `⚠️ ${p.name} 선수가 많이 지쳐 보입니다 (체력 ${Math.round(p.stam)}%)`, 'warn'); }
             });
@@ -4147,64 +4175,147 @@
         // ===== 경기 중 개입 (beta41): 결정의 순간 카드 · 터치라인 지시 =====
         // 터치라인 지시: 경기마다 풀에서 4장이 무작위로 '오늘의 지시'로 뽑히고, 쓰면 새 카드로 바뀌며, 하프타임에 2장이 교체됨
         const SHOUTS = {
-            push: { n: '🔥 몰아붙여!', d: '내 슈팅 +8% · 압박 +1명 · 라인↑ · 체력 소모 +25% · 상대 슈팅 +4%', b: { h: 1.08, a: 1.04, press: 1, fat: 1.25, line: 3 } },
-            focus: { n: '🧱 집중해! 지켜!', d: '상대 슈팅 -10% · 라인↓ · 내 슈팅 -6%', b: { h: 0.94, a: 0.90, line: -3 } },
-            calm: { n: '🎯 침착하게 돌려', d: '패스 정확도 +3% · 체력 소모 -15% · 내 슈팅 +2%', b: { acc: 0.03, fat: 0.85, h: 1.02 } },
-            waste: { n: '⏱️ 시간 끌어', d: '경기 시계 +20% · 상대 슈팅 -8% · 내 슈팅 -12% · 경고 위험 30%', b: { h: 0.88, a: 0.92, fat: 0.8 }, need: st => st.scoreHome > st.scoreAway, why: '이기고 있을 때만' },
-            wide: { n: '💨 측면으로 벌려!', d: '양 측면을 터치라인까지 벌림 (폭 +30%) · 크로스 공격 · 내 슈팅 +4%', b: { wide: 1.3, h: 1.04 } },
-            shoot: { n: '💥 슈팅 아끼지 마!', d: '슈팅 시도 +35% · 대신 슈팅 품질 -3%', b: { freq: 1.35, h: 0.97 } },
-            gegen: { n: '🐺 게겐프레싱!', d: '압박 +2명 · 태클 시도↑ · 상대 슈팅 -5% · 내 슈팅 +3% · 체력 소모 +35%', b: { press: 2, tackAtt: 0.12, fat: 1.35, a: 0.95, h: 1.03, line: 4 } },
-            counter: { n: '⚡ 뺏으면 바로 역습!', d: '전환 속도↑ · 공격수 더 높이 · 내 슈팅 +6% · 상대 슈팅 +3%', b: { speed: 1.08, fwd: 4, h: 1.06, a: 1.03 } },
-            ace: { n: '⭐ 에이스한테 공 줘!', d: '우리 에이스 능력치 +8% · 내 슈팅 +2%', b: { h: 1.02 }, need: st => st.homePlayers.some(p => p.ace && !p.isRedCarded && p.role !== 'GK'), why: '에이스가 뛰고 있을 때', pf: st => st.homePlayers.filter(p => p.ace).map(p => [p.id, 1.08]) },
-            captain: { n: '💬 주장, 앞장서!', d: '주장 능력치 +8% · 내 슈팅 +4% · 상대 슈팅 -3%', b: { h: 1.04, a: 0.97 }, need: st => st.homePlayers.some(p => p.isCaptain && !p.isRedCarded), why: '주장이 뛰고 있을 때', pf: st => st.homePlayers.filter(p => p.isCaptain).map(p => [p.id, 1.08]) },
-            gamble: { n: '🎲 모 아니면 도!', d: '50%: 내 슈팅 +15% / 50%: 상대 슈팅 +10%', roll: () => Math.random() < 0.5 ? [{ h: 1.15 }, '선수들이 과감하게 올라갑니다! 성공!'] : [{ a: 1.10 }, '뒷공간이 휑하게 열렸습니다… 실패'] },
-            slow: { n: '🧊 템포 죽여', d: '경기 속도 -15% · 상대 슈팅 -7% · 내 슈팅 -5% · 체력 소모 -20%', b: { speed: 0.85, a: 0.93, h: 0.95, fat: 0.8 }, need: st => st.scoreHome >= st.scoreAway, why: '지고 있지 않을 때' },
-            final: { n: '🔔 마지막 총공세!', d: '내 슈팅 +15% · 상대 슈팅 +12% · 라인 최대 · 압박 +1', b: { h: 1.15, a: 1.12, line: 6, press: 1, fwd: 3 }, need: st => st.time >= 78 && st.scoreHome <= st.scoreAway, why: '78분 이후 · 이기고 있지 않을 때' },
-            physical: { n: '💪 몸싸움에서 밀리지 마!', d: '태클 시도↑ · 상대 슈팅 -5% · 경고 위험 15%', b: { tackAtt: 0.1, a: 0.95 }, card: 0.15 },
-            setpiece: { n: '📐 세트피스로 승부!', d: '코너킥 헤더 결정력 +30% · 측면 폭 +10%', b: { wide: 1.1, h: 1.01, setp: 1.3 } },
-            fans: { n: '📣 관중을 깨워라!', d: '분위기 반전 (흐름 게이지 +) · 내 슈팅 +5% · 상대 슈팅 -3%', b: { h: 1.05, a: 0.97 }, fx: st => { if (st.momo) st.momo.v = Math.min(100, st.momo.v + 35); } },
-            breathe: { n: '🫁 숨 좀 돌려!', d: '전원 체력 +6 · 체력 소모 -40% · 속도 -8% · 내 슈팅 -3%', b: { fat: 0.6, speed: 0.92, h: 0.97 }, fx: st => st.homePlayers.forEach(p => { if (!p.isRedCarded) p.stam = Math.min(100, (p.stam ?? 100) + 6); }) },
-            trap: { n: '🚩 라인 올려서 오프사이드!', d: '오프사이드 트랩 가동 · 라인↑ · 상대 슈팅 -4% · 뒷공간 위험', b: { trap: 1, line: 4, a: 0.96, breakOpp: 1.1 } },
-            short: { n: '🔄 짧게짧게 연결해', d: '패스 정확도 +4% · 패스 빈도↑ · 전진 속도↓', b: { acc: 0.04, passF: 1.2, speed: 0.95 } }
+            encourage: { n:'격려하기', d:'접전·실점 직후 자신감과 사기를 끌어올림' },
+            calm: { n:'진정시키기', d:'흥분·반칙을 줄이고 수비 집중력을 높임' },
+            focus: { n:'집중시키기', d:'경기 막판과 한 골 차 리드에서 실수를 줄임' },
+            passion: { n:'열정 불어넣기', d:'투지를 높이지만 과열되면 반칙과 체력 부담 증가' },
+            relax: { n:'긴장 풀어주기', d:'긴장한 선수의 자신감을 되찾음' },
+            demand: { n:'강하게 요구하기', d:'무기력할 때 자극하지만 부담이 될 수도 있음' },
+            praise: { n:'칭찬하기', d:'좋은 경기력에 보상, 성급하면 방심할 수 있음' },
+            criticize: { n:'질책하기', d:'정신력을 자극하지만 위축과 불만 위험이 큼' }
         };
+        const PSY_KEYS = ['morale','focus','confidence','nervousness','motivation','frustration'];
         const BOOST_NAMES = { 'm-rally': '🗣️ 다독임', 'm-adjust': '📋 재정비', 'm-roar': '😤 호통', 'm-more': '⚡ 추가골', 'm-calm': '🧊 지키기', 'm-break': '⚡ 뒷공간', 'm-lock': '🧱 잠그기', 'm-long': '💥 중거리', 'm-patience': '🔄 인내', 'm-allin': '🔥 올인', 'm-safe': '🛡️ 신중', 'm-subs': '🔄 교체 승부', 'm-ten': '🟥 10명 대응', 'm-man': '➕ 수적 우위', 'm-own': '🙅 우리 축구' };
-        function renderBoostBadge(st) {
-            const el = document.getElementById('boost-badge'); if (!el) return;
-            const L = liveBoosts(st), name = b => /^s-/.test(b.src) ? (SHOUTS[b.src.slice(2)] || {}).n || '지시' : BOOST_NAMES[b.src] || '효과';
-            el.innerHTML = L.map(b => `<span title="${b.h !== 1 ? '내 슈팅 ' + Math.round((b.h - 1) * 100) + '% ' : ''}${b.a !== 1 ? '상대 슈팅 ' + Math.round((b.a - 1) * 100) + '%' : ''}">${name(b)}${b.until ? ` ${Math.max(0, Math.ceil(b.until - st.time))}'` : ''}</span>`).join('');
+        function psychInit(p) {
+            if (p.psych) return;
+            const seed = rnd(hash(p.id || p.name), 81);
+            p.psych = { morale: p.isHome ? mor(players.find(x => x.id === p.id) || p) : 70,
+                focus: 62 + Math.round(seed*24), confidence: 55 + Math.round(seed*28),
+                nervousness: 22 + Math.round((1-seed)*22), motivation: 60 + Math.round(seed*25),
+                frustration: 14 + Math.round((1-seed)*13) };
+            p.psychEffects = [];
+            p.psychResilience = Math.max(0, Math.min(1, 0.25 + rnd(hash(p.id || p.name), 82)*0.6 + ((p.ovr||70)-75)/450 + (p.trait==='engine'?.07:0) - (p.age&&p.age<=22?.09:0)));
         }
-        function shoutsLeft(st) { return st.shouts === undefined ? 3 : st.shouts; }
-        function drawShout(st, not) { const pool = Object.keys(SHOUTS).filter(k => !(st.shoutDeck || []).includes(k) && !(not || []).includes(k)); return pool[Math.floor(Math.random() * pool.length)]; }
-        function dealShouts(st, n) {   // 오늘의 지시 카드: 처음엔 4장, 하프타임엔 2장을 새로 뽑음
-            st.shoutDeck = st.shoutDeck || [];
-            if (!st.shoutDeck.length) { for (let i = 0; i < 4; i++) st.shoutDeck.push(drawShout(st)); return; }
-            for (let i = 0; i < n; i++) { const j = Math.floor(Math.random() * st.shoutDeck.length), old = st.shoutDeck[j]; st.shoutDeck[j] = drawShout(st, [old]) || old; }
+        function psychAdjust(p, changes) {
+            psychInit(p);
+            for (const [key,value] of Object.entries(changes)) p.psych[key]=Math.max(0,Math.min(100,p.psych[key]+value));
+        }
+        function psychValue(p, key, st) {
+            psychInit(p);
+            let v=p.psych[key];
+            if (st) for (const e of p.psychEffects) v += (e.delta[key]||0)*Math.max(0,Math.min(1,(e.until-st.time)/(e.until-e.start)));
+            return Math.max(0,Math.min(100,v));
+        }
+        function psychFactor(p, k) {
+            const st=currentMatchState;
+            if (!st || !p.isHome || !p.psychEffects?.some(e=>e.until>st.time)) return 1;
+            const d=key=>psychValue(p,key,st)-p.psych[key];
+            let n=d('morale')*.001+d('focus')*(k==='def'||k==='pas'?.0019:.00065)
+                +d('confidence')*(k==='sho'||k==='dri'?.002:.00075)
+                +d('motivation')*(k==='pac'||k==='phy'?.0015:.0008)
+                -d('nervousness')*(k==='sho'||k==='pas'?.0014:.0008)
+                -d('frustration')*.001;
+            return Math.max(.93,Math.min(1.07,1+n));
+        }
+        function psychFoulRisk(p, st) {
+            if (!p.isHome || !p.psychEffects?.some(e=>e.until>st.time)) return 1;
+            const d=key=>psychValue(p,key,st)-p.psych[key];
+            return Math.max(.8,Math.min(1.32,1+d('frustration')*.012+d('nervousness')*.007+d('motivation')*.003-d('focus')*.005));
+        }
+        function renderBoostBadge(st) {
+            const el=document.getElementById('boost-badge');if(!el)return;
+            const names=liveBoosts(st).map(b=>BOOST_NAMES[b.src]||'경기 효과');
+            if(st.shoutLast&&st.shoutLast.until>st.time)names.push(`📣 ${SHOUTS[st.shoutLast.key].n} ${Math.ceil(st.shoutLast.until-st.time)}'`);
+            el.replaceChildren(...names.map(n=>{const x=document.createElement('span');x.textContent=n;return x;}));
+        }
+        function shoutContext(st) {
+            const diff=st.scoreHome-st.scoreAway, last=(st.goalLog||[]).at(-1), recent=last&&st.time-last.time<=6?last:null;
+            const x=st.stats, shots=(x.homeShots||0)-(x.awayShots||0), xg=(x.homeXG||0)-(x.awayXG||0);
+            const poor=st.time>15&&(shots<=-3||xg<-.65||(x.homeShots||0)<2&&st.time>30);
+            const carded=st.homePlayers.filter(p=>p.cards>0&&!p.isRedCarded).length;
+            const tense=st.homePlayers.filter(p=>!p.isRedCarded&&psychValue(p,'nervousness',st)>=65).length;
+            return {diff,recent,poor,carded,tense,important:['career','europa','worldcup'].includes(st.mode),stronger:st.homePlayers.reduce((v,p)=>v+p.ovr,0)>st.awayPlayers.reduce((v,p)=>v+p.ovr,0)*1.05};
+        }
+        function shoutFit(k,st,p,c) {
+            const m=key=>psychValue(p,key,st),low=m('motivation')<50, nervous=m('nervousness')>65,conf=m('confidence')<45;
+            const ps=st.playerStats[p.id]||{}, individualPoor=Number(liveRating(st,p))<5.8 || (ps.pass||0)>=5&&(ps.passOk||0)/(ps.pass||1)<.55;
+            switch(k) {
+            case 'encourage':return (c.diff===0||c.diff===-1||c.recent&&!c.recent.home?1:0)+(conf?1:0)-(c.diff>=3||m('morale')>90?2:0);
+            case 'calm':return (c.carded>=2||m('frustration')>60||nervous||c.diff>0&&st.time>=70?1:0)-(c.diff<0&&low?2:0);
+            case 'focus':return (st.time>=70&&c.diff===1?2:0)+(c.poor||m('focus')<55?1:0)-(c.diff>=3||st.time<20&&m('focus')>75?2:0);
+            case 'passion':return (c.diff<0||st.time>=45&&low?1:0)+(low?1:0)-(c.carded>=2||c.diff>0&&st.time>=70||m('frustration')>65?2:0);
+            case 'relax':return (nervous?2:0)+(c.important&&nervous?1:0)-(c.diff<=-2&&low||st.time>=75&&m('focus')<55?2:0);
+            case 'demand':return ((c.poor||individualPoor)&&c.diff<=0?2:0)+(c.stronger&&c.diff<0?1:0)-(nervous||!c.poor&&!individualPoor||c.diff>=3||c.diff<=-3?2:0);
+            case 'praise':return (c.diff>=2||c.recent?.home?2:0)+(c.stronger===false&&c.diff>0?1:0)-(c.diff<0||c.diff===0&&c.poor||st.time<15&&!c.recent?2:0);
+            case 'criticize':return (c.diff<=-2&&(c.poor||individualPoor)?2:0)+((c.poor||individualPoor)&&low?1:0)-(nervous||conf||!c.poor&&!individualPoor||c.diff>0?2:0);
+            }
+            return 0;
+        }
+        function shoutChanges(k, good, p, st) {
+            const delta={};const r=(a,b)=>Math.round(a+Math.random()*(b-a));const v=(key,a,b)=>delta[key]=r(a,b);
+            if(good) {
+                if(k==='encourage'){v('morale',5,12);v('confidence',4,10);v('motivation',4,8);v('nervousness',-5,-2);}
+                if(k==='calm'){v('nervousness',-15,-8);v('frustration',-12,-6);v('focus',3,8);}
+                if(k==='focus'){v('focus',8,15);v('nervousness',0,2);}
+                if(k==='passion'){v('motivation',10,18);v('confidence',3,7);v('nervousness',3,6);}
+                if(k==='relax'){v('nervousness',-20,-10);v('confidence',5,10);v('focus',2,5);}
+                if(k==='demand'){v('motivation',8,15);v('focus',4,8);}
+                if(k==='praise'){v('morale',8,15);v('confidence',8,15);v('motivation',2,5);v('nervousness',-6,-3);}
+                if(k==='criticize'){v('motivation',8,15);v('focus',5,10);}
+            } else {
+                if(k==='encourage'){v('frustration',2,5);v('focus',-4,-1);}
+                if(k==='calm'){v('motivation',-8,-3);v('focus',-4,-1);}
+                if(k==='focus'){v('nervousness',5,10);v('confidence',-5,-2);}
+                if(k==='passion'){v('frustration',5,10);v('nervousness',7,12);v('focus',-6,-2);}
+                if(k==='relax'){v('focus',-7,-3);v('motivation',-6,-3);}
+                if(k==='demand'){v('nervousness',8,15);v('confidence',-10,-5);v('frustration',5,10);}
+                if(k==='praise'){v('focus',-10,-5);v('motivation',-7,-3);}
+                if(k==='criticize'){v('morale',-20,-10);v('confidence',-20,-10);v('nervousness',5,15);v('frustration',8,18);}
+            }
+            return delta;
         }
         function openShouts() {
-            const st = currentMatchState; if (!st || st.ended || st.isPaused || st.userPaused) return;
-            const el = document.getElementById('moment-card'); if (!el) return;
-            if (!st.shoutDeck || !st.shoutDeck.length) dealShouts(st);
-            const left = shoutsLeft(st), act = liveBoosts(st).find(b => /^s-/.test(b.src));
-            st.userPaused = true;
-            el.innerHTML = `<div class="mc-box"><div class="mc-kicker">📣 터치라인 지시 · 남은 횟수 ${left}/3 · 오늘의 지시 카드</div><div class="mc-title">선수들에게 무엇을 외칠까요?</div>${act ? `<div class="mc-q">지금 적용 중: <b>${(SHOUTS[act.src.slice(2)] || {}).n}</b> (${Math.max(0, Math.ceil(act.until - st.time))}분 남음) · 새 지시를 내리면 교체돼요</div>` : '<div class="mc-q">효과는 10분 동안 이어져요. 쓴 카드는 새 카드로 바뀌고, 하프타임에 2장이 교체돼요.</div>'}<div class="mc-opts">${st.shoutDeck.map(k => { const v = SHOUTS[k]; if (!v) return ''; const ok = !v.need || v.need(st), dis = !left || !ok; return `<button class="mc-opt" ${dis ? 'disabled' : ''} onclick="doShout('${k}')"><b>${v.n}</b><small>${v.d}${!ok && v.why ? ` · <span style="color:#fca5a5">${v.why}</span>` : ''}</small></button>`; }).join('')}</div><button class="mc-skip" onclick="closeMoment()">닫기</button></div>`;
+            const st=currentMatchState;if(!st||st.ended||st.isPaused||st.userPaused)return;
+            const el=document.getElementById('moment-card');if(!el)return;
+            const remaining=Math.max(0,10-(st.time-(st.shoutAt??-100)));
+            st.userPaused=true;
+            el.innerHTML=`<div class="mc-box"><div class="mc-kicker">📣 터치라인 외침</div><div class="mc-title">선수들에게 무엇을 외칠까요?</div><div class="mc-q">선수 성향과 경기 흐름에 따라 같은 말에도 다르게 반응해. 효과는 10~15분 동안 서서히 사라져.${remaining>0?` 다음 외침까지 ${Math.ceil(remaining)}분`:''}</div><div class="mc-opts" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px">${Object.entries(SHOUTS).map(([k,v])=>`<button class="mc-opt" ${remaining>0?'disabled':''} onclick="doShout('${k}')"><b>${v.n}</b><small>${v.d}</small></button>`).join('')}</div><button class="mc-skip" onclick="closeMoment()">닫기</button></div>`;
             el.classList.remove('hidden');
         }
         function doShout(k) {
-            const st = currentMatchState, v = SHOUTS[k]; if (!st || !v || !shoutsLeft(st) || (v.need && !v.need(st))) return;
-            st.shouts = shoutsLeft(st) - 1; st.boosts = (st.boosts || []).filter(b => !/^s-/.test(b.src));
-            let b = v.b || {}, extra = '';
-            if (v.roll) { const [rb, msg] = v.roll(); b = rb; extra = ' — ' + msg; }
-            const pf = v.pf ? Object.fromEntries(v.pf(st)) : null;
-            addBoost(st, { src: 's-' + k, until: st.time + 10, ...b, ...(pf ? { pf } : {}) });
-            if (v.fx) v.fx(st);
-            comm(st, `📣 감독의 지시: "${v.n.replace(/^\S+\s/, '')}" (10분)${extra}`, 'sub'); toast(v.n);
-            { const j = st.shoutDeck.indexOf(k); if (j >= 0) st.shoutDeck[j] = drawShout(st, [k]) || k; }
-            const cardRisk = k === 'waste' ? 0.3 : v.card || 0;
-            if (k === 'waste') st.wasteUntil = st.time + 10;
-            if (cardRisk && Math.random() < cardRisk) { const c = st.homePlayers.filter(p => !p.isRedCarded && p.role !== 'GK' && !p.cards); if (c.length) { const p = c[Math.floor(Math.random() * c.length)]; closeMoment(); setTimeout(() => { if (currentMatchState === st && !st.ended) { comm(st, k === 'waste' ? `🟨 주심이 시간 지연을 지적합니다` : `🟨 거친 몸싸움에 주심이 카드를 꺼냅니다`, 'warn'); triggerCard(p, 'yellow', Math.floor(st.time)); } }, 300); updateShoutBtn(st); return; } }
-            closeMoment(); updateShoutBtn(st);
+            const st=currentMatchState,v=SHOUTS[k];if(!st||!v||st.ended||st.time-(st.shoutAt??-100)<10)return;
+            const c=shoutContext(st),repeat=(st.shoutCounts ||= {})[k]||0,scale=repeat===0?1:repeat===1?.5:.2;
+            st.shoutCounts[k]=repeat+1;st.shoutAt=st.time;st.shoutLast={key:k,until:st.time+15};
+            const responses=[];
+            for(const p of st.homePlayers.filter(x=>!x.isRedCarded)) {
+                psychInit(p);
+                const fit=shoutFit(k,st,p,c),res=p.psychResilience,nervous=psychValue(p,'nervousness',st),conf=psychValue(p,'confidence',st);
+                let chance=.48+fit*.14+(res-.5)*.42+(psychValue(p,'morale',st)-65)*.002-(nervous-40)*.003;
+                if(k==='criticize'||k==='demand')chance+=(res-.5)*.42-(conf<40?.14:0);
+                if(k==='relax')chance+=(nervous-50)*.006;
+                if(repeat>=2)chance-=.35;
+                chance=Math.max(.06,Math.min(.92,chance));
+                const roll=Math.random(),state=roll<chance*.3?2:roll<chance?1:roll<chance+.12?0:roll>Math.min(.99,chance+.8)?-2:-1;
+                const delta=state===0?{}:shoutChanges(k,state>0,p,st);
+                for(const key of Object.keys(delta))delta[key]=Math.round(delta[key]*scale*(state===2?1.2:state===-2?1.25:1));
+                if(Object.keys(delta).length)p.psychEffects.push({start:st.time,until:st.time+15,delta});
+                p.psychEffects=p.psychEffects.filter(e=>e.until>st.time).slice(-5);
+                const text=state===2?'크게 힘을 얻음':state===1?'긍정적으로 반응함':state===0?'별다른 반응 없음':state===-1?'부담을 느낌':'의욕이 크게 꺾임';
+                responses.push({name:p.name,state,text});
+            }
+            comm(st,`📣 선수들에게 ${v.n} 외침! ${repeat?'같은 외침 반복으로 반응 감소 · ':''}좋은 반응 ${responses.filter(x=>x.state>0).length}명 / 나쁜 반응 ${responses.filter(x=>x.state<0).length}명`,'sub');
+            responses.slice(0,4).forEach(x=>comm(st,`${x.state>0?'😊':x.state<0?'😟':'😐'} ${x.name} — ${x.text}`,x.state<0?'warn':'info'));
+            const el=document.getElementById('moment-card');
+            if(el)el.innerHTML=`<div class="mc-box"><div class="mc-kicker">📣 ${v.n}</div><div class="mc-title">선수들의 반응</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px">${responses.map(x=>`<div style="border-radius:8px;padding:5px 8px;background:${x.state>0?'#064e3b':x.state<0?'#7f1d1d':'#374151'};font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.state>0?'😊':x.state<0?'😟':'😐'} ${leagueEsc(x.name)} · ${x.text}</div>`).join('')}</div><button class="mc-skip" onclick="closeMoment()">경기 계속하기</button></div>`;
+            updateShoutBtn(st);renderBoostBadge(st);
+            setTimeout(()=>{if(currentMatchState===st&&!st.ended&&st.userPaused&&el&&!el.classList.contains('hidden'))closeMoment();},2600);
         }
-        function updateShoutBtn(st) { const b = document.getElementById('btn-shout'); if (b) { b.textContent = `📣 지시 ${shoutsLeft(st)}`; b.disabled = !shoutsLeft(st); b.style.opacity = shoutsLeft(st) ? '' : '.45'; } }
+        function updateShoutBtn(st) {
+            const b=document.getElementById('btn-shout');if(!b)return;
+            const remaining=Math.max(0,10-(st.time-(st.shoutAt??-100)));
+            b.textContent=remaining>0?`📣 외침 ${Math.ceil(remaining)}'`:'📣 터치라인 외침';
+            b.disabled=st.ended||remaining>0;b.style.opacity=b.disabled?'.5':'';
+        }
         const MOMENTS = {
             conceded: { t: '😣 실점 직후', q: st => `${st.enemy.name}에게 실점했습니다 (${st.scoreHome}:${st.scoreAway}). 선수들이 고개를 숙였습니다.`, o: [
                 { n: '🗣️ 주장을 불러 다독인다', d: '주장이 뛰고 있으면 확실, 아니면 55% · 12분간 내 슈팅 +6% · 상대 슈팅 -4%', f: st => { const cap = st.homePlayers.find(p => p.isCaptain && !p.isRedCarded); if (cap || Math.random() < 0.55) { addBoost(st, { src: 'm-rally', h: 1.06, a: 0.96, until: st.time + 12 }); return `${cap ? cap.name + '(주장)이 ' : ''}선수들을 모아 다독입니다! 눈빛이 달라졌습니다`; } return '다독였지만 분위기가 쉽게 살아나지 않습니다…'; } },
@@ -4476,7 +4587,7 @@
             const st = currentMatchState; if (!st) return;
             document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
             allOf(st).forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; p.stam = Math.min(100, (p.stam ?? 100) + 10); if (p.stam >= 35) p.tiredWarned = false; });
-            kickoff(st, false); snapAll(st); SFX.whistle(); comm(st, '▶ 후반 시작', 'info'); cpuHalftimeAdapt(st); dealShouts(st, 2); comm(st, `📣 오늘의 지시 카드 교체: ${st.shoutDeck.map(k => SHOUTS[k].n).join(' · ')}`, 'sub');
+            kickoff(st, false); snapAll(st); SFX.whistle(); comm(st, '▶ 후반 시작', 'info'); cpuHalftimeAdapt(st); updateShoutBtn(st);
             st.isPaused = false; st.last = performance.now(); st.acc = 0;
         }
 
@@ -5095,14 +5206,14 @@
             const st = currentMatchState, engine = document.getElementById('match-engine'); engine.innerHTML = ''; matchElements = {};
             document.getElementById('match-pitch-lines').innerHTML = PITCH_H;
             const sh = document.createElement('div'); sh.id = 'match-ball-shadow'; engine.appendChild(sh); matchElements.shadow = sh;
-            allOf(st).forEach(p => { p.stam = p.isHome ? matchStartStam(players.find(q => q.id === p.id) || {}, st.mode) : (st.mode === 'rogue' && st.enemy.rogue && st.enemy.rogue.trait === 'tired' ? 80 : 100); p.stam0 = p.stam; makeDot(p); });
+            allOf(st).forEach(p => { p.stam = p.isHome ? matchStartStam(players.find(q => q.id === p.id) || {}, st.mode) : (st.mode === 'rogue' && st.enemy.rogue && st.enemy.rogue.trait === 'tired' ? 80 : 100); p.stam0 = p.stam; psychInit(p); makeDot(p); });
             const ballEl = document.createElement('div'); ballEl.id = 'match-ball'; engine.appendChild(ballEl); matchElements.ball = ballEl;
             ['l', 'r'].forEach(sd => { const n = document.createElement('div'); n.className = 'goal-net goal-net-' + sd; n.id = 'goal-net-' + sd; engine.appendChild(n); });
             const spm = document.createElement('div'); spm.className = 'sp-marker'; engine.appendChild(spm); matchElements.spm = spm;
             const ofl = document.createElement('div'); ofl.className = 'off-line'; engine.appendChild(ofl); matchElements.offl = ofl;
             document.getElementById('match-half').innerText = '전반';
             document.getElementById('match-comm').innerHTML = '';
-            document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden'); dismissSubRec(); { const mc = document.getElementById('moment-card'); if (mc) mc.classList.add('hidden'); } st.shoutDeck = []; dealShouts(st); updateShoutBtn(st);
+            document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden'); dismissSubRec(); { const mc = document.getElementById('moment-card'); if (mc) mc.classList.add('hidden'); } updateShoutBtn(st);
             kickoff(st, true); snapAll(st); render(st, 16, 1); updateSide(st);
             setTimeout(() => { const F = st.forms; if (!F) return; comm(st, `${VENUE[st.venue].i} ${VENUE[st.venue].n} · 오늘의 폼 — ${teamName} ${FORMS[F.h].n} / ${st.enemy.name} ${FORMS[F.a].n}`, 'info'); }, 0);
             comm(st, `🏁 킥오프! ${teamName} vs ${st.enemy.name}`, 'info');
@@ -5139,7 +5250,7 @@
                     st.alpha = st.isPaused ? 1 : Math.min(1, st.acc / step);
                 }
                 render(st, dt, st.alpha); updateClock(st, st.isPaused || st.userPaused ? 0 : st.alpha);
-                if (now - st.lastUi > 400) { st.lastUi = now; updateSide(st); }
+                if (now - st.lastUi > 400) { st.lastUi = now; updateSide(st); updateShoutBtn(st); renderBoostBadge(st); }
                 requestAnimationFrame(loop);
             };
             requestAnimationFrame(loop);
@@ -5203,13 +5314,13 @@
             if (closestEnemy && minEnmD < 5) {
                 const dv = A(owner, 'dri') * (owner.trait === 'dribbler' ? 1.08 : 1) + (owner.pi === 'dribble' ? 5 : 0) - A(closestEnemy, 'def');
                 const pBreak = Math.min(0.45, 0.07 * Math.exp(dv / 26)) * (owner.trait === 'dribbler' ? 1.3 : 1) * (owner.pi === 'dribble' ? 1.2 : 1) * (owner.isHome ? 1 : st.M.breakOpp);
-                if (Math.random() < pBreak) { if (Math.random() < 0.025 * (closestEnemy.name === '이주진' ? 3 : 1) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1)) { commitFoul(st, closestEnemy, owner, allPlayers); return; } owner.dash = 6; closestEnemy.stun = 4; lastAssistId = null; } // 뚫리면 전술적 파울 가능
+                if (Math.random() < pBreak) { if (Math.random() < 0.025 * (closestEnemy.name === '이주진' ? 3 : 1) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * psychFoulRisk(closestEnemy,st)) { commitFoul(st, closestEnemy, owner, allPlayers); return; } owner.dash = 6; closestEnemy.stun = 4; lastAssistId = null; } // 뚫리면 전술적 파울 가능
                 else {
                     { const lx = (owner.x - closestEnemy.x) * 0.2, ly = (owner.y - closestEnemy.y) * 0.2, lm = Math.hypot(lx, ly) || 1, c = Math.min(1, 0.9 / lm); closestEnemy.x += lx * c; closestEnemy.y += ly * c; }
                     const ta = closestEnemy.isHome ? st.M.tackAtt : 0.25, dv2 = (A(owner, 'dri') + A(owner, 'phy')) / 2 - A(closestEnemy, 'def');
                     if (Math.random() < ta) {
                         addStat(st, closestEnemy, 'tackle');
-                        if (Math.random() < Math.min(closestEnemy.name === '이주진' ? 0.4 : 0.11, FOUL_BASE * Math.exp(dv2 / 70) * (closestEnemy.name === '이주진' ? 3 : 1)) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * (inBoxOf(owner.isHome, owner.x, owner.y) ? 4 : 1)) { commitFoul(st, closestEnemy, owner, allPlayers); return; }
+                        if (Math.random() < Math.min(closestEnemy.name === '이주진' ? 0.4 : 0.11, FOUL_BASE * Math.exp(dv2 / 70) * (closestEnemy.name === '이주진' ? 3 : 1)) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * (inBoxOf(owner.isHome, owner.x, owner.y) ? 4 : 1) * psychFoulRisk(closestEnemy,st)) { commitFoul(st, closestEnemy, owner, allPlayers); return; }
                         if (Math.random() < Math.min(0.9, 0.28 * Math.exp(-dv2 / 26))) { addStat(st, closestEnemy, 'tackleWon'); st.ball.ownerId = closestEnemy.id; st.lastPoss = closestEnemy.isHome; return; }
                     }
                 }
@@ -5318,6 +5429,7 @@
             if (type === 'yellow') { player.cards += 1; if (player.cards >= 2) isRedOut = true; } 
             else { player.cards += 2; isRedOut = true; }
             if (isRedOut) { player.isRedCarded = true; if (player.role === 'GK') replaceExpelledKeeper(st, player); queueMoment(st, player.isHome ? 'redUs' : 'redThem'); }
+            psychAdjust(player,{nervousness:isRedOut?12:7,frustration:isRedOut?13:7,focus:-3});
             comm(st, isRedOut ? `🟥 ${player.name} 퇴장!` : `🟨 ${player.name} 경고`, 'card');
             addStat(st, player, type === 'yellow' ? 'yc' : 'rc'); if (isRedOut && type === 'yellow') addStat(st, player, 'rc');
 
@@ -5346,6 +5458,10 @@
             st.goalLog ||= []; st.goalLog.push({home:isHome,time:Number(time)||0,homeBefore:st.scoreHome,awayBefore:st.scoreAway,scorer,how});
             if(isHome) { st.scoreHome++; document.getElementById('match-score-home').innerText = st.scoreHome; }
             else { st.scoreAway++; document.getElementById('match-score-away').innerText = st.scoreAway; }
+            allOf(st).filter(p=>!p.isRedCarded).forEach(p=>{
+                const scored=p.isHome===isHome;
+                psychAdjust(p,scored?{morale:4,confidence:p.name===scorer?9:4,motivation:3,nervousness:-2}:{morale:-4,confidence:-3,nervousness:5,frustration:3});
+            });
             if (!isHome && st.scoreHome <= st.scoreAway) queueMoment(st, 'conceded'); else if (isHome && st.scoreHome - st.scoreAway === 1) queueMoment(st, 'lead');
             
             [...st.homePlayers, ...st.awayPlayers].forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; });
