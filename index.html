@@ -577,22 +577,6 @@
             #screen-lobby .fm-tip { flex:0 1 auto;width:max-content;max-width:calc(100vw - 160px);height:auto;min-height:2.6em;overflow:visible; }
             #screen-lobby .fm-tip-text { width:max-content;max-width:calc(100vw - 160px);word-break:keep-all;overflow-wrap:normal; }
         }
-
-/* Account gate and local profile */
-#yfm-auth-gate{position:fixed;inset:0;z-index:999999;background:rgba(5,8,23,.97);display:flex;align-items:center;justify-content:center;padding:18px;color:#f8fafc}
-#yfm-auth-gate[hidden]{display:none}
-.yfm-auth-panel{width:min(100%,410px);max-height:95vh;overflow:auto;padding:27px;background:#151b32;border:1px solid #7285bd;border-radius:22px;box-shadow:0 25px 90px #000b}
-.yfm-auth-panel h2{font-weight:900;font-size:24px;margin-bottom:8px}
-.yfm-auth-panel input:not([type=checkbox]){width:100%;background:#080e21;border:1px solid #7583a2;border-radius:10px;padding:11px;margin:6px 0 13px;color:white}
-.yfm-auth-panel label{display:block;font-size:13px;font-weight:700}
-.yfm-auth-panel button{padding:10px 14px;border-radius:10px;font-weight:800;background:#6949d3;color:white}
-.yfm-auth-panel button:disabled{opacity:.4}
-#yfm-auth-error{min-height:22px;color:#fda4af;font-size:13px;margin:8px 0}
-#yfm-account-widget{margin-top:auto;border-top:1px solid #575178;padding:12px 3px 2px;display:flex;align-items:center;gap:9px;min-width:0;color:white}
-.yfm-avatar{height:37px;width:37px;border-radius:50%;object-fit:cover;background:#49379d;flex:none;cursor:pointer}
-#yfm-account-name{font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#yfm-account-widget button{font-size:10px;color:#ddd0ff;text-decoration:underline}
-@media(max-width:760px){#yfm-account-widget{position:fixed;bottom:76px;left:6px;z-index:48;background:#121024;padding:4px 8px;border:1px solid #51457c;border-radius:22px}#yfm-account-widget .yfm-avatar{height:26px;width:26px}}
 </style>
 <style>
 #screen-mode-select>div{flex-wrap:wrap;align-content:center} #screen-mode-select>div>div{width:320px;height:320px} @media(max-width:740px){#screen-mode-select>div{align-content:flex-start}}
@@ -789,7 +773,6 @@
                     <button class="fm-nav-item" onclick="openSave()"><span class="fm-ico">💾</span><span>저장 관리</span></button>
                     <button class="fm-nav-item" onclick="replayTutorial()"><span class="fm-ico">📖</span><span>튜토리얼</span></button>
                 </nav>
-                <div id="yfm-account-widget"><img class="yfm-avatar" id="yfm-avatar" alt="내 프로필" onclick="document.getElementById('yfm-avatar-file').click()"><input id="yfm-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="setYfmAvatar(this)"><div style="min-width:0;flex:1"><div id="yfm-account-name">로그인 필요</div><div id="yfm-cloud-status" style="font-size:10px;color:#a5f3fc;cursor:pointer" onclick="resolveYfmCloudConflict()" title="클라우드 저장 상태"></div><button type="button" onclick="logoutYfm()">로그아웃</button></div></div>
             </aside>
             <main class="fm-main">
                 <header class="fm-top">
@@ -822,18 +805,6 @@
         </div>
     </div>
 
-    <div id="screen-friendly" class="screen bg-gradient-dark flex-col overflow-y-auto p-5 sm:p-10">
-        <button onclick="switchScreen('screen-lobby')" class="text-left text-sky-300 font-bold mb-6">← 로비</button>
-        <div class="w-full max-w-2xl mx-auto bg-gray-900 border border-sky-700 rounded-2xl p-6 space-y-5">
-            <h2 class="text-3xl font-black">🌐 온라인 친선경기</h2>
-            <p class="text-gray-300 text-sm">각자의 선발 11명으로 경기해. 방장이 경기를 계산하고 두 화면에 중계해. 전후반마다 각자 전술·교체 정지 3회, 한 번당 15초.</p>
-            <div class="flex flex-wrap gap-3"><button onclick="friendlyCreate()" class="fm-btn pri">4자리 방 만들기</button><input id="friendly-join-code" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4자리 코드" class="bg-gray-800 rounded-xl p-3 w-32 text-white font-black tracking-widest"><button onclick="friendlyJoin()" class="fm-btn">코드로 참가</button></div>
-            <div class="text-4xl font-black text-sky-300" id="friendly-code"></div><div id="friendly-status" role="status" class="text-sm text-gray-300 min-h-8">팀 관리에서 선발 11명을 구성한 뒤 방을 만들어줘.</div>
-            <div id="friendly-pause-count" class="text-xs text-gray-400"></div>
-            <p class="text-xs text-gray-400">경기 기록은 친선전으로만 남으며 토큰·미션·선수 체력·구단주 랭킹에는 영향을 주지 않아. 초대 코드는 생성 후 2시간 동안 유효해.</p>
-        </div>
-    </div>
-
     <!-- 일일 미션 / 업적 -->
     <div id="mission-modal" class="fixed inset-0 bg-black/90 z-[70] hidden flex-col items-center justify-center p-2 sm:p-5 backdrop-blur-md">
       <div class="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-2xl max-h-[94vh] max-h-[94dvh] flex flex-col min-h-0">
@@ -851,7 +822,7 @@
     <!-- 2. 게임 모드 선택 화면 -->
     <div id="screen-mode-select" class="screen bg-gradient-dark flex-col relative">
         <button onclick="switchScreen('screen-lobby')" class="absolute top-6 left-6 text-2xl font-bold hover:text-blue-400">&lt; 로비로 돌아가기</button>
-        <div class="flex flex-1 items-center justify-start gap-5 p-8 pt-24 overflow-auto">
+        <div class="flex flex-1 items-center justify-center gap-5 p-8 pt-24 overflow-auto">
             <div class="w-96 h-96 shrink-0 bg-gray-800 rounded-3xl border-4 border-yellow-500 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition shadow-[0_0_40px_rgba(234,179,8,0.3)] group" onclick="switchScreen('screen-saudi')">
                 <span class="text-7xl mb-4 group-hover:scale-110 transition">💰</span>
                 <h2 class="text-4xl font-black text-yellow-500 mb-2">사우디 모드</h2>
@@ -866,7 +837,6 @@
                 <span class="text-7xl mb-4">🏟️</span><h2 class="text-4xl font-black text-emerald-400 mb-2">리그 모드</h2>
                 <p class="text-gray-400 font-bold text-center px-6">K리그2 → 프리미어리그<br>14개 리그 승격 도전 · 모든 팀과 한 번씩</p>
             </div>
-            <div class="w-80 h-96 shrink-0 bg-gray-800 rounded-3xl border-4 border-cyan-400 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition" onclick="switchScreen('screen-friendly')"><span class="text-7xl mb-4">🌐</span><h2 class="text-3xl font-black text-cyan-300 mb-2">온라인 친선</h2><p class="text-gray-400 font-bold text-center px-6">4자리 코드로 친구와 경기</p></div>
             <div class="w-80 h-96 shrink-0 bg-gray-800 rounded-3xl border-4 border-fuchsia-500 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition shadow-[0_0_40px_rgba(217,70,239,0.3)] relative" onclick="switchScreen('screen-rogue')">
                 <span class="absolute top-4 right-4 text-xs font-black bg-fuchsia-500 text-white px-2 py-1 rounded-full">NEW</span>
                 <span class="text-7xl mb-4">🎲</span><h2 class="text-4xl font-black text-fuchsia-300 mb-2">로그라이크</h2>
@@ -933,11 +903,6 @@
             </div>
             <div class="mt-actions"><button id="btn-forfeit" class="mt-btn" onclick="forfeitMatch()" title="0:3 패배 처리">🏳️ 나가기</button><button id="btn-speed" class="mt-btn" onclick="toggleSpeed()">배속 x1</button><button id="btn-shout" class="mt-btn" onclick="openShouts()" title="선수 심리에 따라 다른 반응 · 경기 시간 10분 쿨타임">📣 터치라인 외침</button><button id="btn-tactics" class="mt-btn primary" onclick="openTactics()">⚙️ 전술 / 교체</button></div>
         </div>
-        <div id="friendly-match-controls" class="hidden bg-slate-950/90 border-b border-sky-700 px-3 py-1 flex-wrap items-center gap-2 text-xs font-bold" style="z-index:22;position:relative">
-            <span id="friendly-countdown">▶ 경기 진행 중</span><button onclick="friendlyPause()" class="mt-btn">⏸ 전술·교체 (15초)</button>
-            <span class="text-gray-400">감정표현:</span><button onclick="friendlySendEmoji('😜')">😜</button><button onclick="friendlySendEmoji('😂')">😂</button><button onclick="friendlySendEmoji('😢')">😢</button><button onclick="friendlySendEmoji('😡')">😡</button><button onclick="friendlySendEmoji('😎')">😎</button>
-            <button onclick="friendlyLeave()" class="ml-auto text-red-300">나가기</button><span id="friendly-reaction" class="hidden bg-fuchsia-900 text-white rounded-lg px-2 py-1"></span>
-        </div>
         <div class="poss-bar"><i id="poss-home" style="width:50%;background:#3b82f6"></i><i id="poss-away" style="width:50%;background:#ef4444"></i></div>
         <div class="mom-bar" title="경기 흐름(모멘텀): 최근 공격 점유·슈팅·득점으로 계산"><span class="mom-mid"></span><i id="mom-fill"></i><em id="mom-label"></em></div>
 
@@ -955,11 +920,6 @@
         </div>
         <div id="match-comm" class="match-comm"></div>
 
-        <div id="friendly-guest-panel" class="hidden absolute inset-0 z-[66] bg-black/95 flex-col p-4 sm:p-8 overflow-y-auto gap-4">
-            <div class="flex justify-between gap-2 items-center"><b class="text-xl">원정팀 전술 · 교체</b><button class="fm-btn" onclick="document.getElementById('friendly-guest-panel').classList.replace('flex','hidden')">닫기</button></div>
-            <p class="text-gray-300 text-xs">전술과 교체를 선택하면 방장 경기 화면에 적용돼. 15초 뒤 자동 재개돼.</p><div id="friendly-guest-tactic" class="flex flex-wrap gap-2"></div><div id="friendly-guest-instr" class="text-sm"></div><div id="friendly-guest-sub" class="overflow-y-auto max-h-[54vh]"></div>
-        </div>
-        <div id="friendly-guest-result" class="hidden absolute inset-0 z-[67] bg-black/90 flex-col items-center justify-center gap-5 text-3xl font-black text-center p-6"></div>
         <div id="pk-overlay" class="absolute inset-0 z-[56] hidden flex-col items-center justify-center bg-black/85 backdrop-blur-sm p-6">
             <div class="text-lg font-bold text-yellow-300 mb-1">승부차기</div>
             <div id="pk-score" class="text-6xl font-black mb-6">0 : 0</div>
@@ -1331,16 +1291,6 @@
             <button id="match-audio-loading-button" type="button" class="mt-5 hidden w-full rounded-lg bg-sky-500 px-4 py-3 font-bold text-white" onclick="launchPreparedMatch()">▶ 경기 시작</button>
         </div>
     </div>
-<div id="yfm-auth-gate" role="dialog" aria-modal="true" aria-label="YFM 로그인">
- <form class="yfm-auth-panel" onsubmit="submitYfmAuth(event)">
- <h2>⚽ YFM 계정</h2><p style="font-size:13px;color:#cbd5e1;margin-bottom:15px">게임을 시작하려면 로그인하거나 아이디를 만들어줘.</p>
- <div style="display:flex;gap:8px;margin-bottom:16px"><button type="button" id="yfm-tab-login" onclick="setYfmAuthMode(false)">로그인</button><button type="button" id="yfm-tab-register" onclick="setYfmAuthMode(true)">회원가입</button></div>
- <label for="yfm-username">아이디 (3~10자, 영문·숫자·! @ # ^ *)</label><input id="yfm-username" autocomplete="username" required minlength="3" maxlength="10" pattern="[A-Za-z0-9!@#^*]{3,10}">
- <label for="yfm-password">비밀번호 (5~15자, 영문·숫자·! @ # ^ *)</label><input id="yfm-password" type="password" autocomplete="current-password" required minlength="5" maxlength="15" pattern="[A-Za-z0-9!@#^*]{5,15}">
- <p style="color:#fb7185;font-size:13px;font-weight:900;line-height:1.5;margin:3px 0 14px">⚠️ 다른 사이트에서 쓰는 비밀번호는 절대 사용하지 마세요. 이 게임 전용 비밀번호를 새로 만드세요. 비밀번호를 잊으면 이메일 없이 복구할 수 없습니다.</p>
- <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><input id="yfm-remember" type="checkbox"> 로그인 유지 (이 브라우저에서 계속 로그인)</label>
- <div id="yfm-auth-error" role="alert"></div><button id="yfm-auth-submit" type="submit" style="width:100%">로그인</button>
- </form></div>
     <!-- ================= 단일 자바스크립트 블록 ================= -->
     <script>
         let activeEffectSkip=null;
@@ -2659,7 +2609,7 @@
             if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(OWNER_RANK_URL)) throw new Error('HTML의 OWNER_RANK_URL에 프로젝트 URL을 입력해줘.');
             if (!OWNER_RANK_PUBLISHABLE_KEY.startsWith('sb_publishable_') && !OWNER_RANK_PUBLISHABLE_KEY.startsWith('eyJ')) throw new Error('HTML의 OWNER_RANK_PUBLISHABLE_KEY에 Supabase Publishable key를 입력해줘.');
             if (!window.supabase?.createClient) throw new Error('Supabase 연결 스크립트를 불러오지 못했어. 인터넷 연결을 확인해줘.');
-            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true,storage:yfmAuthStorage}});
+            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true}});
             return ownerRankClient;
         }
         async function checkOwnerRankRegistration() {
@@ -2704,8 +2654,8 @@
             if (day!==ownerRankDay) {ownerRankDay=day;if(document.querySelector('.screen.active')?.id==='screen-owner-rank') loadOwnerRank();}
             if (ownerRankRegistered) queueOwnerRankSync();
         },60000);
-        document.addEventListener('visibilitychange',()=>{if(!document.hidden && yfmAccount){checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});}});
-        setTimeout(()=>{if(yfmAccount)checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});},2500);
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});}});
+        setTimeout(()=>checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{}),2500);
         async function loadOwnerRank() {
             const mine = document.getElementById('owner-rank-mine'), list = document.getElementById('owner-rank-list');
             const starters = players.filter(p => p.isStarting);
@@ -2741,7 +2691,12 @@
                 if (await checkOwnerRankRegistration()) return ownerRankStatus('이미 등록된 구단이야. 이후 OVR은 자동으로 저장돼.');
                 let { data: { session }, error: sessionError } = await client.auth.getSession();
                 if (sessionError) throw sessionError;
-                if (!session?.user?.id || session.user.is_anonymous) throw new Error('왼쪽 아래에서 아이디로 로그인해줘.');
+                if (!session) {
+                    const result = await client.auth.signInAnonymously();
+                    if (result.error) throw result.error;
+                    session = result.data.session;
+                }
+                if (!session?.user?.id) throw new Error('익명 로그인에 실패했어.');
                 const club=teamName.trim().slice(0,12)||'내 팀',ovr=getTeamOvr();
                 const { error } = await client.from('owner_rankings').insert({user_id:session.user.id,club_name:club,average_ovr:ovr,pending_ovr:ovr});
                 if (error) throw error;
@@ -3095,7 +3050,7 @@
 
         const globalSideNav = document.querySelector('#screen-lobby .fm-side');
         if (globalSideNav) { globalSideNav.id = 'fm-global-side'; document.body.appendChild(globalSideNav); }
-        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7,'screen-friendly':1};
+        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7};
         function updatePersistentNav(screenId) {
             const show = screenId !== 'screen-match'; document.body.classList.toggle('has-global-nav', show); document.body.classList.toggle('in-match', !show);
             document.querySelectorAll('#fm-global-side .fm-nav-item').forEach((button,index)=>button.classList.toggle('active', show && index===navScreenIndex[screenId]));
@@ -5481,7 +5436,6 @@
             if (mode === 'league') { const cc = clubById(e.id); if (cc) e = { ...e, lineup: clubLineup(cc), formation: clubForm(cc) }; }
             if (mode === 'worldcup' && worldCupNationalPlayers(e)) e = { ...e, lineup: null, formation: '4-3-3' };
             if (mode === 'career' || mode === 'europa') { const cc = clClub(e.name); if (cc) e = { ...e, lineup: clubLineup(cc), formation: clubForm(cc) }; else if (CUP_EXTRA_ROSTERS[e.name]) { const pool = CUP_EXTRA_ROSTERS[e.name], used = { GK:0, DF:0, MF:0, FW:0 }; e = { ...e, formation:'4-3-3', lineup: formationsLayouts['4-3-3'].map(slot => ({name:pool[slot.pos][used[slot.pos]++],pos:slot.pos})) }; } }
-            if (mode === 'friendly' && e.onlineTeam) { const team=e.onlineTeam; return {formation:formationsLayouts[team.formation]?team.formation:'4-3-3',list:team.players.map(p=>({...p,det:p.pos})),ace:-1}; }
             const formation = e.formation && formationsLayouts[e.formation] ? e.formation : '4-2-3-1', layout = formationsLayouts[formation];
             const used = { GK: 0, DF: 0, MF: 0, FW: 0 }, nums = { GK: [1, 12, 23], DF: [2, 3, 4, 5, 15], MF: [6, 8, 10, 14, 16], FW: [9, 7, 11, 17, 19] };
             const names = layout.map((slot, i) => { const c = e.lineup && e.lineup[i], k = used[slot.pos]++; const national = mode === 'worldcup' && worldCupNationalPlayers(e); return c ? (c.name || c) : national?.[slot.pos]?.[k] || `${e.name} ${nums[slot.pos][k] || 20 + k}번`; });
@@ -5544,8 +5498,8 @@
         }
         function getAwayRoster(mode, e) {
             const k = lineupKey(mode, e);
-            if (mode !== 'friendly' && preLineup && preLineup.k === k && preLineup.r && preLineup.r.list && !((mode === 'worldcup' && worldCupNationalPlayers(e) || mode === 'europa' && CUP_EXTRA_ROSTERS[e.name]) && preLineup.r.list.some(p => / \d+번$/.test(p.name)))) return preLineup.r;
-            const r = buildAwayRoster(mode, e); if (mode === 'friendly') return r; preLineup = { k, r };
+            if (preLineup && preLineup.k === k && preLineup.r && preLineup.r.list && !((mode === 'worldcup' && worldCupNationalPlayers(e) || mode === 'europa' && CUP_EXTRA_ROSTERS[e.name]) && preLineup.r.list.some(p => / \d+번$/.test(p.name)))) return preLineup.r;
+            const r = buildAwayRoster(mode, e); preLineup = { k, r };
             try { localStorage.setItem('fm_prelineup', JSON.stringify(preLineup)); } catch (x) {}
             return r;
         }
@@ -5827,8 +5781,8 @@
             awayLayout.forEach((slot, idx) => {
                 const R = roster.list[idx] || { name: `CPU ${slot.pos}`, ovr: Math.round(Number(enemyData.ovr) || 60) }, pName = R.name;
                 let mappedX = slot.x * 0.45 + 50;
-                const playerOvr = R.ovr + (mode === 'friendly' ? 0 : AWAY_ADJ); // 표시 OVR은 그대로, 내부 밸런스 보정치만 더함
-                awayPlayers.push({ id: mode === 'friendly' ? 'guest_'+R.id : 'cpu_'+idx, name: pName, ovr: playerOvr, displayOvr: R.ovr, attr: mode === 'friendly' ? R.attr : genAttr(playerOvr, slot.pos, pName), det: slotDetail(slot), rl: roleFor(mode === 'friendly' ? R.attr : genAttr(playerOvr, slot.pos, pName), slotDetail(slot)), trait: mode === 'friendly' ? R.trait : traitOf(pName, slot.pos), role: slot.pos, baseX: mappedX, baseY: 100 - slot.y, x: mappedX, y: 100 - slot.y, targetX: mappedX, targetY: 100 - slot.y, isHome: false, phase: Math.random()*100, isRedCarded: false, cards: 0 });
+                const playerOvr = R.ovr + AWAY_ADJ; // 표시 OVR은 그대로, 내부 밸런스 보정치만 더함
+                awayPlayers.push({ id: 'cpu_'+idx, name: pName, ovr: playerOvr, displayOvr: R.ovr, attr: genAttr(playerOvr, slot.pos, pName), det: slotDetail(slot), rl: roleFor(genAttr(playerOvr, slot.pos, pName), slotDetail(slot)), trait: traitOf(pName, slot.pos), role: slot.pos, baseX: mappedX, baseY: 100 - slot.y, x: mappedX, y: 100 - slot.y, targetX: mappedX, targetY: 100 - slot.y, isHome: false, phase: Math.random()*100, isRedCarded: false, cards: 0 });
                 if (idx === roster.ace) awayPlayers[awayPlayers.length - 1].star = true;
             });
 
@@ -5849,7 +5803,7 @@
             if (mode === 'league') { currentMatchState.leagueRound = leagueState.round; currentMatchState.leagueSeason = leagueState.season; currentMatchState.leaguePlayoff = !!enemyData.playoff; }
             currentMatchState.forms = forms; currentMatchState.venue = venue; currentMatchState.formBase = matchFormation; currentMatchState.formF = { h: formationFactor(homeLayout, matchFormation), a: formationFactor(awayLayout, enemyFormation) }; setupMiracle(currentMatchState);
 
-            document.getElementById('match-mode-text').innerText = mode === 'friendly' ? '온라인 친선경기' : mode === 'league' ? leagueMatchLabel(enemyData) : mode === 'saudi' ? '사우디 모드' : mode === 'rogue' ? prematchLabel('rogue', enemyData) : mode === 'europa' ? `유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}` : mode === 'worldcup' ? `월드컵 ${worldCupState.round}` : (careerState.round === 2 ? '결승전' : `${careerState.round}강 ${careerState.leg}차전`);
+            document.getElementById('match-mode-text').innerText = mode === 'league' ? leagueMatchLabel(enemyData) : mode === 'saudi' ? '사우디 모드' : mode === 'rogue' ? prematchLabel('rogue', enemyData) : mode === 'europa' ? `유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}` : mode === 'worldcup' ? `월드컵 ${worldCupState.round}` : (careerState.round === 2 ? '결승전' : `${careerState.round}강 ${careerState.leg}차전`);
             document.getElementById('match-enemy-name').innerText = enemyData.name; 
             const enemyLogo = document.getElementById('match-enemy-logo'), enemyLogoUrl = enemyData.logo || clubLogoUrl(enemyData.id || enemyData.name);
             enemyLogo.src = enemyLogoUrl || ''; enemyLogo.classList.toggle('hidden', !enemyLogoUrl);
@@ -5858,7 +5812,6 @@
             document.getElementById('match-score-away').innerText = '0';
             updateTeamNameUI();
             
-            if (mode === 'friendly') { currentMatchState.awaySubsLeft=5; currentMatchState.awayOutIds=[]; }
             document.getElementById('btn-tactics').style.display = 'block'; document.getElementById('btn-forfeit').style.display = 'block'; { const bs = document.getElementById('btn-shout'); if (bs) bs.style.display = ''; } closeTactics();
             switchScreen('screen-match'); initEngineUI(); prepareMatchAudioAndStart(currentMatchState);
         }
@@ -5894,7 +5847,7 @@
                 if (currentMatchState !== st || st.ended) return;
                 const dt = Math.min(100, now - st.last); st.last = now;
                 const step = SIM_MS / matchSpeed * (st.mode === 'saudi' ? SAUDI_STEP : 1) * (st.sp && st.sp.kind === 'corner' ? 1.7 : st.cornerHold ? 1.25 : 1); // 코너킥 정렬은 천천히, 공은 적당히
-                if (!st.isPaused && !st.userPaused && !st.friendlyPause) {
+                if (!st.isPaused && !st.userPaused) {
                     st.acc += dt;
                     while (st.acc >= step) {
                         st.acc -= step; saveSnap(st); st.time += MIN_PER_TICK * (st.mode === 'saudi' ? SAUDI_TIME : 1) * (st.wasteUntil && st.time < st.wasteUntil ? 1.2 : 1);
@@ -6169,7 +6122,7 @@
             const endAwayLogo = st.enemy.logo || clubLogoUrl(st.enemy.id || st.enemy.name);
             document.getElementById('end-away-logo').innerHTML = endAwayLogo ? `<img class="club-crest club-crest-user-large" src="${leagueEsc(endAwayLogo)}" alt="${leagueEsc(st.enemy.name)} 엠블럼" onerror="this.style.display='none'">` : '<span class="text-3xl" aria-hidden="true">🛡️</span>';
             let rewardText = ""; let userWon = st.scoreHome > st.scoreAway; let draw = st.scoreHome === st.scoreAway;
-            if (!st.forfeit && st.mode !== 'friendly') { dailyOnMatch(st.scoreHome, st.scoreAway); dailyOnHard(st); }
+            if (!st.forfeit) { dailyOnMatch(st.scoreHome, st.scoreAway); dailyOnHard(st); }
             const gdBonus = userWon ? (st.scoreHome - st.scoreAway) * 10 : 0;
 
             let totalPos = st.stats.homePos + st.stats.awayPos;
@@ -6704,12 +6657,11 @@
         function saveMsg(t, bad) { const m = document.getElementById('save-msg'); m.innerText = t; m.className = 'text-sm mt-3 font-bold ' + (bad ? 'text-red-400' : 'text-emerald-400'); }
         function collectSave() {
             saveData(); if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_stats', JSON.stringify(S));
-            const o = { app: 'YFM', v: 23, at: new Date().toISOString(), owner_id:yfmAccount?.id, owner_name:yfmAccount?.username, data: {} };
+            const o = { app: 'YFM', v: 22, at: new Date().toISOString(), data: {} };
             for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('fm_')) o.data[k] = localStorage.getItem(k); }
             return o;
         }
         function exportSave() {
-            if (!yfmAccount) return saveMsg('로그인 후 내보낼 수 있어.',true);
             const o = collectSave(), d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: 'application/json' }));
             a.download = `yfm_save_${teamName.replace(/[^\w가-힣]/g, '')}_${stamp}.json`; document.body.appendChild(a); a.click(); a.remove();
@@ -6731,7 +6683,7 @@
                 keys.forEach(k => localStorage.removeItem(k));
                 localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
                 localStorage.setItem('fm_tutorial_pending_v1', '1');                        // 새 스토리는 항상 튜토리얼부터
-                window.__wiping = true; yfmCloudLast=''; setTimeout(() => {window.__wiping=false;yfmCloudSave(true).finally(()=>location.reload());}, 700);
+                window.__wiping = true; setTimeout(() => location.reload(), 700);
             } catch (e) {
                 if (backupUrl) URL.revokeObjectURL(backupUrl);
                 saveMsg('백업 파일을 만들거나 새 파일로 전환하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도하세요.', true);
@@ -6740,7 +6692,6 @@
         function applySave(o) {
             try {
                 if (!o || o.app !== 'YFM' || !o.data || !Array.isArray(JSON.parse(o.data.fm_players || 'null'))) throw 0;
-                if (!yfmAccount || !o.owner_id || o.owner_id !== yfmAccount.id || o.owner_name?.toLowerCase() !== yfmAccount.username.toLowerCase()) {saveMsg('다른 아이디의 저장 파일은 불러올 수 없어.',true);return;}
                 if (Number(o.v) < 22 || o.data.fm_beta_test_save_version !== BETA_TEST_SAVE_VERSION) { saveMsg('이전 베타 버전의 저장 파일은 정식 베타 테스트에 불러올 수 없어.', true); return; }
                 if (o.data.fm_league_v2) { const l = JSON.parse(o.data.fm_league_v2); if (l && l.v === 2 && !Array.isArray(l.schedule)) throw 0; }
             } catch (e) { return saveMsg('올바른 저장 데이터가 아닙니다.', true); }
@@ -6750,7 +6701,7 @@
             Object.entries(o.data).forEach(([k, v]) => { if (k.startsWith('fm_')) localStorage.setItem(k, v); });
             localStorage.setItem('fm_has_reset_tokens_v29', 'true');
             localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
-            yfmCloudSave(true).finally(()=>location.reload());
+            location.reload();
         }
         function importSaveFile(inp) {
             const f = inp.files && inp.files[0]; if (!f) return;
@@ -6768,69 +6719,6 @@
             try { applySave(JSON.parse(decodeURIComponent(escape(atob(v.replace(/^YFM1:/, '')))))); } catch (e) { saveMsg('코드가 올바르지 않습니다. 끝까지 복사됐는지 확인하세요.', true); }
         }
         function closeEnhanceEffect() { if (!enhancementBusy || !enhancementReady) return; enhancementReady = false; enhancementBusy = false; const button = document.getElementById('enhance-confirm'); button.disabled = true; button.tabIndex = -1; document.getElementById('enhance-effect-overlay').classList.replace('flex','hidden'); }
-
-
-        // Supabase Auth uses an internal deterministic address; users only see their ID.
-        var yfmAccount=null, yfmRegisterMode=false, yfmCloudRevision=0, yfmCloudLast='', yfmCloudBusy=false, yfmCloudBlocked=false, yfmCloudStarted=false;
-        const yfmAuthStorage={
-            getItem(key){return (localStorage.getItem('yfm_auth_keep')==='1'?localStorage:sessionStorage).getItem(key) || (key.startsWith('sb-')?localStorage.getItem(key):null);},
-            setItem(key,value){const target=localStorage.getItem('yfm_auth_keep')==='1'?localStorage:sessionStorage;target.setItem(key,value);(target===localStorage?sessionStorage:localStorage).removeItem(key);},
-            removeItem(key){localStorage.removeItem(key);sessionStorage.removeItem(key);}
-        };
-        function yfmEmail(username){return 'u'+Array.from(new TextEncoder().encode(username.toLowerCase()),b=>b.toString(16).padStart(2,'0')).join('')+'@accounts.yfm.invalid';}
-        const yfmDefaultAvatar='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs><rect width="80" height="80" rx="40" fill="url(#g)"/><circle cx="40" cy="30" r="14" fill="#fff"/><path d="M13 74c2-19 13-28 27-28s25 9 27 28" fill="#fff"/></svg>');
-        function setYfmAuthMode(register){yfmRegisterMode=register;document.getElementById('yfm-auth-submit').textContent=register?'회원가입':'로그인';document.getElementById('yfm-password').autocomplete=register?'new-password':'current-password';document.getElementById('yfm-auth-error').textContent='';document.getElementById('yfm-tab-login').style.opacity=register?.55:1;document.getElementById('yfm-tab-register').style.opacity=register?1:.55;}
-        function yfmCurrentData(){const data={};Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>data[k]=localStorage.getItem(k));return data;}
-        function yfmRestore(data){Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));Object.entries(data||{}).forEach(([k,v])=>{if(k.startsWith('fm_')&&typeof v==='string')localStorage.setItem(k,v);});}
-        function yfmSwitchSave(id){const old=localStorage.getItem('yfm_active_uid');if(old===id)return false;if(old)localStorage.setItem('yfm_account_save_'+old,JSON.stringify(yfmCurrentData()));const saved=localStorage.getItem('yfm_account_save_'+id);if(saved){yfmRestore(JSON.parse(saved));localStorage.setItem('yfm_active_uid',id);return true;}if(old){yfmRestore({});localStorage.setItem('yfm_active_uid',id);return true;}localStorage.setItem('yfm_active_uid',id);return false;}
-        function yfmCloudStatus(message,bad=false){const el=document.getElementById('yfm-cloud-status');if(el){el.textContent=message;el.style.color=bad?'#fda4af':'#a5f3fc';}}
-        function yfmCloudDigest(data){return JSON.stringify(Object.keys(data).sort().map(k=>[k,data[k]]));}
-        async function yfmCloudSave(force=false){
-          if(!yfmAccount||yfmCloudBusy||yfmCloudBlocked||document.hidden&&!force||window.__wiping)return;
-          const data=yfmCurrentData(),current=yfmCloudDigest(data);if(!force&&current===yfmCloudLast)return;
-          yfmCloudBusy=true;yfmCloudStatus('클라우드 저장 중...');
-          try{const {data:revision,error}=await getOwnerRankClient().rpc('yfm_store_cloud_save',{p_payload:{app:'YFM',v:23,owner_id:yfmAccount.id,owner_name:yfmAccount.username,at:new Date().toISOString(),data},p_revision:yfmCloudRevision});
-            if(error)throw error;yfmCloudRevision=Number(revision);yfmCloudLast=current;localStorage.setItem('yfm_cloud_synced_'+yfmAccount.id,current);yfmCloudStatus('☁ 저장됨');
-          }catch(e){if(/CLOUD_SAVE_CONFLICT/.test(e.message)){yfmCloudBlocked=true;yfmCloudStatus('⚠ 다른 기기 변경 · 눌러서 선택',true);}else{yfmCloudStatus('⚠ 저장 실패 · 다시 시도 중',true);console.warn('클라우드 저장:',e);}}
-          finally{yfmCloudBusy=false;}
-        }
-        async function resolveYfmCloudConflict(){if(!yfmAccount||!yfmCloudBlocked)return;try{const {data:remote,error}=await getOwnerRankClient().from('yfm_cloud_saves').select('payload,revision').eq('user_id',yfmAccount.id).maybeSingle();if(error||!remote)throw error||Error('서버 기록을 찾을 수 없어.');if(!confirm('다른 기기에서 진행한 기록이 있어. 이 기기의 진행 상황을 버리고 서버 기록을 불러올까?\n취소하면 이 기기 기록을 서버에 덮어쓸 수 있어.')){if(!confirm('정말 이 기기의 기록으로 서버 기록을 덮어쓸까?'))return;yfmCloudRevision=Number(remote.revision);yfmCloudBlocked=false;await yfmCloudSave(true);return;}localStorage.setItem('yfm_account_save_'+yfmAccount.id,JSON.stringify(yfmCurrentData()));yfmRestore(remote.payload.data);yfmCloudRevision=Number(remote.revision);yfmCloudLast=yfmCloudDigest(remote.payload.data);localStorage.setItem('yfm_cloud_synced_'+yfmAccount.id,yfmCloudLast);location.reload();}catch(e){yfmCloudStatus('서버 기록 확인 실패: '+e.message,true);}}
-        async function bootYfmAuth(){try{
-          const client=getOwnerRankClient();const {data:{session},error}=await client.auth.getSession();if(error)throw error;
-          if(!session?.user?.id||session.user.is_anonymous){setYfmAuthMode(false);return;}
-          const {data:row,error:profileError}=await client.from('yfm_accounts').select('username').eq('user_id',session.user.id).maybeSingle();if(profileError)throw profileError;if(!row){setYfmAuthMode(false);return;}
-          yfmAccount={id:session.user.id,username:row.username};yfmCloudStatus('클라우드 기록 확인 중...');
-          const {data:remote,error:cloudError}=await client.from('yfm_cloud_saves').select('payload,revision').eq('user_id',yfmAccount.id).maybeSingle();if(cloudError)throw cloudError;
-          const previousUid=localStorage.getItem('yfm_active_uid'),currentData=yfmCurrentData(),justRestored=sessionStorage.getItem('yfm_cloud_restored_'+yfmAccount.id)==='1';sessionStorage.removeItem('yfm_cloud_restored_'+yfmAccount.id);
-          if(previousUid&&previousUid!==yfmAccount.id)localStorage.setItem('yfm_account_save_'+previousUid,JSON.stringify(currentData));
-          if(remote){
-            if(!remote.payload?.data||remote.payload.owner_id!==yfmAccount.id)throw Error('서버 저장 데이터의 계정이 일치하지 않아.');
-            yfmCloudRevision=Number(remote.revision);yfmCloudLast=yfmCloudDigest(remote.payload.data);
-            const synced=localStorage.getItem('yfm_cloud_synced_'+yfmAccount.id);
-            // Keep unsynced local progress intact; ask which copy should win.
-            if(!justRestored&&previousUid===yfmAccount.id&&synced&&yfmCloudDigest(currentData)!==synced&&yfmCloudDigest(currentData)!==yfmCloudLast){
-              yfmCloudBlocked=true;yfmCloudStatus('⚠ 저장 충돌 · 눌러서 선택',true);
-            }else if(!justRestored&&(previousUid!==yfmAccount.id||yfmCloudDigest(currentData)!==yfmCloudLast)){
-              if(previousUid===yfmAccount.id)localStorage.setItem('yfm_account_save_'+yfmAccount.id,JSON.stringify(currentData));
-              yfmRestore(remote.payload.data);localStorage.setItem('yfm_active_uid',yfmAccount.id);sessionStorage.setItem('yfm_cloud_restored_'+yfmAccount.id,'1');
-              localStorage.setItem('yfm_cloud_synced_'+yfmAccount.id,yfmCloudLast);location.reload();return;
-            }
-            localStorage.setItem('yfm_active_uid',yfmAccount.id);localStorage.setItem('yfm_cloud_synced_'+yfmAccount.id,yfmCloudLast);
-          }else{
-            // First login on this account: upload its previous local progress before opening the game.
-            if(yfmSwitchSave(yfmAccount.id)){location.reload();return;}
-            await yfmCloudSave(true);
-            if(!yfmCloudRevision){document.getElementById('yfm-auth-error').textContent='첫 클라우드 저장에 실패했어. SQL 설치와 인터넷 연결을 확인해줘.';return;}
-          }
-          document.getElementById('yfm-account-name').textContent=yfmAccount.username;
-          document.getElementById('yfm-avatar').src=localStorage.getItem('yfm_avatar_'+yfmAccount.id)||yfmDefaultAvatar;
-          document.getElementById('yfm-auth-gate').hidden=true;if(!yfmCloudBlocked)yfmCloudStatus('☁ 저장됨');
-          if(!yfmCloudStarted){yfmCloudStarted=true;setInterval(()=>yfmCloudSave(),7000);document.addEventListener('visibilitychange',()=>{if(document.hidden)yfmCloudSave(true);});}
-          showStarPick();maybeStartTutorial();checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});
-        }catch(e){document.getElementById('yfm-auth-error').textContent='계정/클라우드 기록을 확인하지 못했어: '+e.message;}}
-        async function submitYfmAuth(event){event.preventDefault();const username=document.getElementById('yfm-username').value,password=document.getElementById('yfm-password').value,box=document.getElementById('yfm-auth-error'),button=document.getElementById('yfm-auth-submit');if(!/^[A-Za-z0-9!@#^*]{3,10}$/.test(username)||!/^[A-Za-z0-9!@#^*]{5,15}$/.test(password)){box.textContent='아이디/비밀번호 길이와 허용 문자를 확인해줘.';return;}button.disabled=true;box.textContent='계정을 확인하는 중...';try{const client=getOwnerRankClient(),email=yfmEmail(username);let result;if(yfmRegisterMode){result=await client.auth.signUp({email,password,options:{data:{yfm_username:username}}});if(!result.error&&!result.data.session)throw Error('Supabase에서 이메일 확인을 끄고 다시 시도해줘.');}else result=await client.auth.signInWithPassword({email,password});if(result.error)throw result.error;localStorage.setItem('yfm_auth_keep',document.getElementById('yfm-remember').checked?'1':'0');if(!document.getElementById('yfm-remember').checked){const key='sb-'+new URL(OWNER_RANK_URL).hostname.split('.')[0]+'-auth-token';const token=localStorage.getItem(key);if(token){sessionStorage.setItem(key,token);localStorage.removeItem(key);}}await bootYfmAuth();}catch(e){box.textContent=yfmRegisterMode?'가입 실패: 아이디가 이미 사용 중이거나 인증 설정을 확인해줘. ('+e.message+')':'로그인 실패: 아이디 또는 비밀번호를 확인해줘. ('+e.message+')';}finally{button.disabled=false;}}
-        async function logoutYfm(){if(!yfmAccount)return;const old=yfmAccount.id;localStorage.setItem('yfm_account_save_'+old,JSON.stringify(yfmCurrentData()));await yfmCloudSave(true);yfmRestore({});localStorage.removeItem('yfm_active_uid');try{await getOwnerRankClient().auth.signOut();}finally{yfmAccount=null;location.reload();}}
-        function setYfmAvatar(input){const file=input.files?.[0];input.value='';if(!file||!yfmAccount)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>4*1024*1024){alert('PNG, JPEG, WebP 형식의 4MB 이하 사진만 선택해줘.');return;}const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const ctx=canvas.getContext('2d'),size=Math.min(img.width,img.height);ctx.drawImage(img,(img.width-size)/2,(img.height-size)/2,size,size,0,0,128,128);try{const result=canvas.toDataURL('image/jpeg',.75);localStorage.setItem('yfm_avatar_'+yfmAccount.id,result);document.getElementById('yfm-avatar').src=result;}catch(e){alert('사진을 저장할 공간이 부족해.');}URL.revokeObjectURL(url);};img.onerror=()=>URL.revokeObjectURL(url);img.src=url;}
 
         // ================= 일일 미션 =================
         const DAILY_MISSIONS = [
@@ -6923,7 +6811,7 @@
         }
         if (S.news && S.news.length > NEWS_MAX) { S.news = S.news.slice(0, NEWS_MAX); localStorage.setItem('fm_stats', JSON.stringify(S)); }
         updatePersistentNav(document.querySelector('.screen.active')?.id || 'screen-lobby');
-        recoverLeagueSave(); updateNewsBadge(); if (S.ace === undefined) computeUserAce(); try { renderLobby(); } catch (e) { console.error(e); } bootYfmAuth();
+        recoverLeagueSave(); updateNewsBadge(); if (S.ace === undefined) computeUserAce(); try { renderLobby(); } catch (e) { console.error(e); } showStarPick(); maybeStartTutorial();
         ensureDaily(); updateMissionIcon();
         function preloadGameImages(){
             const urls=new Set([PLAYER_CARD_BACKGROUND, NORMAL_CARD_BG, JONGGEON_CARD_BG]);
@@ -6938,298 +6826,6 @@
             Promise.all(workers).catch(()=>{});
         }
         preloadGameImages();
-// Online friendly extension. Bundled into YFM_beta42.4.html below the existing game code.
-let friendlyRoom = null, friendlyPoll = null, friendlyEvents = null, friendlyStream = null;
-let friendlySeq = 0, friendlySending = false, friendlyStarting = false, friendlyGuestView = false;
-let friendlyGuestTactic='bal', friendlyGuestInstr={atk:'bal',def:'mid',tempo:'normal',width:'normal',pass:'normal',trap:'off'};
-const friendlyEmoji = ['😜','😂','😢','😡','😎'];
-const friendlyClient = () => getOwnerRankClient(); // 구단주 랭킹과 같은 Supabase 로그인/프로젝트 재사용
-const friendlyError = e => { const box=document.getElementById('friendly-status'); if(box) box.textContent=e?.message||String(e); };
-const friendlyRpc = async (fn,args) => { const {data,error}=await friendlyClient().rpc(fn,args); if(error) throw error; return data; };
-async function friendlyIdentity() {
-  const client=friendlyClient();let {data:{session},error}=await client.auth.getSession();if(error)throw error;
-  if(!session?.user?.id || session.user.is_anonymous)throw Error('아이디로 로그인해줘.');
-  return session.user.id;
-}
-function friendlyRoster(){
-  const xi=players.filter(p=>p.isStarting).sort((a,b)=>a.slotIndex-b.slotIndex);
-  if(xi.length!==11||xi.some((p,i)=>p.slotIndex!==i))throw Error('팀 관리에서 선발 11명을 모두 배치해줘.');
-  const layout=getLayout(currentFormation);
-  const pack=(p,det)=>({id:String(p.id).replace(/[^a-zA-Z0-9_-]/g,''),name:String(p.name).slice(0,40),pos:p.position,ovr:getCalculatedOvr(p),attr:matchAttrs(p,det),trait:ensure(p).trait});
-  const benchDet=p=>slotDetail(layout.find(x=>x.pos===p.position)||layout.find(x=>x.pos!=='GK'));
-  return {name:teamName.slice(0,18),formation:currentFormation,players:xi.map((p,i)=>pack(p,slotDetail(layout[i]))),bench:benchIds.map(id=>players.find(p=>p.id===id)).filter(Boolean).slice(0,9).map(p=>pack(p,benchDet(p)))};
-}
-function friendlyShowRoom(){
-  const r=friendlyRoom, s=document.getElementById('friendly-status');if(!r||!s)return;
-  s.textContent=`방 코드 ${r.code} · ${r.status==='waiting'?'상대 입장 대기 중':r.status==='ended'?'경기 종료':`${r.host_team?.name||'홈'} vs ${r.guest_team?.name||'원정'}`}`;
-  document.getElementById('friendly-code').textContent=r.code;
-  const badge=document.getElementById('friendly-pause-count');
-  if(badge)badge.textContent=`${r.half===1?'전반':'후반'} 정지 ${r.host_pauses}/3 · ${r.guest_pauses}/3`;
-}
-async function friendlyCreate(){
-  try{friendlyMe=await friendlyIdentity();friendlyRoom=await friendlyRpc('friendly_create',{p_team:friendlyRoster()});friendlyShowRoom();friendlyWatch();}
-  catch(e){friendlyError(e);}
-}
-async function friendlyJoin(){
-  try{friendlyMe=await friendlyIdentity();const code=document.getElementById('friendly-join-code').value.trim();friendlyRoom=await friendlyRpc('friendly_join',{p_code:code,p_team:friendlyRoster()});friendlyShowRoom();friendlyWatch();friendlyStartGuest();}
-  catch(e){friendlyError(e);}
-}
-function friendlyStopWatch(){
-  clearInterval(friendlyPoll);clearInterval(friendlyEvents);clearInterval(friendlyStream);
-  friendlyPoll=friendlyEvents=friendlyStream=null;
-  if(friendlyChannel){friendlyClient().removeChannel(friendlyChannel);friendlyChannel=null;}
-}
-let friendlyChannel=null;
-function friendlyWatch(){
-  friendlyStopWatch(); if(!friendlyRoom)return;
-  const id=friendlyRoom.id;
-  friendlyChannel=friendlyClient().channel('friendly-'+id)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'friendly_rooms',filter:`id=eq.${id}`},e=>friendlyRoomUpdate(e.new))
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'friendly_actions',filter:`room_id=eq.${id}`},e=>friendlyAction(e.new)).subscribe();
-  friendlyPoll=setInterval(friendlyRefresh,1800);friendlyEvents=setInterval(friendlyReadActions,900);
-  friendlyStream=setInterval(friendlyPublish,900);
-  friendlyRefresh();friendlyReadActions();
-}
-async function friendlyRefresh(){
-  if(!friendlyRoom)return;
-  try{const {data,error}=await friendlyClient().from('friendly_rooms').select('*').eq('id',friendlyRoom.id).single();if(error)throw error;friendlyRoomUpdate(data);}
-  catch(e){friendlyError(e);}
-}
-function friendlyRoomUpdate(r){
-  if(!friendlyRoom||r.id!==friendlyRoom.id)return;
-  friendlyRoom=r;friendlyShowRoom();
-  if(r.status==='playing'&&r.guest_id&&r.guest_team){
-    if(friendlyIsHost()&&!friendlyStarting&&(!currentMatchState||currentMatchState.mode!=='friendly'))friendlyStartHost();
-    if(!friendlyIsHost()&&!friendlyGuestView)friendlyStartGuest();
-    if(friendlyGuestView&&r.snapshot)friendlyDrawGuest(r.snapshot);
-  }
-  if(r.status==='ended'&&friendlyGuestView){friendlyGuestView=false;friendlyEndGuest(r.snapshot);}
-  if(r.status==='ended'&&friendlyIsHost()&&currentMatchState?.mode==='friendly'&&!currentMatchState.ended){currentMatchState.ended=true;finishMatch();}
-  if(friendlyIsHost()&&currentMatchState?.mode==='friendly'){
-    const paused=!!r.pause_until&&Date.parse(r.pause_until)>Date.now();
-    currentMatchState.friendlyPause=paused;
-    if(!paused&&document.getElementById('tactics-panel').classList.contains('flex'))closeTactics();
-    if(paused&&r.pause_by!==r.host_id)currentMatchState.userPaused=true;
-    else if(!paused&&r.pause_by!==r.host_id&&document.getElementById('tactics-panel').classList.contains('hidden'))currentMatchState.userPaused=false;
-  }
-  const countdown=document.getElementById('friendly-countdown');
-  if(countdown)countdown.textContent=r.pause_until&&Date.parse(r.pause_until)>Date.now()?`⏸ ${Math.ceil((Date.parse(r.pause_until)-Date.now())/1000)}초`:'▶ 경기 진행 중';
-}
-function friendlyIsHost(){return friendlyRoom&&friendlyRoom.host_id===friendlyMe;}
-let friendlyMe=null;
-async function friendlyStartHost(){
-  if(friendlyStarting||!friendlyRoom||!friendlyIsHost())return;friendlyStarting=true;
-  try{
-    prepareMatch('friendly',{name:friendlyRoom.guest_team.name,ovr:Math.round(friendlyRoom.guest_team.players.reduce((s,p)=>s+p.ovr,0)/11),formation:friendlyRoom.guest_team.formation,lineup:friendlyRoom.guest_team.players,onlineTeam:friendlyRoom.guest_team});
-    if(!currentMatchState||currentMatchState.mode!=='friendly')throw Error('경기 준비에 실패했어');
-    document.getElementById('match-mode-text').textContent='온라인 친선경기';
-    document.getElementById('btn-speed').style.display='none';document.getElementById('btn-shout').style.display='none';
-    document.getElementById('friendly-match-controls').classList.remove('hidden');
-    currentMatchState.ai={mode:'normal',line:0,freq:1,own:1,press:2,block:1};
-    await friendlyPublish();
-  }catch(e){friendlyError(e);friendlyStarting=false;}
-}
-function friendlyStartGuest(){
-  if(friendlyGuestView||!friendlyRoom?.guest_team)return;
-  friendlyGuestView=true;switchScreen('screen-match');
-  document.getElementById('match-mode-text').textContent='온라인 친선경기';
-  document.getElementById('match-home-name').textContent=friendlyRoom.host_team.name;
-  document.getElementById('match-enemy-name').textContent=friendlyRoom.guest_team.name;
-  document.getElementById('match-pitch-lines').innerHTML=PITCH_H;
-  document.getElementById('btn-speed').style.display='none';document.getElementById('btn-shout').style.display='none';
-  document.getElementById('btn-tactics').textContent='⚙️ 내 전술 / 교체';
-  document.getElementById('friendly-match-controls').classList.remove('hidden');
-  document.getElementById('match-ht-overlay').classList.add('hidden');
-  startMatchAudio();playMatchSound('start');
-  document.getElementById('match-engine').replaceChildren();matchElements={};
-  const shadow=document.createElement('div');shadow.id='match-ball-shadow';document.getElementById('match-engine').append(shadow);matchElements.shadow=shadow;
-  const ball=document.createElement('div');ball.id='match-ball';document.getElementById('match-engine').append(ball);matchElements.ball=ball;
-  const marker=document.createElement('div');marker.className='sp-marker';document.getElementById('match-engine').append(marker);matchElements.spm=marker;
-  const line=document.createElement('div');line.className='off-line';document.getElementById('match-engine').append(line);matchElements.offl=line;
-  if(friendlyRoom.snapshot)friendlyDrawGuest(friendlyRoom.snapshot);
-}
-function friendlySnapshot(st){
-  const fields=['id','name','role','det','isHome','isRedCarded','isCaptain','ace','ovr','displayOvr','stam','cards','injured','x','y','baseX','baseY'];
-  const pack=p=>({...Object.fromEntries(fields.map(k=>[k,p[k]])),rating:liveRating(st,p)});
-  return {time:st.time,htDone:st.htDone,ended:st.ended,scoreHome:st.scoreHome,scoreAway:st.scoreAway,stats:st.stats,playerStats:st.playerStats,
-    ball:{x:st.ball.x,y:st.ball.y,ownerId:st.ball.ownerId},homePlayers:st.homePlayers.map(pack),awayPlayers:st.awayPlayers.map(pack),sp:st.sp&&{x:st.sp.x,y:st.sp.y,kind:st.sp.kind,t:st.sp.t,lineX:st.sp.lineX}};
-}
-async function friendlyPublish(){
-  if(!friendlyIsHost()||friendlySending||currentMatchState?.mode!=='friendly'||!friendlyRoom||friendlyRoom.status!=='playing')return;
-  friendlySending=true;
-  try{await friendlyRpc('friendly_push',{p_room:friendlyRoom.id,p_snapshot:friendlySnapshot(currentMatchState),p_end:!!currentMatchState.ended});}
-  catch(e){friendlyError(e);}finally{friendlySending=false;}
-}
-function friendlyDrawGuest(s){
-  if(!friendlyGuestView||!s||document.querySelector('.screen.active')?.id!=='screen-match')return;
-  const st={...s,ball:{...s.ball,px:s.ball.x,py:s.ball.y,snap:true},homePlayers:s.homePlayers||[],awayPlayers:s.awayPlayers||[],stats:s.stats||{homePos:0,awayPos:0}};
-  for(const p of [...st.homePlayers,...st.awayPlayers]){
-    p.px=p.x;p.py=p.y;
-    if(!matchElements[p.id])makeDot(p);
-  }
-  for(const [id,el] of Object.entries(matchElements))if(!['ball','shadow','spm','offl'].includes(id)&&![...st.homePlayers,...st.awayPlayers].some(p=>String(p.id)===String(id))){el.remove();delete matchElements[id];}
-  document.getElementById('match-score-home').textContent=s.scoreHome;
-  document.getElementById('match-score-away').textContent=s.scoreAway;
-  updateClock(st,0);render(st,120,1);
-  document.getElementById('side-squad').innerHTML=st.awayPlayers.map(p=>{const v=st.playerStats?.[p.id]||{};return `<div class="sq-row"><span class="sq-pos">${leagueEsc(p.det||p.role)}</span><span class="sq-name">${leagueEsc(p.name)} · OVR ${Math.round(p.displayOvr??p.ovr)} ${'⚽'.repeat(v.goals||0)}${v.assists?`🅰️${v.assists}`:''}</span><span class="sq-rating">⭐${p.rating||'–'}</span><span class="sq-stam">${Math.round(p.stam??100)}%</span></div>`}).join('');
-  document.getElementById('side-stats').innerHTML=statBars(st);
-  const n=(st.stats.homePos||0)+(st.stats.awayPos||0),percent=n?100*st.stats.homePos/n:50;
-  document.getElementById('poss-home').style.width=percent+'%';document.getElementById('poss-away').style.width=(100-percent)+'%';
-}
-async function friendlyReadActions(){
-  if(!friendlyRoom||friendlyRoom.status!=='playing')return;
-  try{const {data,error}=await friendlyClient().from('friendly_actions').select('*').eq('room_id',friendlyRoom.id).gt('id',friendlySeq).order('id').limit(100);if(error)throw error;for(const a of data){friendlyAction(a);}}
-  catch(e){friendlyError(e);}
-}
-function friendlyAction(a){
-  if(!friendlyRoom||a.room_id!==friendlyRoom.id||a.id<=friendlySeq)return;
-  friendlySeq=a.id;
-  if(a.kind==='emoji'){
-    if(a.user_id!==friendlyMe||friendlyIsHost())friendlyReaction(a.payload.emoji,a.user_id===friendlyRoom.host_id?'홈':'원정');
-    return;
-  }
-  if(!friendlyIsHost())return;
-  const st=currentMatchState;if(!st||st.mode!=='friendly')return;
-  if(a.kind==='leave'){st.ended=true;if(a.user_id===friendlyRoom.host_id)st.scoreAway=Math.max(3,st.scoreAway);else st.scoreHome=Math.max(3,st.scoreHome);finishMatch();return;}
-  // DB 함수가 행동을 기록할 때 정지 권한과 15초 제한을 이미 검사한다.
-  if(a.user_id!==friendlyRoom.guest_id)return;
-  if(a.kind==='tactics'&&['atk','bal','def'].includes(a.payload.tactic)){
-    const t=a.payload.tactic,raw=a.payload.instr||{},valid=(key,table,base)=>Object.hasOwn(table,raw[key])?raw[key]:base;
-    const i={atk:valid('atk',ATK,'bal'),def:valid('def',DEFI,'mid'),tempo:valid('tempo',TEMPO,'normal'),width:valid('width',WIDTH,'normal'),pass:valid('pass',PASSLEN,'normal'),trap:valid('trap',TRAP,'off')};
-    st.awayInstr=i;st.awayStyle=i.atk;
-    st.ai={mode:t,line:TACTICS[t].line+(ATK[i.atk].line||0)+(DEFI[i.def].line||0)+(i.trap==='on'?4:0),
-      freq:TACTICS[t].freq*(ATK[i.atk].freq||1)*(TEMPO[i.tempo].speed||1)*(PASSLEN[i.pass].speed||1),
-      own:TACTICS[t].own*(ATK[i.atk].own||1)*(WIDTH[i.width].own||1)*(PASSLEN[i.pass].own||1),
-      press:DEFI[i.def].pressN||2,block:t==='def'?0.85:DEFI[i.def].opp||1};
-    comm(st,`📋 ${st.enemy.name} 전술 변경: ${TACTICS[t].label}`,'sub');
-  }
-  if(a.kind==='sub')friendlyApplyGuestSub(st,String(a.payload.out),String(a.payload.in),a.payload);
-}
-function friendlyApplyGuestSub(st,outId,inId,action){
-  const team=friendlyRoom.guest_team,slot=st.awayPlayers.findIndex(p=>p.id===outId),old=st.awayPlayers[slot],next=team.bench.find(p=>p.id===inId);
-  if(!old||!next||st.awaySubsLeft<=0||old.isRedCarded||st.awayPlayers.some(p=>p.id==='guest_'+inId)||st.awayOutIds?.includes('guest_'+inId)||((old.role==='GK')!==(next.pos==='GK')))return;
-  const incomingOvr=Number(action.ovr),validOvr=Number.isFinite(incomingOvr)&&incomingOvr>=20&&incomingOvr<=200;
-  const incomingAttrs=action.attr&&typeof action.attr==='object'&&ATTRS.every(k=>Number.isFinite(action.attr[k])&&action.attr[k]>=0&&action.attr[k]<=200);
-  const np={...old,id:'guest_'+next.id,name:next.name,ovr:validOvr?incomingOvr:next.ovr,displayOvr:validOvr?Math.round(incomingOvr):next.ovr,attr:incomingAttrs?action.attr:next.attr,trait:next.trait,stam:100,cards:0,isRedCarded:false,injured:0,enter:st.time};
-  if(old.teamMean)starCompress(np,old.teamMean);
-  if(old.gapShift)shiftPlayer(np,old.gapShift);
-  if(old.sideF)scaleSide([np],old.sideF);
-  st.awayPlayers[slot]=np;st.awayOutIds ||= [];st.awayOutIds.push(old.id);st.awaySubsLeft--;
-  if(st.ball.ownerId===old.id)st.ball.ownerId=np.id;
-  matchElements[old.id]?.remove();delete matchElements[old.id];makeDot(np);
-  st.playerStats[np.id]={goals:0};comm(st,`🔄 ${st.enemy.name}: ${old.name} OUT → ${np.name} IN`,'sub');
-}
-async function friendlyPause(){
-  if(!friendlyRoom||friendlyRoom.status!=='playing')return;
-  try{friendlyRoom=await friendlyRpc('friendly_pause',{p_room:friendlyRoom.id});friendlyRoomUpdate(friendlyRoom);
-    if(friendlyIsHost())friendlyOriginalOpenTactics();else friendlyGuestPanel();}
-  catch(e){friendlyError(e);}
-}
-function friendlyGuestPanel(){
-  const panel=document.getElementById('friendly-guest-panel');panel.classList.remove('hidden');panel.classList.add('flex');friendlyRenderGuestPanel();
-}
-function friendlyRenderGuestPanel(){
-  const r=friendlyRoom,p=document.getElementById('friendly-guest-panel');if(!r||!p)return;
-  const st=r.snapshot||{},active=st.awayPlayers||[],used=new Set(active.map(x=>x.id));
-  const roomBench=r.guest_team.bench.filter(x=>!used.has('guest_'+x.id));
-  document.getElementById('friendly-guest-tactic').innerHTML='<b class="w-full">팀 성향</b>'+['atk','bal','def'].map(t=>`<button class="fm-btn ${friendlyGuestTactic===t?'pri':''}" onclick="friendlySendTactics('${t}')">${TACTICS[t].label}</button>`).join('');
-  document.getElementById('friendly-guest-instr').innerHTML=[['공격 방식','atk',ATK],['수비 방식','def',DEFI],['템포','tempo',TEMPO],['공격 폭','width',WIDTH],['패스 길이','pass',PASSLEN],['오프사이드 트랩','trap',TRAP]].map(([label,key,table])=>`<div class="mb-2"><b class="text-xs text-gray-300">${label}</b><div class="flex flex-wrap gap-1">${Object.entries(table).map(([k,v])=>`<button class="fm-btn ${friendlyGuestInstr[key]===k?'pri':''}" onclick="friendlyGuestSetInstr('${key}','${k}')">${v.n}</button>`).join('')}</div></div>`).join('');
-  document.getElementById('friendly-guest-sub').innerHTML=active.map(x=>`<div class="flex items-center gap-2 border-b border-gray-700 py-1"><span class="w-24 truncate">${leagueEsc(x.name)}</span><select class="text-white bg-gray-800 rounded p-1" onchange="if(this.value)friendlySendSub('${leagueEsc(x.id)}',this.value)"><option value="">교체할 선수</option>${roomBench.filter(y=>(y.pos==='GK')===(x.role==='GK')).map(y=>`<option value="${leagueEsc(y.id)}">${leagueEsc(y.name)} · OVR ${y.ovr}</option>`).join('')}</select></div>`).join('');
-}
-async function friendlySendTactics(tactic){try{friendlyGuestTactic=tactic;friendlyRenderGuestPanel();await friendlyRpc('friendly_action',{p_room:friendlyRoom.id,p_kind:'tactics',p_payload:{tactic,instr:friendlyGuestInstr}});friendlyError({message:'전술이 적용됐어.'});}catch(e){friendlyError(e);}}
-function friendlyGuestSetInstr(key,value){const tables={atk:ATK,def:DEFI,tempo:TEMPO,width:WIDTH,pass:PASSLEN,trap:TRAP};if(!Object.hasOwn(tables,key)||!Object.hasOwn(tables[key],value))return;friendlyGuestInstr[key]=value;friendlySendTactics(friendlyGuestTactic);}
-async function friendlySendSub(out,inId){try{
-  const p=players.find(x=>String(x.id)===inId),target=friendlyRoom.snapshot?.awayPlayers?.find(x=>x.id===out);
-  const payload={out,in:inId};if(p&&target){payload.ovr=Math.round(getCalculatedOvr(p)*aptitude(p,target.det)*moraleF(p));payload.attr=matchAttrs(p,target.det);}
-  await friendlyRpc('friendly_action',{p_room:friendlyRoom.id,p_kind:'sub',p_payload:payload});friendlyError({message:'교체 요청을 보냈어.'});
-}catch(e){friendlyError(e);}}
-async function friendlySendEmoji(emoji){try{await friendlyRpc('friendly_action',{p_room:friendlyRoom.id,p_kind:'emoji',p_payload:{emoji}});if(!friendlyIsHost())friendlyReaction(emoji,'나');}catch(e){friendlyError(e);}}
-function friendlyReaction(emoji,from){if(!friendlyEmoji.includes(emoji))return;const box=document.getElementById('friendly-reaction');box.textContent=`${from}: ${emoji}`;box.classList.remove('hidden');clearTimeout(friendlyReaction.timer);friendlyReaction.timer=setTimeout(()=>box.classList.add('hidden'),2200);}
-function friendlyEndGuest(s){
-  finishMatchAudio();playMatchSound('end');
-  document.getElementById('friendly-guest-panel').classList.replace('flex','hidden');
-  document.getElementById('friendly-match-controls').classList.add('hidden');
-  const result=document.getElementById('friendly-guest-result');result.textContent=`경기 종료 · ${friendlyRoom.host_team.name} ${s?.scoreHome??0} : ${s?.scoreAway??0} ${friendlyRoom.guest_team.name}`;
-  result.classList.remove('hidden');result.classList.add('flex');
-}
-function friendlyResetUi(){
-  document.getElementById('btn-speed').style.display='';
-  document.getElementById('btn-shout').style.display='';
-  document.getElementById('btn-tactics').textContent='⚙️ 전술 / 교체';
-  document.getElementById('friendly-guest-panel').classList.replace('flex','hidden');
-  document.getElementById('friendly-match-controls').classList.add('hidden');
-}
-async function friendlyLeave(){
-  if(!friendlyRoom)return switchScreen('screen-lobby');
-  if(friendlyRoom.status==='playing'){try{await friendlyRpc('friendly_action',{p_room:friendlyRoom.id,p_kind:'leave',p_payload:{}});}catch(e){friendlyError(e);}}
-  else if(friendlyIsHost()){try{await friendlyRpc('friendly_leave',{p_room:friendlyRoom.id});}catch(e){friendlyError(e);}}
-  if(friendlyIsHost()&&currentMatchState?.mode==='friendly'&&!currentMatchState.ended){
-    currentMatchState.ended=true;currentMatchState.scoreAway=Math.max(3,currentMatchState.scoreAway);finishMatch();
-    try{await friendlyRpc('friendly_push',{p_room:friendlyRoom.id,p_snapshot:friendlySnapshot(currentMatchState),p_end:true});}catch(e){friendlyError(e);}
-  }
-  friendlyStopWatch();friendlyRoom=null;friendlyGuestView=false;friendlyStarting=false;
-  finishMatchAudio();friendlyResetUi();
-  document.getElementById('friendly-guest-result').classList.replace('flex','hidden');
-  switchScreen('screen-lobby');
-}
-let friendlyCountdownTimer=setInterval(()=>{
-  if(!friendlyRoom)return;
-  const ms=Date.parse(friendlyRoom.pause_until||0)-Date.now(),active=ms>0;
-  const label=document.getElementById('friendly-countdown');if(label)label.textContent=active?`⏸ 교체 가능 ${Math.ceil(ms/1000)}초`:'▶ 경기 진행 중';
-  if(friendlyIsHost()&&currentMatchState?.mode==='friendly'){
-    currentMatchState.friendlyPause=active;
-    if(!active&&document.getElementById('tactics-panel').classList.contains('flex'))closeTactics();
-    else if(!active&&document.getElementById('tactics-panel').classList.contains('hidden')&&!currentMatchState.isPaused)currentMatchState.userPaused=false;
-  }
-  if(!active)document.getElementById('friendly-guest-panel').classList.replace('flex','hidden');
-},250);
-const friendlyOriginalOpenTactics=openTactics;
-openTactics=function(){
-  if(currentMatchState?.mode==='friendly'||friendlyGuestView){
-    if(friendlyRoom?.pause_by===friendlyMe&&Date.parse(friendlyRoom.pause_until)>Date.now())return friendlyIsHost()?friendlyOriginalOpenTactics():friendlyGuestPanel();
-    return friendlyPause();
-  }
-  return friendlyOriginalOpenTactics();
-};
-const friendlyOriginalAiUpdate=aiUpdate;
-aiUpdate=function(st){if(st.mode==='friendly')return;return friendlyOriginalAiUpdate(st);};
-const friendlyOriginalFinish=finishMatch;
-finishMatch=function(){
-  if(currentMatchState?.mode!=='friendly')return friendlyOriginalFinish();
-  const st=currentMatchState;if(st.resultProcessed)return;st.resultProcessed=true;st.ended=true;
-  finishMatchAudio();friendlyPublish();
-  document.getElementById('friendly-match-controls').classList.add('hidden');
-  document.getElementById('match-end-title').textContent='온라인 친선경기 종료';
-  document.getElementById('match-end-score').textContent=`${st.scoreHome} : ${st.scoreAway}`;
-  document.getElementById('match-end-reward').textContent='친선경기 · 토큰/미션/체력 변동 없음';
-  document.getElementById('match-end-overlay').classList.replace('hidden','flex');
-};
-const friendlyOriginalEndFlow=endMatchFlow;
-endMatchFlow=function(){if(currentMatchState?.mode==='friendly'){document.getElementById('match-end-overlay').classList.replace('flex','hidden');friendlyStopWatch();friendlyRoom=null;friendlyStarting=false;friendlyResetUi();switchScreen('screen-lobby');return;}return friendlyOriginalEndFlow();};
-const friendlyOriginalHalf=halfTime;
-halfTime=function(){friendlyOriginalHalf();if(currentMatchState?.mode==='friendly')friendlyPublish();};
-const friendlyOriginalSecond=startSecondHalf;
-startSecondHalf=async function(){if(currentMatchState?.mode==='friendly'){
-  try{
-    while(friendlySending)await new Promise(resolve=>setTimeout(resolve,120));
-    await friendlyPublish();
-    friendlyRoom=await friendlyRpc('friendly_advance_half',{p_room:friendlyRoom.id});friendlyRoomUpdate(friendlyRoom);
-  }catch(e){friendlyError(e);return;}
-}return friendlyOriginalSecond();};
-const friendlyOriginalResume=resumeFromBreak;
-resumeFromBreak=function(){if(currentMatchState?.mode==='friendly')return startSecondHalf();return friendlyOriginalResume();};
-const friendlyOriginalForfeit=forfeitMatch;
-forfeitMatch=function(){if(currentMatchState?.mode==='friendly'||friendlyGuestView)return friendlyLeave();return friendlyOriginalForfeit();};
-const friendlyOriginalCpuHalf=cpuHalftimeAdapt;
-cpuHalftimeAdapt=function(st){if(st.mode==='friendly')return;return friendlyOriginalCpuHalf(st);};
-const friendlyOriginalClose=closeTactics;
-closeTactics=function(){if(currentMatchState?.mode==='friendly'&&friendlyRoom?.pause_until&&Date.parse(friendlyRoom.pause_until)>Date.now()){
-  friendlyOriginalClose();currentMatchState.userPaused=true;pauseMatchCrowd();return;
-}return friendlyOriginalClose();};
-const friendlyOriginalSpeed=toggleSpeed;
-toggleSpeed=function(){if(currentMatchState?.mode==='friendly')return;return friendlyOriginalSpeed();};
-const friendlyOriginalShout=openShouts;
-openShouts=function(){if(currentMatchState?.mode==='friendly')return;return friendlyOriginalShout();};
         setInterval(dailyTick, 15000);
         document.addEventListener('visibilitychange', dailyTick);
     </script>
