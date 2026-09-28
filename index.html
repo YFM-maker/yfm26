@@ -1168,6 +1168,14 @@
         </div>
     </div>
 
+    <!-- 소셜 피드 -->
+    <div id="social-modal" class="fixed inset-0 bg-black/80 z-[90] hidden items-center justify-center p-6" onclick="if(event.target===this)closeSocialFeed()">
+        <div class="bg-gray-900 rounded-2xl p-6 w-full max-w-xl border border-gray-600 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-black">💬 소셜 피드</h2><button onclick="closeSocialFeed()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
+            <div id="social-list" class="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1"></div>
+        </div>
+    </div>
+
     <!-- 저장 관리 -->
     <div id="save-modal" class="fixed inset-0 bg-black/80 z-[90] hidden items-center justify-center p-6" onclick="if(event.target===this)closeSave()">
         <div class="bg-gray-800 rounded-2xl p-4 sm:p-6 w-full max-w-lg max-h-[92vh] max-h-[92dvh] overflow-y-auto custom-scrollbar border border-gray-600">
@@ -2153,6 +2161,173 @@
         }
         function openNews() { const L = S.news || []; document.getElementById('news-list').innerHTML = L.length ? `<p class="text-xs text-gray-500 -mt-1">최근 소식 ${NEWS_MAX}개까지 보관돼요.</p>` + L.map(newsCard).join('') : '<p class="text-gray-400">아직 소식이 없습니다. 경기를 치르면 뉴스가 쌓여요.</p>'; L.forEach(x => x.read = true); localStorage.setItem('fm_stats', JSON.stringify(S)); updateNewsBadge(); document.getElementById('news-modal').classList.replace('hidden', 'flex'); }
         function closeNews() { document.getElementById('news-modal').classList.replace('flex', 'hidden'); }
+        // ===== 확장형 FM 소셜 피드 =====
+        const SOCIAL_AUTHORS={
+          fan:[['용산울트라','🇰🇷'],['HS_12번째선수','🇰🇷'],['풋볼덕후26','🇰🇷'],['서울축구광','🇰🇷'],['골대뒤직관러','🇰🇷'],['전술분석러','🇰🇷'],['오늘도직관','🇰🇷'],['블루스탠드','🇰🇷'],['축구보는민준','🇰🇷'],['박지훈','🇰🇷'],['김서준','🇰🇷'],['이도윤','🇰🇷'],['최현우','🇰🇷'],['정민석','🇰🇷'],['윤재호','🇰🇷'],['James_Wilson','🇬🇧'],['OliverSmith','🇬🇧'],['NorthStandTom','🇬🇧'],['Emily_Footy','🇬🇧'],['MarcoRossi','🇮🇹'],['Luca_Bianchi','🇮🇹'],['SofiaGarcia','🇪🇸'],['Carlos_1902','🇪🇸'],['LucasMartin','🇫🇷'],['TheoFoot','🇫🇷'],['JonasKeller','🇩🇪'],['Felix_09','🇩🇪'],['KenjiSato','🇯🇵'],['Haruto_Football','🇯🇵'],['LeoSantos','🇧🇷'],['MateoDiaz','🇦🇷'],['Noah_FC','🇺🇸']],
+          journalist:[['김도현 기자','기자'],['이수민 기자','기자'],['박성재 기자','기자'],['한지우 기자','기자'],['최윤호 기자','기자'],['Daniel Carter','Reporter'],['Emma Collins','Reporter'],['Marco Bellini','Reporter'],['Julien Moreau','Reporter']],
+          media:[['YFM Sports','매체'],['풋볼데일리 코리아','매체'],['서울 풋볼','매체'],['K-Sports 24','매체'],['풋볼라인','매체'],['Global Football News','Media'],['The Football Chronicle','Media'],['Matchday Live','Media'],['World Football Desk','Media']],
+          data:[['MatchData','데이터'],['Football Analytics','데이터'],['StatZone','데이터'],['90Metrics','데이터']],
+          transfer:[['Transfer Desk','이적 전문'],['Market Watch Football','이적 전문'],['Deadline Room','이적 전문']]
+        };
+        // ===== 자연스러운 SNS 말투 + FM식 상황 반응 =====
+        const SOCIAL_VOICES = {
+          win:[
+            '오케이 오늘은 기분 좋게 잘 수 있다 ㅋㅋ','3점 냠냠. 다음 분 들어오세요','이런 날은 전술이고 뭐고 일단 즐겨',
+            '감독님 오늘만큼은 제가 아무 말 안 하겠습니다','이겼다아아아아','결과창 캡처 완료. 오늘은 안 지운다',
+            '전반 보고 욕한 사람들 조용히 손 들어봐 🙋','요즘 이 팀 왜 이렇게 재밌냐','딱 이런 경기 하나씩 해줘야 팬질하지',
+            '승점 3점보다 내 혈압이 더 많이 올랐지만 아무튼 승리','아 몰라 이기면 장땡임 ㅋㅋ','오늘 경기 다시보기 예약'
+          ],
+          loss:[
+            '아니 잠깐만 내가 뭘 본 거지','오늘 경기는 기억에서 삭제하겠습니다','90분 돌려줘요 제발',
+            '다음 경기까지 축구 안 본다 (다음 경기 5분 전 접속 예정)','이건 감독도 선수도 집 가서 다시 봐야 함',
+            '내 주말 돌려줘…','하이라이트도 못 보겠다 오늘은','진짜 한 골만 넣었어도 분위기 달랐을 텐데',
+            '팬질 난이도 갑자기 월드클래스 됨','오늘은 전술판보다 반성문이 먼저다','졌잘싸라고 하기엔 내가 너무 화남'
+          ],
+          draw:[
+            '이걸 못 이기네… 아깝다 진짜','1점 챙긴 걸 좋아해야 하나 2점 잃은 걸 슬퍼해야 하나',
+            '딱 한 골만 더 넣지 그랬냐아아','무승부인데 왜 진 느낌이지','오늘 골대랑 원수졌나',
+            '지는 줄 알았던 사람 개추 ㅋㅋ','승점 1점 주웠다 생각하자','뭔가 배부르지 않은 무승부'
+          ],
+          bigwin:[
+            '그만 때려 ㅋㅋㅋㅋ 상대 울겠다','스코어 실화냐 게임 난이도 낮춘 줄','오늘 골 알림이 쉬지를 않네',
+            '이건 하이라이트가 아니라 풀경기 봐야 함','골 넣을 때마다 웃음밖에 안 나옴 ㅋㅋ','상대 골키퍼 퇴근시켜줘라…',
+            '오늘 공격진 단체로 뭐 먹었냐','이 정도면 경기 끝나고 불꽃놀이 해야지'
+          ],
+          bigloss:[
+            '스코어 가리고 보면 친선경기인 줄 알겠다…','휴대폰 껐다. 다시 켰다. 스코어 그대로다.',
+            '이건 전술 분석이 아니라 사고 조사 들어가야 함','오늘 수비진 단체로 길 잃었냐',
+            '제발 꿈이라고 해줘','후반부터는 내가 왜 보고 있나 싶었음','이 경기는 다시보기 금지 지정해야 한다',
+            'ㅅㅂ 이게 팀이야?!','어휴 ㅂㅅ들…'
+          ],
+          close:[
+            '마지막 10분 동안 숨 안 쉰 사람? 저요','심장에 안 좋은 팀이다 진짜 ㅋㅋ','휘슬 불자마자 수명 3년 돌아옴',
+            '한 골 차 승리 왜 이렇게 힘드냐','버텼다… 진짜 버텼다','오늘 MOM은 내 심장'
+          ],
+          comeback:[
+            '미쳤다 이걸 뒤집어????','전반에 욕해서 죄송합니다 감독님','각본 누가 썼냐 ㅋㅋㅋ',
+            '포기한 나 자신 반성합니다','이 팀 사람 미치게 하는 재주가 있음','역전골 순간 옆집에서 항의 들어올 뻔'
+          ],
+          late:[
+            '90분부터가 진짜 경기였네 ㅋㅋ','극장 문 닫으려는데 다시 열어버림','이 맛에 추가시간 본다',
+            '나 방금 소리 질러서 목 나감','끝난 줄 알고 화장실 간 사람 없지?','축구는 진짜 마지막 1초까지 모른다'
+          ],
+          clean:[
+            '무실점? 이런 평화로운 단어 오랜만이다','오늘 수비진 밥 두 공기씩 줘라','클린시트가 이렇게 달콤했나',
+            '골키퍼 유니폼에 흙도 안 묻었으면 더 좋고 ㅋㅋ'
+          ],
+          hat:[
+            '공 챙겨라. 오늘 그 공 네 거다','혼자 세 골은 너무하잖아 ㅋㅋ','오늘 수비수들 꿈에 나오겠다',
+            '해트트릭 알림 보고 눈 비빔','오늘은 그냥 이 선수의 날'
+          ],
+          transfer:[
+            '오피셜 뜰 때까지 안 믿음. 나 여러 번 당했다','일단 유니폼 입고 공항 나오면 말해',
+            '이적시장 새로고침 중독 시작됐다','가격 보고 다시 얘기하자 ㅋㅋ','이 선수 오면 포메이션부터 다시 짜야겠는데?',
+            'HERE WE— 아니 아직 참자','누가 공항 목격담 좀 가져와봐','에이전트 팔로우 목록 확인하러 간다'
+          ],
+          injury:[
+            '아 제발 큰 부상만 아니어라','축구신님 이번엔 봐주세요','일정도 빡센데 왜 하필 지금…',
+            '건강하게만 돌아와줘 진짜','대체자한테 갑자기 인생 경기 미션 떨어짐'
+          ],
+          title:[
+            '우승이다아아아아아아 🏆','오늘 잠은 다 잤다','이 장면 평생 저장한다 진짜',
+            '몇 달 동안 욕하고 웃고 했는데 결국 여기까지 왔네','챔피언!!!!!!!!','트로피 드는 거 보니까 갑자기 눈물 나네',
+            '오늘만큼은 감독님 종신계약 드립 허용'
+          ],
+          out:[
+            '아… 끝났네. 허무하다','오늘은 그냥 조용히 자야겠다','그래도 여기까지 온 건 박수 쳐준다',
+            '내년엔 진짜 더 멀리 가자','한 경기로 시즌 전부를 지울 순 없지. 그래도 아프다'
+          ],
+          award:[
+            '이건 받을 사람이 받았다','트로피 진열장 자리 비워놔라','축하한다 진짜. 시즌 내내 잘했음',
+            '이견 없음 👏','사진 잘 나왔으면 프사 각'
+          ],
+          default:[
+            '오 이건 좀 흥미로운데','댓글창 벌써 난리 났겠네 ㅋㅋ','일단 지켜본다','이거 다음 경기 떡밥인가',
+            '팬들 의견 반반 갈릴 듯','뭔가 일이 커지는 느낌인데','오피셜 더 뜨면 얘기하자','이 팀은 조용한 날이 없네'
+          ]
+        };
+
+        const MEDIA_VOICES={
+          win:['FULL TIME | {team}, 승점 3점 확보.','{team}, 중요한 경기에서 승리를 챙겼습니다.','경기 종료. {team}이 웃었습니다.'],
+          loss:['FULL TIME | {team}, 승점 획득에 실패.','{team}, 패배 후 빠른 반등이 필요해졌습니다.'],
+          draw:['FULL TIME | 승점은 나눠 가졌습니다.','경기 종료. 승부를 가리지 못했습니다.'],
+          transfer:['TRANSFER WATCH | {team}을 둘러싼 움직임이 계속되고 있습니다.','이적시장 소식 | {team} 관련 협상 상황에 관심이 모입니다.'],
+          title:['CHAMPIONS 🏆 | {team}, 정상에 올랐습니다.'],
+          injury:['TEAM NEWS | 선수단 부상 상황에 관심이 모입니다.'],
+          default:['CLUB UPDATE | {team} 관련 새 소식입니다.']
+        };
+
+        function sh(v){return String(v||'').split('').reduce((a,c)=>((a*33+c.charCodeAt(0))>>>0),5381)}
+        function sp(a,n){return a[Math.abs(n)%a.length]}
+        function socialKind(x){
+          const z=`${x.title||''} ${x.body||''} ${x.facts||''} ${x.tag||''}`;
+          const sm=z.match(/(\d+)\s*[:\-]\s*(\d+)/),A=sm?+sm[1]:null,B=sm?+sm[2]:null;
+          if(/우승|챔피언|정상/.test(z))return'title'; if(/탈락|고배/.test(z))return'out';
+          if(/부상|부상자|회복/.test(z))return'injury'; if(/영입|이적|방출|계약|재계약|협상/.test(z))return'transfer';
+          if(/수상|MVP|베스트|골든/.test(z))return'award'; if(/해트트릭/.test(z))return'hat';
+          if(/극장|막판|추가시간|90분/.test(z))return'late'; if(/역전/.test(z))return'comeback';
+          if(A!==null&&B!==null){if(A>B&&A-B>=3)return'bigwin';if(A<B&&B-A>=3)return'bigloss';if(A>B&&A-B===1)return'close';if(A>B)return'win';if(A<B)return'loss';return'draw'}
+          if(/대승|완승/.test(z))return'bigwin';if(/대패/.test(z))return'bigloss';if(/승리|제압/.test(z))return'win';if(/패배/.test(z))return'loss';if(/무승부/.test(z))return'draw';
+          return'default'
+        }
+        function author(type,seed){const a=sp(SOCIAL_AUTHORS[type]||SOCIAL_AUTHORS.fan,seed);return{name:a[0],role:a[1],type}}
+        function fillSocial(t){return String(t).replaceAll('{team}',teamName||'우리 팀')}
+        function socialMatchLabel(x){
+          const raw=`${x.title||''} ${x.body||''} ${x.facts||''}`;
+          // 뉴스에 "A vs B"가 이미 있으면 그대로 사용
+          let m=raw.match(/([가-힣A-Za-zÀ-ÿ0-9 .&'_-]{2,35})\s+vs\.?\s+([가-힣A-Za-zÀ-ÿ0-9 .&'_-]{2,35})/i);
+          if(m) return `${m[1].trim()} vs ${m[2].trim()}`;
+          // "상대전" 형태에서 상대를 추출
+          m=(x.title||'').match(/,\s*([^,]+?)전\b/);
+          if(m) return `${teamName||'우리 팀'} vs ${m[1].trim()}`;
+          m=raw.match(/([^,\n·]{2,35})\s*전\s*(?:도중|경기|승리|패배|무승부|대승|대패|기권|$)/);
+          if(m && !/라운드|시즌|훈련/.test(m[1])) return `${teamName||'우리 팀'} vs ${m[1].trim()}`;
+          // 경기 뉴스인데 상대 추출에 실패하면 경기 제목을 사용
+          if(/경기|라운드|승리|패배|무승부|대승|대패|기권|스코어|해트트릭|극장골|역전/.test(raw))
+            return (x.title||`${teamName||'우리 팀'} 경기`).replace(/\s+/g,' ').trim();
+          return '';
+        }
+        function socialFeedItems(){
+          const news=(S.news||[]).slice(0,8),out=[],used=new Set();
+          news.forEach((x,ni)=>{
+            const k=socialKind(x),base=sh(`${x.t}|${x.title}|${x.body}`),score=((`${x.title} ${x.body}`).match(/\d+\s*[:\-]\s*\d+/)||[''])[0];
+            const types=ni===0?['fan','fan','fan','fan','journalist','media','fan','data']:['fan','fan','journalist','media','fan'];
+            types.forEach((type,j)=>{
+              if(k==='transfer'&&j===3)type='transfer';
+              let au=author(type,base+j*97+ni*31),g=0;while(used.has(au.name)&&g++<30)au=author(type,base+j*97+g*59);used.add(au.name);
+              let text='';
+              if(type==='fan'){
+                text=sp(SOCIAL_VOICES[k]||SOCIAL_VOICES.default,base+j*137);
+                // 일부 팬은 원문 사건을 짧게 인용해 실제 타임라인 느낌을 냄
+                if(j===0 && x.title && (base%3===0)) text=`${x.title}… ${text}`;
+              } else if(type==='journalist'){
+                if(k==='transfer')text=`${teamName} 관련 이적 움직임이 이어지고 있습니다. 구단의 다음 선택에 관심이 쏠리고 있습니다.`;
+                else if(k==='title')text=`${teamName}이 정상에 올랐습니다. 긴 시즌의 결실을 트로피로 완성했습니다.`;
+                else if(k==='win'||k==='bigwin'||k==='close')text=`${teamName}이 승부처에서 집중력을 보이며 승리를 챙겼습니다.`;
+                else if(k==='loss'||k==='bigloss')text=`${teamName}이 아쉬운 패배를 기록했습니다. 다음 경기에서 어떤 반응을 보여줄지 주목됩니다.`;
+                else if(k==='draw')text=`${teamName}이 승점 1점을 추가했습니다. 승부를 가리지 못한 가운데 다음 일정으로 시선이 향합니다.`;
+                else if(k==='injury')text=`${teamName} 선수단에 부상 변수가 발생했습니다. 향후 출전 여부에 관심이 모이고 있습니다.`;
+                else if(k==='out')text=`${teamName}의 대회 여정이 마무리됐습니다. 팬들의 아쉬움이 이어지고 있습니다.`;
+                else if(k==='award')text=`${teamName}에 반가운 수상 소식이 전해졌습니다. 활약에 대한 좋은 평가가 이어지고 있습니다.`;
+                else text=`${x.title}. 경기장 안팎에서 팬들의 관심이 이어지고 있습니다.`;
+              } else if(type==='media'){
+                text=fillSocial(sp(MEDIA_VOICES[k]||MEDIA_VOICES.default,base+j*43));
+              } else if(type==='data'){
+                text=score?`📊 ${score} | 결과 기록 완료. 최근 흐름과 순위 변화에 영향을 줄 경기.`:`📊 DATA NOTE | ${x.facts||x.title}`;
+              } else {
+                text=`🔄 ${teamName} 관련 협상 상황을 계속 확인 중. 아직 최종 단계로 단정하기는 이르다.`;
+              }
+              out.push({t:x.t-(j*33000+ni*9000),name:au.name,role:au.role,type:au.type,text,match:socialMatchLabel(x),tag:x.tag||'구단 소식',likes:7+(base+j*47)%391,reposts:(base+j*23)%79});
+            });
+          });
+          return out.sort((a,b)=>b.t-a.t).slice(0,40)
+        }
+        function socialCard(x){
+          const ico=x.type==='media'?'📰':x.type==='journalist'?'✍️':x.type==='data'?'📊':x.type==='transfer'?'🔄':'👤';
+          return `<article class="rounded-xl bg-gray-800/90 border border-gray-700 p-4"><div class="flex items-center gap-2 mb-2"><span class="w-9 h-9 shrink-0 rounded-full bg-violet-600/25 border border-violet-400/30 flex items-center justify-center">${ico}</span><div class="min-w-0"><div class="flex items-baseline gap-2 min-w-0 flex-wrap"><b class="text-sm text-white">${x.type==='fan'?'@':''}${leagueEsc(x.name)}</b>${x.type==='fan'&&x.match?`<span class="text-xs font-normal text-gray-500">${leagueEsc(x.match)}</span>`:''}</div><div class="text-[11px] text-gray-500">${leagueEsc(x.role)} · ${newsAgo(x.t)} · ${leagueEsc(x.tag)}</div></div></div><p class="text-sm text-gray-200 leading-relaxed break-keep">${leagueEsc(x.text)}</p><div class="text-xs text-gray-500 mt-2">♡ ${x.likes}　↻ ${x.reposts}</div></article>`
+        }
+        function openSocialFeed(){const L=socialFeedItems();document.getElementById('social-list').innerHTML=L.length?`<div class="text-xs text-gray-500 -mt-1 mb-1">팬 · 기자 · 국내외 매체 · 데이터 계정의 반응 ${L.length}개</div>`+L.map(socialCard).join(''):'<p class="text-gray-400">아직 소셜 반응이 없습니다. 경기를 치르거나 새 소식이 생기면 다양한 반응이 올라와요.</p>';document.getElementById('social-modal').classList.replace('hidden','flex')}
+        function closeSocialFeed(){document.getElementById('social-modal').classList.replace('flex','hidden')}
         const pickOne = a => a[Math.floor(Math.random() * a.length)];
         // 한 경기 → 헤드라인 1개 + 짧은 본문 + 핵심 기록 한 줄
         function matchReport(st, tag) {
@@ -2659,6 +2834,7 @@
                 : `<div class="fm-card fm-span-8"><div class="fm-card-h">다음 경기<b>일정 없음</b></div><div class="fm-card-b"><p class="fm-empty">진행 중인 리그 경기가 없어. 리그 시즌을 시작하거나 다음 시즌으로 넘어가 봐.</p><div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="fm-btn pri" onclick="switchScreen('screen-league')">🏟️ 리그 시작하기</button></div></div></div>`;
             const teamCard = `<div class="fm-card fm-span-4"><div class="fm-card-h">팀 현황<button class="fm-link" onclick="switchScreen('screen-manager')">팀 관리 ›</button></div><div class="fm-card-b"><div class="fm-stat"><div><small>평균 OVR</small><b>${avg}</b></div><div><small>체력</small><b>${cond}%</b>${meter(cond, cond >= 70 ? '#34d399' : cond >= 45 ? '#fbbf24' : '#fb7185')}</div><div><small>사기</small><b>${morale >= 85 ? '😊' : morale >= 70 ? '🙂' : morale >= 50 ? '😐' : '😕'}</b>${meter(morale, '#8b5cf6')}</div></div><div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><small style="color:var(--fm-mute);font-size:11px;font-weight:700">최근 5경기</small>${formHtml}</div><div style="text-align:right;font-size:13px;color:var(--fm-mute)">${ace ? `⭐ 에이스 <b style="color:#fff">${esc(ace.name)}</b><br>` : ''}${inj ? `🚑 부상 ${inj}명` : '부상자 없음'}</div></div></div></div>`;
             const news = (S.news || []).slice(0, 5), newsCardH = `<div class="fm-card fm-span-6"><div class="fm-card-h">받은 소식<button class="fm-link" onclick="openNews()">전체 보기 ›</button></div><div class="fm-card-b"><div class="fm-news">${news.length ? news.map(x => `<div class="fm-news-item ${x.read ? '' : 'unread'}" onclick="openNews()"><span class="ic">${x.icon || '📰'}</span><div class="min-w-0"><b>${esc(x.title)}</b><small>${esc(x.tag || '')}</small></div></div>`).join('') : '<p class="fm-empty">아직 소식이 없어요. 경기를 치르면 경기 리포트와 이적설, 시상 소식이 여기에 쌓여요.</p>'}</div></div></div>`;
+            const social = socialFeedItems().slice(0, 5), socialCardH = `<div class="fm-card fm-span-6"><div class="fm-card-h">소셜 피드<button class="fm-link" onclick="openSocialFeed()">전체 보기 ›</button></div><div class="fm-card-b"><div class="fm-news">${social.length ? social.map(x => `<div class="fm-news-item" onclick="openSocialFeed()"><span class="ic">${x.type==='media'?'📰':x.type==='journalist'?'✍️':x.type==='data'?'📊':'💬'}</span><div class="min-w-0"><div style="display:flex;gap:6px;align-items:baseline;min-width:0"><b style="white-space:nowrap">${x.type==='fan'?'@':''}${esc(x.name)}</b>${x.type==='fan'&&x.match?`<span style="font-size:10px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.match)}</span>`:''}</div><small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.text)}</small></div></div>`).join('') : '<p class="fm-empty">아직 소셜 반응이 없어요. 경기를 치르거나 새 소식이 생기면 팬들의 반응이 올라와요.</p>'}</div></div></div>`;
             const saudiCard = `<div class="fm-card fm-span-6"><div class="fm-card-h">사우디 모드<b>친선경기</b></div><div class="fm-card-b"><p class="fm-empty">상대를 선택하고 사우디 친선경기에 도전해 봐.</p><div style="margin-top:12px"><button class="fm-btn pri" onclick="switchScreen('screen-saudi')">💰 사우디 모드 시작</button></div></div></div>`;
             const day = seoulDayKey(), comp = [['cl', '⭐ 챔피언스리그', careerState, () => 'initCareer()'], ['europa', '🟠 유로파리그', europaState, () => 'initEuropa()'], ['worldcup', '🌍 월드컵', worldCupState, () => 'initWorldCup()']].map(([k, t, stt, fn]) => {
                 const active = stt && stt.status !== 'finished', used = localStorage.getItem(challengeDateKey(k)) === day;
@@ -2674,7 +2850,7 @@
             } else {
                 rankingCard = `<div class="fm-card fm-span-6"><div class="fm-card-h">리그 순위<button class="fm-link" onclick="openLeagueDetails()">자세히 보기 ›</button></div><div class="fm-card-b"><p class="fm-empty">아직 리그 시즌을 시작하지 않았어. 시즌을 시작하면 이곳에 순위가 표시돼.</p><button class="fm-btn pri" style="margin-top:12px" onclick="switchScreen('screen-league')">🏟️ 리그 시작하기</button></div></div>`;
             }
-            grid.innerHTML = nextCard + teamCard + newsCardH + saudiCard + compCard + rankingCard;
+            grid.innerHTML = nextCard + teamCard + newsCardH + socialCardH + saudiCard + compCard + rankingCard;
             updateNewsBadge(); updateMissionIcon();
         }
         function openLeagueDetails() { switchScreen('screen-league-rankings'); }
