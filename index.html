@@ -785,7 +785,7 @@
                     <button class="fm-nav-item" onclick="switchScreen('screen-fusion')"><span class="fm-ico">🧬</span><span>진화</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-stats')"><span class="fm-ico">📊</span><span>기록실</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-owner-rank')"><span class="fm-ico">🏆</span><span>구단주 TOP 50</span></button>
-                    <button class="fm-nav-item" onclick="switchScreen('screen-social')"><span class="fm-ico">👥</span><span>소셜</span></button>
+                    <button class="fm-nav-item" onclick="switchScreen('screen-social')"><span class="fm-ico">👥</span><span>소셜</span><span id="fm-social-badge" class="fm-badge" style="display:none" aria-label="새 소셜 알림"></span></button>
                     <div class="fm-nav-sep"></div>
                     <button class="fm-nav-item" onclick="openMissions()"><span class="fm-ico">🎯</span><span>미션</span><i id="fm-mission-dot" class="fm-dot" style="display:none"></i><img id="mission-btn" alt="" hidden></button>
                     <button class="fm-nav-item" onclick="openSave()"><span class="fm-ico">💾</span><span>저장 관리</span></button>
@@ -837,9 +837,9 @@
     <div id="screen-social" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px;color:white">
       <div style="width:min(100%,1050px);margin:0 auto;padding-bottom:80px">
         <h1 style="font-size:28px;font-weight:900;margin-bottom:6px">👥 소셜</h1>
-        <p style="color:#cbd5e1;font-size:13px;margin-bottom:18px">아이디로 친구를 찾고 메시지를 주고받아 봐.</p>
+        <p style="color:#cbd5e1;font-size:13px;margin-bottom:18px">구단주명으로 친구를 찾고 메시지를 주고받아 봐.</p>
         <form onsubmit="searchSocialUser(event)" style="display:flex;gap:8px;margin-bottom:12px">
-          <input id="social-search-id" maxlength="10" autocomplete="off" placeholder="친구 아이디 입력" aria-label="친구 아이디" style="flex:1;min-width:0;background:#1b1430;border:1px solid #69538c;color:white;padding:10px;border-radius:9px">
+          <input id="social-search-name" maxlength="16" autocomplete="off" placeholder="구단주명 입력" aria-label="구단주명" style="flex:1;min-width:0;background:#1b1430;border:1px solid #69538c;color:white;padding:10px;border-radius:9px">
           <button type="submit" style="background:#7c3aed;border-radius:9px;padding:10px 16px;font-weight:800">검색</button>
         </form>
         <div id="social-search-result" style="margin-bottom:16px"></div>
@@ -2791,7 +2791,26 @@
         }
 
         let socialFriendId=null, socialFriendName='', socialRefreshBusy=false, socialFriends=[];
+        let socialNotificationBusy=false;
         const socialClient=()=>getOwnerRankClient();
+        async function updateSocialNotifications(){
+            if(!accountUser || document.hidden || socialNotificationBusy)return;
+            socialNotificationBusy=true;
+            try {
+                const me=accountUser.id;
+                const [requests,messages]=await Promise.all([
+                    socialClient().from('social_friendships').select('id',{count:'exact',head:true}).eq('addressee_id',me).eq('status','pending'),
+                    socialClient().from('social_messages').select('id',{count:'exact',head:true}).eq('receiver_id',me).is('read_at',null)
+                ]);
+                if(requests.error)throw requests.error;
+                if(messages.error)throw messages.error;
+                const count=(requests.count||0)+(messages.count||0),badge=document.getElementById('fm-social-badge');
+                badge.style.display=count?'inline-flex':'none';
+                badge.textContent=count>99?'99+':String(count);
+                badge.setAttribute('aria-label',`새 소셜 알림 ${count}개`);
+            } catch(e){console.warn('소셜 알림 확인 실패:',e);}
+            finally{socialNotificationBusy=false;}
+        }
         function socialStatus(message,failed=false){
             const el=document.getElementById('social-status');
             if(el){el.textContent=message;el.style.color=failed?'#fca5a5':'#c4b5fd';}
@@ -2851,24 +2870,27 @@
                     document.getElementById('social-chat-messages').textContent='친구 목록에서 대화할 친구를 골라줘.';
                     document.getElementById('social-chat-input').disabled=true;document.getElementById('social-chat-send').disabled=true;
                 }
+                updateSocialNotifications();
                 socialStatus('친구 목록을 불러왔어.');
             } catch(e){console.warn('소셜 불러오기 실패:',e);socialStatus('소셜 데이터를 불러오지 못했어. SQL 설치와 연결을 확인해줘.',true);}
             finally{socialRefreshBusy=false;}
         }
         async function searchSocialUser(event){
             event.preventDefault();
-            const name=document.getElementById('social-search-id').value.trim().toLowerCase(),box=document.getElementById('social-search-result');
+            const name=document.getElementById('social-search-name').value.trim(),box=document.getElementById('social-search-result');
             box.replaceChildren();
-            if(!/^[a-z0-9!@#^*]{3,10}$/.test(name))return socialStatus('정확한 아이디(3~10자)를 입력해줘.',true);
+            if(name.length<2 || name.length>16)return socialStatus('구단주명을 2~16자로 입력해줘.',true);
             try {
-                const {data,error}=await socialClient().from('social_profiles').select('user_id,username,owner_name').eq('username',name).maybeSingle();
+                const escaped=name.replace(/[\\%_]/g,'\\$&');
+                const {data,error}=await socialClient().from('social_profiles').select('user_id,username,owner_name')
+                    .ilike('owner_name',`%${escaped}%`).order('owner_name',{ascending:true}).limit(20);
                 if(error)throw error;
-                if(!data)return socialStatus('검색한 아이디가 없어.',true);
-                if(data.user_id===accountUser?.id)return socialStatus('내 계정이야.');
-                box.append(socialRow(`${data.owner_name} · @${data.username}`,'아이디로 검색한 구단주',[
-                    ['친구 요청',()=>sendSocialRequest(data.user_id)]
-                ]));
-                socialStatus('검색 결과를 찾았어.');
+                const matches=(data||[]).filter(p=>p.user_id!==accountUser?.id);
+                if(!matches.length)return socialStatus('검색한 구단주명을 찾지 못했어.',true);
+                matches.forEach(profile=>box.append(socialRow(`${profile.owner_name} · @${profile.username}`,'구단주명 검색 결과',[
+                    ['친구 요청',()=>sendSocialRequest(profile.user_id)]
+                ])));
+                socialStatus(`${matches.length}명을 찾았어.${data.length===20?' 첫 20명만 표시해.':''}`);
             } catch(e){socialStatus(e.message||'검색에 실패했어.',true);}
         }
         async function sendSocialRequest(otherId){
@@ -2885,7 +2907,7 @@
                 const query=socialClient().from('social_friendships');
                 const {error}=accept?await query.update({status:'accepted'}).eq('id',id):await query.delete().eq('id',id);
                 if(error)throw error;
-                socialStatus(accept?'친구 요청을 수락했어.':'요청을 정리했어.');await refreshSocial();
+                socialStatus(accept?'친구 요청을 수락했어.':'요청을 정리했어.');await refreshSocial();updateSocialNotifications();
             } catch(e){socialStatus(e.message||'요청을 처리하지 못했어.',true);}
         }
         async function openSocialChat(id,name){
@@ -2893,13 +2915,24 @@
             socialFriendId=id;socialFriendName=name;
             document.getElementById('social-chat-title').textContent=`${name}님과 대화`;
             document.getElementById('social-chat-input').disabled=false;document.getElementById('social-chat-send').disabled=false;
+            await markSocialMessagesRead(id);
             await loadSocialMessages();
         }
+        async function markSocialMessagesRead(other){
+            if(!accountUser || !socialFriends.includes(other))return;
+            const {error}=await socialClient().from('social_messages').update({read_at:new Date().toISOString()})
+                .eq('sender_id',other).eq('receiver_id',accountUser.id).is('read_at',null);
+            if(error)console.warn('메시지 읽음 처리 실패:',error);
+            updateSocialNotifications();
+        }
+        const socialTimeFormat=new Intl.DateTimeFormat('ko-KR',{
+            timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
+        });
         async function loadSocialMessages(){
             if(!accountUser || !socialFriendId || document.hidden || document.querySelector('.screen.active')?.id!=='screen-social')return;
             const me=accountUser.id,other=socialFriendId,box=document.getElementById('social-chat-messages');
             try {
-                const {data,error}=await socialClient().from('social_messages').select('id,sender_id,body,created_at')
+                const {data,error}=await socialClient().from('social_messages').select('id,sender_id,body,created_at,read_at')
                     .or(`and(sender_id.eq.${me},receiver_id.eq.${other}),and(sender_id.eq.${other},receiver_id.eq.${me})`)
                     .order('created_at',{ascending:false}).limit(50);
                 if(error)throw error;
@@ -2910,10 +2943,14 @@
                 (data||[]).reverse().forEach(msg=>{
                     const row=document.createElement('div');row.style.cssText=`display:flex;justify-content:${msg.sender_id===me?'flex-end':'flex-start'};margin:5px 0`;
                     const bubble=document.createElement('div');bubble.style.cssText=`max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere;background:${msg.sender_id===me?'#6d36b3':'#302447'};padding:8px 11px;border-radius:11px;font-size:13px`;
-                    bubble.textContent=msg.body;row.append(bubble);box.append(row);
+                    const message=document.createElement('div');message.textContent=msg.body;
+                    const time=document.createElement('small');time.style.cssText='display:block;margin-top:5px;color:#e2d5f5;font-size:10px;text-align:right';
+                    time.textContent=socialTimeFormat.format(new Date(msg.created_at));
+                    bubble.append(message,time);row.append(bubble);box.append(row);
                 });
                 box.dataset.lastId=String(data?.[0]?.id||'');
                 if(nearBottom || lastId!==box.dataset.lastId)box.scrollTop=box.scrollHeight;
+                if((data||[]).some(msg=>msg.sender_id===other && !msg.read_at))markSocialMessagesRead(other);
             } catch(e){socialStatus('메시지를 불러오지 못했어.',true);}
         }
         async function sendSocialMessage(event){
@@ -2930,7 +2967,9 @@
         }
         setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)loadSocialMessages();},10000);
         setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)refreshSocial();},30000);
+        setInterval(updateSocialNotifications,20000);
         document.addEventListener('visibilitychange',()=>{if(!document.hidden && document.querySelector('.screen.active')?.id==='screen-social'){refreshSocial();loadSocialMessages();}});
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateSocialNotifications();});
 
         // Supabase Auth가 비밀번호를 해시·검증한다. 진행도 테이블은 auth.uid() RLS로 격리한다.
         let accountMode = 'login', accountSaving = false, accountLegacyUser = null, accountMigrationSave = null;
@@ -3082,6 +3121,7 @@
             document.getElementById('account-gate').style.display='none';
             renderAccountProfile();
             checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});
+            updateSocialNotifications();
             if (typeof renderLobby==='function') renderLobby();
             ensureDaily();
             if (typeof showStarPick==='function') showStarPick();
@@ -3099,6 +3139,7 @@
             socialFriendId=null;socialFriends=[];
             document.getElementById('social-search-result').replaceChildren();
             document.getElementById('social-chat-messages').textContent='친구 목록에서 대화할 친구를 골라줘.';
+            document.getElementById('fm-social-badge').style.display='none';
             document.getElementById('account-gate').style.display='flex';
             document.getElementById('account-form').style.display='block';
             document.getElementById('account-profile').style.display='none';
