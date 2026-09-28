@@ -577,6 +577,22 @@
             #screen-lobby .fm-tip { flex:0 1 auto;width:max-content;max-width:calc(100vw - 160px);height:auto;min-height:2.6em;overflow:visible; }
             #screen-lobby .fm-tip-text { width:max-content;max-width:calc(100vw - 160px);word-break:keep-all;overflow-wrap:normal; }
         }
+
+/* Account gate and local profile */
+#yfm-auth-gate{position:fixed;inset:0;z-index:999999;background:rgba(5,8,23,.97);display:flex;align-items:center;justify-content:center;padding:18px;color:#f8fafc}
+#yfm-auth-gate[hidden]{display:none}
+.yfm-auth-panel{width:min(100%,410px);max-height:95vh;overflow:auto;padding:27px;background:#151b32;border:1px solid #7285bd;border-radius:22px;box-shadow:0 25px 90px #000b}
+.yfm-auth-panel h2{font-weight:900;font-size:24px;margin-bottom:8px}
+.yfm-auth-panel input:not([type=checkbox]){width:100%;background:#080e21;border:1px solid #7583a2;border-radius:10px;padding:11px;margin:6px 0 13px;color:white}
+.yfm-auth-panel label{display:block;font-size:13px;font-weight:700}
+.yfm-auth-panel button{padding:10px 14px;border-radius:10px;font-weight:800;background:#6949d3;color:white}
+.yfm-auth-panel button:disabled{opacity:.4}
+#yfm-auth-error{min-height:22px;color:#fda4af;font-size:13px;margin:8px 0}
+#yfm-account-widget{margin-top:auto;border-top:1px solid #575178;padding:12px 3px 2px;display:flex;align-items:center;gap:9px;min-width:0;color:white}
+.yfm-avatar{height:37px;width:37px;border-radius:50%;object-fit:cover;background:#49379d;flex:none;cursor:pointer}
+#yfm-account-name{font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#yfm-account-widget button{font-size:10px;color:#ddd0ff;text-decoration:underline}
+@media(max-width:760px){#yfm-account-widget{position:fixed;bottom:76px;left:6px;z-index:48;background:#121024;padding:4px 8px;border:1px solid #51457c;border-radius:22px}#yfm-account-widget .yfm-avatar{height:26px;width:26px}}
 </style>
 <style>
 #screen-mode-select>div{flex-wrap:wrap;align-content:center} #screen-mode-select>div>div{width:320px;height:320px} @media(max-width:740px){#screen-mode-select>div{align-content:flex-start}}
@@ -773,6 +789,7 @@
                     <button class="fm-nav-item" onclick="openSave()"><span class="fm-ico">💾</span><span>저장 관리</span></button>
                     <button class="fm-nav-item" onclick="replayTutorial()"><span class="fm-ico">📖</span><span>튜토리얼</span></button>
                 </nav>
+                <div id="yfm-account-widget"><img class="yfm-avatar" id="yfm-avatar" alt="내 프로필" onclick="document.getElementById('yfm-avatar-file').click()"><input id="yfm-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="setYfmAvatar(this)"><div style="min-width:0;flex:1"><div id="yfm-account-name">로그인 필요</div><button type="button" onclick="logoutYfm()">로그아웃</button></div></div>
             </aside>
             <main class="fm-main">
                 <header class="fm-top">
@@ -1314,6 +1331,16 @@
             <button id="match-audio-loading-button" type="button" class="mt-5 hidden w-full rounded-lg bg-sky-500 px-4 py-3 font-bold text-white" onclick="launchPreparedMatch()">▶ 경기 시작</button>
         </div>
     </div>
+<div id="yfm-auth-gate" role="dialog" aria-modal="true" aria-label="YFM 로그인">
+ <form class="yfm-auth-panel" onsubmit="submitYfmAuth(event)">
+ <h2>⚽ YFM 계정</h2><p style="font-size:13px;color:#cbd5e1;margin-bottom:15px">게임을 시작하려면 로그인하거나 아이디를 만들어줘.</p>
+ <div style="display:flex;gap:8px;margin-bottom:16px"><button type="button" id="yfm-tab-login" onclick="setYfmAuthMode(false)">로그인</button><button type="button" id="yfm-tab-register" onclick="setYfmAuthMode(true)">회원가입</button></div>
+ <label for="yfm-username">아이디 (3~10자, 영문·숫자·! @ # ^ *)</label><input id="yfm-username" autocomplete="username" required minlength="3" maxlength="10" pattern="[A-Za-z0-9!@#^*]{3,10}">
+ <label for="yfm-password">비밀번호 (5~15자, 영문·숫자·! @ # ^ *)</label><input id="yfm-password" type="password" autocomplete="current-password" required minlength="5" maxlength="15" pattern="[A-Za-z0-9!@#^*]{5,15}">
+ <p style="color:#fb7185;font-size:13px;font-weight:900;line-height:1.5;margin:3px 0 14px">⚠️ 다른 사이트에서 쓰는 비밀번호는 절대 사용하지 마세요. 이 게임 전용 비밀번호를 새로 만드세요. 비밀번호를 잊으면 이메일 없이 복구할 수 없습니다.</p>
+ <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><input id="yfm-remember" type="checkbox"> 로그인 유지 (이 브라우저에서 계속 로그인)</label>
+ <div id="yfm-auth-error" role="alert"></div><button id="yfm-auth-submit" type="submit" style="width:100%">로그인</button>
+ </form></div>
     <!-- ================= 단일 자바스크립트 블록 ================= -->
     <script>
         let activeEffectSkip=null;
@@ -2632,7 +2659,7 @@
             if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(OWNER_RANK_URL)) throw new Error('HTML의 OWNER_RANK_URL에 프로젝트 URL을 입력해줘.');
             if (!OWNER_RANK_PUBLISHABLE_KEY.startsWith('sb_publishable_') && !OWNER_RANK_PUBLISHABLE_KEY.startsWith('eyJ')) throw new Error('HTML의 OWNER_RANK_PUBLISHABLE_KEY에 Supabase Publishable key를 입력해줘.');
             if (!window.supabase?.createClient) throw new Error('Supabase 연결 스크립트를 불러오지 못했어. 인터넷 연결을 확인해줘.');
-            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true}});
+            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true,storage:yfmAuthStorage}});
             return ownerRankClient;
         }
         async function checkOwnerRankRegistration() {
@@ -2677,8 +2704,8 @@
             if (day!==ownerRankDay) {ownerRankDay=day;if(document.querySelector('.screen.active')?.id==='screen-owner-rank') loadOwnerRank();}
             if (ownerRankRegistered) queueOwnerRankSync();
         },60000);
-        document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});}});
-        setTimeout(()=>checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{}),2500);
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden && yfmAccount){checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});}});
+        setTimeout(()=>{if(yfmAccount)checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});},2500);
         async function loadOwnerRank() {
             const mine = document.getElementById('owner-rank-mine'), list = document.getElementById('owner-rank-list');
             const starters = players.filter(p => p.isStarting);
@@ -2714,12 +2741,7 @@
                 if (await checkOwnerRankRegistration()) return ownerRankStatus('이미 등록된 구단이야. 이후 OVR은 자동으로 저장돼.');
                 let { data: { session }, error: sessionError } = await client.auth.getSession();
                 if (sessionError) throw sessionError;
-                if (!session) {
-                    const result = await client.auth.signInAnonymously();
-                    if (result.error) throw result.error;
-                    session = result.data.session;
-                }
-                if (!session?.user?.id) throw new Error('익명 로그인에 실패했어.');
+                if (!session?.user?.id || session.user.is_anonymous) throw new Error('왼쪽 아래에서 아이디로 로그인해줘.');
                 const club=teamName.trim().slice(0,12)||'내 팀',ovr=getTeamOvr();
                 const { error } = await client.from('owner_rankings').insert({user_id:session.user.id,club_name:club,average_ovr:ovr,pending_ovr:ovr});
                 if (error) throw error;
@@ -6682,11 +6704,12 @@
         function saveMsg(t, bad) { const m = document.getElementById('save-msg'); m.innerText = t; m.className = 'text-sm mt-3 font-bold ' + (bad ? 'text-red-400' : 'text-emerald-400'); }
         function collectSave() {
             saveData(); if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_stats', JSON.stringify(S));
-            const o = { app: 'YFM', v: 22, at: new Date().toISOString(), data: {} };
+            const o = { app: 'YFM', v: 23, at: new Date().toISOString(), owner_id:yfmAccount?.id, owner_name:yfmAccount?.username, data: {} };
             for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('fm_')) o.data[k] = localStorage.getItem(k); }
             return o;
         }
         function exportSave() {
+            if (!yfmAccount) return saveMsg('로그인 후 내보낼 수 있어.',true);
             const o = collectSave(), d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
             const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: 'application/json' }));
             a.download = `yfm_save_${teamName.replace(/[^\w가-힣]/g, '')}_${stamp}.json`; document.body.appendChild(a); a.click(); a.remove();
@@ -6717,6 +6740,7 @@
         function applySave(o) {
             try {
                 if (!o || o.app !== 'YFM' || !o.data || !Array.isArray(JSON.parse(o.data.fm_players || 'null'))) throw 0;
+                if (!yfmAccount || !o.owner_id || o.owner_id !== yfmAccount.id || o.owner_name?.toLowerCase() !== yfmAccount.username.toLowerCase()) {saveMsg('다른 아이디의 저장 파일은 불러올 수 없어.',true);return;}
                 if (Number(o.v) < 22 || o.data.fm_beta_test_save_version !== BETA_TEST_SAVE_VERSION) { saveMsg('이전 베타 버전의 저장 파일은 정식 베타 테스트에 불러올 수 없어.', true); return; }
                 if (o.data.fm_league_v2) { const l = JSON.parse(o.data.fm_league_v2); if (l && l.v === 2 && !Array.isArray(l.schedule)) throw 0; }
             } catch (e) { return saveMsg('올바른 저장 데이터가 아닙니다.', true); }
@@ -6744,6 +6768,25 @@
             try { applySave(JSON.parse(decodeURIComponent(escape(atob(v.replace(/^YFM1:/, '')))))); } catch (e) { saveMsg('코드가 올바르지 않습니다. 끝까지 복사됐는지 확인하세요.', true); }
         }
         function closeEnhanceEffect() { if (!enhancementBusy || !enhancementReady) return; enhancementReady = false; enhancementBusy = false; const button = document.getElementById('enhance-confirm'); button.disabled = true; button.tabIndex = -1; document.getElementById('enhance-effect-overlay').classList.replace('flex','hidden'); }
+
+
+        // Supabase Auth uses an internal deterministic address; users only see their ID.
+        var yfmAccount=null, yfmRegisterMode=false;
+        const yfmAuthStorage={
+            getItem(key){return (localStorage.getItem('yfm_auth_keep')==='1'?localStorage:sessionStorage).getItem(key) || (key.startsWith('sb-')?localStorage.getItem(key):null);},
+            setItem(key,value){const target=localStorage.getItem('yfm_auth_keep')==='1'?localStorage:sessionStorage;target.setItem(key,value);(target===localStorage?sessionStorage:localStorage).removeItem(key);},
+            removeItem(key){localStorage.removeItem(key);sessionStorage.removeItem(key);}
+        };
+        function yfmEmail(username){return 'u'+Array.from(new TextEncoder().encode(username.toLowerCase()),b=>b.toString(16).padStart(2,'0')).join('')+'@accounts.yfm.invalid';}
+        const yfmDefaultAvatar='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#0ea5e9"/></linearGradient></defs><rect width="80" height="80" rx="40" fill="url(#g)"/><circle cx="40" cy="30" r="14" fill="#fff"/><path d="M13 74c2-19 13-28 27-28s25 9 27 28" fill="#fff"/></svg>');
+        function setYfmAuthMode(register){yfmRegisterMode=register;document.getElementById('yfm-auth-submit').textContent=register?'회원가입':'로그인';document.getElementById('yfm-password').autocomplete=register?'new-password':'current-password';document.getElementById('yfm-auth-error').textContent='';document.getElementById('yfm-tab-login').style.opacity=register?.55:1;document.getElementById('yfm-tab-register').style.opacity=register?1:.55;}
+        function yfmCurrentData(){const data={};Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>data[k]=localStorage.getItem(k));return data;}
+        function yfmRestore(data){Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));Object.entries(data||{}).forEach(([k,v])=>{if(k.startsWith('fm_')&&typeof v==='string')localStorage.setItem(k,v);});}
+        function yfmSwitchSave(id){const old=localStorage.getItem('yfm_active_uid');if(old===id)return false;if(old)localStorage.setItem('yfm_account_save_'+old,JSON.stringify(yfmCurrentData()));const saved=localStorage.getItem('yfm_account_save_'+id);if(saved){yfmRestore(JSON.parse(saved));localStorage.setItem('yfm_active_uid',id);return true;}if(old){yfmRestore({});localStorage.setItem('yfm_active_uid',id);return true;}localStorage.setItem('yfm_active_uid',id);return false;}
+        async function bootYfmAuth(){try{const client=getOwnerRankClient();const {data:{session},error}=await client.auth.getSession();if(error)throw error;if(!session?.user?.id||session.user.is_anonymous){setYfmAuthMode(false);return;}const {data:row,error:profileError}=await client.from('yfm_accounts').select('username').eq('user_id',session.user.id).maybeSingle();if(profileError)throw profileError;if(!row){setYfmAuthMode(false);return;}yfmAccount={id:session.user.id,username:row.username};if(yfmSwitchSave(yfmAccount.id)){location.reload();return;}document.getElementById('yfm-account-name').textContent=yfmAccount.username;document.getElementById('yfm-avatar').src=localStorage.getItem('yfm_avatar_'+yfmAccount.id)||yfmDefaultAvatar;document.getElementById('yfm-auth-gate').hidden=true;showStarPick();maybeStartTutorial();checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});}catch(e){document.getElementById('yfm-auth-error').textContent='계정을 확인하지 못했어: '+e.message;}}
+        async function submitYfmAuth(event){event.preventDefault();const username=document.getElementById('yfm-username').value,password=document.getElementById('yfm-password').value,box=document.getElementById('yfm-auth-error'),button=document.getElementById('yfm-auth-submit');if(!/^[A-Za-z0-9!@#^*]{3,10}$/.test(username)||!/^[A-Za-z0-9!@#^*]{5,15}$/.test(password)){box.textContent='아이디/비밀번호 길이와 허용 문자를 확인해줘.';return;}button.disabled=true;box.textContent='계정을 확인하는 중...';try{const client=getOwnerRankClient(),email=yfmEmail(username);let result;if(yfmRegisterMode){result=await client.auth.signUp({email,password,options:{data:{yfm_username:username}}});if(!result.error&&!result.data.session)throw Error('Supabase에서 이메일 확인을 끄고 다시 시도해줘.');}else result=await client.auth.signInWithPassword({email,password});if(result.error)throw result.error;localStorage.setItem('yfm_auth_keep',document.getElementById('yfm-remember').checked?'1':'0');if(!document.getElementById('yfm-remember').checked){const key='sb-'+new URL(OWNER_RANK_URL).hostname.split('.')[0]+'-auth-token';const token=localStorage.getItem(key);if(token){sessionStorage.setItem(key,token);localStorage.removeItem(key);}}await bootYfmAuth();}catch(e){box.textContent=yfmRegisterMode?'가입 실패: 아이디가 이미 사용 중이거나 인증 설정을 확인해줘. ('+e.message+')':'로그인 실패: 아이디 또는 비밀번호를 확인해줘. ('+e.message+')';}finally{button.disabled=false;}}
+        async function logoutYfm(){if(!yfmAccount)return;const old=yfmAccount.id;localStorage.setItem('yfm_account_save_'+old,JSON.stringify(yfmCurrentData()));yfmRestore({});localStorage.removeItem('yfm_active_uid');try{await getOwnerRankClient().auth.signOut();}finally{yfmAccount=null;location.reload();}}
+        function setYfmAvatar(input){const file=input.files?.[0];input.value='';if(!file||!yfmAccount)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>4*1024*1024){alert('PNG, JPEG, WebP 형식의 4MB 이하 사진만 선택해줘.');return;}const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const ctx=canvas.getContext('2d'),size=Math.min(img.width,img.height);ctx.drawImage(img,(img.width-size)/2,(img.height-size)/2,size,size,0,0,128,128);try{const result=canvas.toDataURL('image/jpeg',.75);localStorage.setItem('yfm_avatar_'+yfmAccount.id,result);document.getElementById('yfm-avatar').src=result;}catch(e){alert('사진을 저장할 공간이 부족해.');}URL.revokeObjectURL(url);};img.onerror=()=>URL.revokeObjectURL(url);img.src=url;}
 
         // ================= 일일 미션 =================
         const DAILY_MISSIONS = [
@@ -6836,7 +6879,7 @@
         }
         if (S.news && S.news.length > NEWS_MAX) { S.news = S.news.slice(0, NEWS_MAX); localStorage.setItem('fm_stats', JSON.stringify(S)); }
         updatePersistentNav(document.querySelector('.screen.active')?.id || 'screen-lobby');
-        recoverLeagueSave(); updateNewsBadge(); if (S.ace === undefined) computeUserAce(); try { renderLobby(); } catch (e) { console.error(e); } showStarPick(); maybeStartTutorial();
+        recoverLeagueSave(); updateNewsBadge(); if (S.ace === undefined) computeUserAce(); try { renderLobby(); } catch (e) { console.error(e); } bootYfmAuth();
         ensureDaily(); updateMissionIcon();
         function preloadGameImages(){
             const urls=new Set([PLAYER_CARD_BACKGROUND, NORMAL_CARD_BG, JONGGEON_CARD_BG]);
@@ -6861,7 +6904,7 @@ const friendlyError = e => { const box=document.getElementById('friendly-status'
 const friendlyRpc = async (fn,args) => { const {data,error}=await friendlyClient().rpc(fn,args); if(error) throw error; return data; };
 async function friendlyIdentity() {
   const client=friendlyClient();let {data:{session},error}=await client.auth.getSession();if(error)throw error;
-  if(!session){const result=await client.auth.signInAnonymously();if(result.error)throw result.error;session=result.data.session;}
+  if(!session?.user?.id || session.user.is_anonymous)throw Error('아이디로 로그인해줘.');
   return session.user.id;
 }
 function friendlyRoster(){
