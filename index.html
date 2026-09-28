@@ -785,6 +785,7 @@
                     <button class="fm-nav-item" onclick="switchScreen('screen-fusion')"><span class="fm-ico">🧬</span><span>진화</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-stats')"><span class="fm-ico">📊</span><span>기록실</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-owner-rank')"><span class="fm-ico">🏆</span><span>구단주 TOP 50</span></button>
+                    <button class="fm-nav-item" onclick="switchScreen('screen-online-friendly')"><span class="fm-ico">🌐</span><span>온라인 친선</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-social')"><span class="fm-ico">👥</span><span>소셜</span><span id="fm-social-badge" class="fm-badge" style="display:none" aria-label="새 소셜 알림"></span></button>
                     <div class="fm-nav-sep"></div>
                     <button class="fm-nav-item" onclick="openMissions()"><span class="fm-ico">🎯</span><span>미션</span><i id="fm-mission-dot" class="fm-dot" style="display:none"></i><img id="mission-btn" alt="" hidden></button>
@@ -832,6 +833,51 @@
             </div>
             <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">현재 순위는 플레이어가 등록한 기록이며 경기 기록을 서버에서 검증하지 않아.</p>
         </div>
+    </div>
+
+    <div id="screen-online-friendly" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px;color:white">
+      <div style="width:min(100%,760px);margin:0 auto;padding-bottom:80px">
+        <h1 style="font-size:clamp(24px,4vw,32px);font-weight:900;margin:0 0 6px">🌐 온라인 친선</h1>
+        <p style="color:#cbd5e1;font-size:13px;margin:0 0 18px">4자리 방 코드로 참가하거나, 수락한 친구에게 매치를 신청해.</p>
+        <div style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:16px;margin-bottom:14px">
+          <h2 style="font-size:18px;font-weight:900;margin:0 0 12px">방 만들기 / 참가하기</h2>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button type="button" onclick="yfmOnlineCreateRoom()" style="background:#7c3aed;border-radius:9px;padding:10px 14px;font-weight:800">새 방 만들기</button>
+            <input id="yfm-online-code" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" placeholder="4자리 코드" aria-label="4자리 방 코드" style="width:130px;background:#100c20;border:1px solid #69538c;color:white;padding:10px;border-radius:9px;text-align:center;letter-spacing:.2em">
+            <button type="button" onclick="yfmOnlineJoinRoom()" style="background:#334155;border-radius:9px;padding:10px 14px;font-weight:800">코드로 참가</button>
+          </div>
+          <p id="yfm-online-status" role="status" style="min-height:20px;color:#c4b5fd;font-size:13px;margin:12px 0 0">로그인 상태를 확인하는 중...</p>
+        </div>
+        <div id="yfm-online-room" style="display:none;background:#19152c;border:1px solid #64518b;border-radius:14px;padding:16px;margin-bottom:14px">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div style="flex:1"><div style="font-size:12px;color:#cbd5e1">방 코드</div><div id="yfm-online-room-code" style="font-size:30px;letter-spacing:.22em;font-weight:900;color:#facc15"></div></div>
+            <button type="button" onclick="yfmOnlineCopyCode()" style="background:#334155;border-radius:9px;padding:9px 12px;font-weight:800">코드 복사</button>
+            <button type="button" onclick="yfmOnlineLeaveRoom()" style="background:#7f1d1d;border-radius:9px;padding:9px 12px;font-weight:800">방 나가기</button>
+          </div>
+          <div id="yfm-online-members" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:14px 0"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button id="yfm-online-ready" type="button" onclick="yfmOnlineToggleReady()" style="background:#0f766e;border-radius:9px;padding:10px 14px;font-weight:800">준비하기</button>
+            <button id="yfm-online-start" type="button" disabled style="display:none;background:#475569;border-radius:9px;padding:10px 14px;font-weight:800;opacity:.75">경기 화면 연결 중</button>
+          </div>
+          <p id="yfm-online-room-status" style="color:#cbd5e1;font-size:12px;margin:10px 0 0">친구가 참가하면 준비 버튼을 눌러줘.</p>
+          <div id="yfm-online-emojis" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid #493b65">
+            <div style="font-size:12px;color:#cbd5e1;margin-bottom:8px">상대에게 감정표현 보내기</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="yfmOnlineEmoji('😝')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">😝</button><button type="button" onclick="yfmOnlineEmoji('🤬')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">🤬</button><button type="button" onclick="yfmOnlineEmoji('😭')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">😭</button><button type="button" onclick="yfmOnlineEmoji('🤣')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">🤣</button><button type="button" onclick="yfmOnlineEmoji('🖕')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">🖕</button></div>
+            <p id="yfm-online-emoji-feed" aria-live="polite" style="min-height:28px;font-size:20px;margin:8px 0 0"></p>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px">
+          <section style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:16px">
+            <h2 style="font-size:18px;font-weight:900;margin:0 0 10px">친구에게 신청</h2>
+            <div id="yfm-online-friends" style="font-size:13px;color:#cbd5e1">친구 목록을 불러오는 중...</div>
+          </section>
+          <section style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:16px">
+            <h2 style="font-size:18px;font-weight:900;margin:0 0 10px">받은 매치 신청</h2>
+            <div id="yfm-online-invites" style="font-size:13px;color:#cbd5e1">신청을 확인하는 중...</div>
+          </section>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:14px">현재는 온라인 방과 초대 연결 단계야. 경기 시뮬레이션을 양쪽 기기에서 같은 상태로 재생하는 연동은 다음 단계에서 붙여야 해.</p>
+      </div>
     </div>
 
     <div id="screen-social" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px;color:white">
@@ -3518,7 +3564,7 @@
 
         const globalSideNav = document.querySelector('#screen-lobby .fm-side');
         if (globalSideNav) { globalSideNav.id = 'fm-global-side'; document.body.appendChild(globalSideNav); }
-        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7,'screen-social':8};
+        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7,'screen-online-friendly':8,'screen-social':9};
         function updatePersistentNav(screenId) {
             const show = screenId !== 'screen-match'; document.body.classList.toggle('has-global-nav', show); document.body.classList.toggle('in-match', !show);
             document.querySelectorAll('#fm-global-side .fm-nav-item').forEach((button,index)=>button.classList.toggle('active', show && index===navScreenIndex[screenId]));
@@ -3537,6 +3583,7 @@
             if (screenId === 'screen-league-rankings') renderLeagueRankings();
             if (screenId === 'screen-owner-rank') loadOwnerRank();
             if (screenId === 'screen-social') refreshSocial();
+            if (screenId === 'screen-online-friendly' && window.yfmOnlineUiLoad) window.yfmOnlineUiLoad();
             if (screenId === 'screen-saudi') initSaudiMode();
             if (screenId === 'screen-rogue') renderRogue();
             if (screenId === 'screen-stats') renderStats();
@@ -7368,5 +7415,6 @@
         setInterval(dailyTick, 15000);
         document.addEventListener('visibilitychange', dailyTick);
     </script>
+    <script src="./cloudflare-worker/online-friendly-client.js?v=20260928-1"></script>
 </body>
 </html>

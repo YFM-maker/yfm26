@@ -1,0 +1,24 @@
+name = "yfm26"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+SUPABASE_URL = "https://wgnnwherrljscxcclkdr.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_yBpUGiF77N7k-ArjiW__uw_KPvL4yp2"
+ALLOWED_ORIGIN = "https://yfm-maker.github.io"
+
+[[durable_objects.bindings]]
+name = "MATCH_ROOMS"
+class_name = "MatchRoom"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[exports.MatchRoom]
+type = "durable-object"
+storage = "sqlite"
+
+[exports.RateLimiter]
+type = "durable-object"
+storage = "sqlite"
