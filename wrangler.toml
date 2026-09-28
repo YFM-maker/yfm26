@@ -1,0 +1,20 @@
+name = "yfm-online-friendly"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co"
+SUPABASE_ANON_KEY = "YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY"
+ALLOWED_ORIGIN = "https://YOUR_GITHUB_NAME.github.io"
+
+[[durable_objects.bindings]]
+name = "MATCH_ROOMS"
+class_name = "MatchRoom"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MatchRoom", "RateLimiter"]
