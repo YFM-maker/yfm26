@@ -3,8 +3,8 @@ main = "src/index.js"
 compatibility_date = "2026-09-01"
 
 [vars]
-SUPABASE_URL = "https://YOUR_PROJECT_REF.supabase.co"
-SUPABASE_ANON_KEY = "YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY"
+SUPABASE_URL = "https://wgnnwherrljscxcclkdr.supabase.co"
+SUPABASE_ANON_KEY = "sb_publishable_yBpUGiF77N7k-ArjiW__uw_KPvL4yp2"
 ALLOWED_ORIGIN = "https://YOUR_GITHUB_NAME.github.io"
 
 [[durable_objects.bindings]]
