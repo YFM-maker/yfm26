@@ -13,6 +13,12 @@
         body { font-family: 'Noto Sans KR', sans-serif; margin: 0; padding: 0; overflow: hidden; background-color: #1a202c; color: white; user-select: none; }
         .screen { display: none; width: 100vw; height: 100vh; }
         .screen.active { display: flex; }
+        #account-profile { display:none; flex:none; align-items:center; gap:8px; padding:10px 8px; border-top:1px solid #634c81; background:#140e25; }
+        #account-profile-photo { width:36px; height:36px; border-radius:50%; object-fit:cover; background:#443060; cursor:pointer; border:2px solid #9b7ccc; }
+        #account-profile-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:800; }
+        #account-profile-logout { font-size:11px; color:#e9d5ff; border:1px solid #735996; border-radius:7px; padding:5px; white-space:nowrap; }
+        @media(max-width:760px) { #fm-global-side #account-profile { position:fixed; bottom:calc(75px + env(safe-area-inset-bottom)); left:8px; z-index:48; max-width:min(235px,70vw); padding:5px 7px; border:1px solid #634c81; border-radius:12px; box-shadow:0 4px 18px #0009; } #account-profile-photo { width:30px; height:30px; } }
+
 
         /* 로비 및 메뉴 화면 스타일 */
         #screen-lobby { background-image: url('https://github.com/user-attachments/assets/68cc1fa9-b0c2-4d75-b56e-570e50516f89'); background-size: cover; background-position: center; background-repeat: no-repeat; }
@@ -732,12 +738,13 @@
       <form id="account-form" onsubmit="submitGameAccount(event)" style="width:min(100%,420px);padding:28px;border:1px solid #7662a6;border-radius:20px;background:#19132d;color:white;box-shadow:0 20px 70px #0009">
         <h1 id="account-title" style="font-size:26px;font-weight:900;margin:0 0 8px">게임 로그인</h1>
         <p style="font-size:13px;color:#d2c5eb;margin-bottom:20px">로그인하면 다른 기기에서도 진행도를 이어서 플레이할 수 있어.</p>
+        <label id="account-owner-label" style="display:none;margin-bottom:14px">구단주명 <small>(2~16자)</small><input id="account-owner-name" autocomplete="nickname" maxlength="16" style="display:block;width:100%;padding:12px;margin-top:6px;border-radius:9px;background:#100c20;border:1px solid #675788;color:white"></label>
         <label style="display:block;margin-bottom:14px">아이디 <small>(3~10자)</small><input id="account-id" autocomplete="username" required minlength="3" maxlength="10" pattern="[A-Za-z0-9!@#\^*]{3,10}" style="display:block;width:100%;padding:12px;margin-top:6px;border-radius:9px;background:#100c20;border:1px solid #675788;color:white"></label>
         <label style="display:block;margin-bottom:8px">비밀번호 <small>(7~15자)</small><span style="display:flex;margin-top:6px"><input id="account-password" type="password" autocomplete="current-password" required minlength="7" maxlength="15" pattern="[A-Za-z0-9!@#\^*]{7,15}" style="flex:1;min-width:0;padding:12px;border-radius:9px 0 0 9px;background:#100c20;border:1px solid #675788;color:white"><button type="button" onclick="toggleAccountPassword()" id="account-eye" aria-label="비밀번호 표시" style="padding:0 12px;background:#342651;border:1px solid #675788;border-radius:0 9px 9px 0">👁</button></span></label>
         <p style="color:#fbbf24;font-size:12px;line-height:1.5;margin:10px 0 18px;font-weight:800">⚠️ 절대 다른 사이트나 실제 계정에서 쓰는 비밀번호를 사용하지 마. 이 게임만을 위한 새로운 비밀번호를 만들어.</p>
         <p id="account-error" role="status" style="min-height:24px;color:#fca5a5;font-size:13px"></p>
         <button id="account-submit" type="submit" style="width:100%;padding:12px;border-radius:9px;background:#7c3aed;color:white;font-weight:900">로그인</button>
-        <button id="account-switch" type="button" onclick="toggleAccountMode()" style="display:block;width:100%;margin-top:15px;color:#c4b5fd">회원이 아니신가? 회원가입</button>
+        <button id="account-switch" type="button" onclick="toggleAccountMode()" style="display:block;width:100%;margin-top:15px;color:#c4b5fd">회원이 아니신가요? 회원가입</button>
       </form>
     </div>
     <!-- 로비 BGM 컨트롤 -->
@@ -783,6 +790,11 @@
                     <button class="fm-nav-item" onclick="openSave()"><span class="fm-ico">💾</span><span>저장 관리</span></button>
                     <button class="fm-nav-item" onclick="replayTutorial()"><span class="fm-ico">📖</span><span>튜토리얼</span></button>
                 </nav>
+                <div id="account-profile">
+                    <label title="프로필 사진 변경" style="cursor:pointer;flex:none"><img id="account-profile-photo" alt="프로필 사진"><input type="file" accept="image/*" onchange="changeAccountPhoto(this)" style="display:none"></label>
+                    <span id="account-profile-name"></span>
+                    <button id="account-profile-logout" onclick="signOutGameAccount()">로그아웃</button>
+                </div>
             </aside>
             <main class="fm-main">
                 <header class="fm-top">
@@ -2731,8 +2743,10 @@
             accountMode = accountMode === 'login' ? 'signup' : 'login';
             document.getElementById('account-title').textContent = accountMode === 'login' ? '게임 로그인' : '회원가입';
             document.getElementById('account-submit').textContent = accountMode === 'login' ? '로그인' : '회원가입';
-            document.getElementById('account-switch').textContent = accountMode === 'login' ? '회원이 아니신가? 회원가입' : '이미 회원이신가? 로그인';
+            document.getElementById('account-switch').textContent = accountMode === 'login' ? '회원이 아니신가요? 회원가입' : '이미 회원이신가요? 로그인';
             document.getElementById('account-password').autocomplete = accountMode === 'login' ? 'current-password' : 'new-password';
+            document.getElementById('account-owner-label').style.display = accountMode === 'signup' ? 'block' : 'none';
+            document.getElementById('account-owner-name').required = accountMode === 'signup';
             document.getElementById('account-error').textContent = '';
         }
         function toggleAccountPassword() {
@@ -2743,24 +2757,28 @@
         function accountMessage(message) { document.getElementById('account-error').textContent = message; }
         async function openAccountGate() {
             const gate = document.getElementById('account-gate'); gate.style.display = 'flex';
+            const form = document.getElementById('account-form'); form.style.display = 'none';
             if (window.yfmAccountReady) { gate.style.display = 'none'; return; }
             try {
                 const {data:{session},error} = await getOwnerRankClient().auth.getSession();
                 if (error) throw error;
-                if (session?.user && !session.user.is_anonymous) await enterGameAccount(session.user);
-            } catch (error) { accountMessage('서버 연결에 실패했어. 인터넷 연결을 확인해줘.'); }
+                if (session?.user && !session.user.is_anonymous) { await enterGameAccount(session.user); return; }
+                form.style.display = 'block';
+            } catch (error) { form.style.display = 'block'; accountMessage('서버 연결에 실패했어. 인터넷 연결을 확인해줘.'); }
         }
         async function submitGameAccount(event) {
             event.preventDefault();
             const id = document.getElementById('account-id').value;
             const password = document.getElementById('account-password').value;
+            const ownerName = document.getElementById('account-owner-name').value.trim();
+            if (accountMode === 'signup' && (ownerName.length < 2 || ownerName.length > 16)) return accountMessage('구단주명은 2~16자로 입력해줘.');
             if (!/^[A-Za-z0-9!@#^*]{3,10}$/.test(id) || !/^[A-Za-z0-9!@#^*]{7,15}$/.test(password)) return accountMessage('아이디·비밀번호의 길이와 허용 문자를 확인해줘.');
             const button = document.getElementById('account-submit'); button.disabled = true;
             accountMessage('계정 확인 중...');
             try {
                 const client = getOwnerRankClient(), email = accountEmail(id);
                 const result = accountMode === 'signup'
-                    ? await client.auth.signUp({email,password,options:{data:{username:id}}})
+                    ? await client.auth.signUp({email,password,options:{data:{username:id,owner_name:ownerName}}})
                     : await client.auth.signInWithPassword({email,password});
                 if (result.error) throw result.error;
                 if (!result.data.session) throw new Error('Supabase Auth의 이메일 확인을 꺼야 아이디 가입 후 바로 로그인할 수 있어.');
@@ -2826,6 +2844,7 @@
             localStorage.setItem(accountDeviceKey,user.id);
             accountUser=user;window.yfmAccountReady=true;
             document.getElementById('account-gate').style.display='none';
+            renderAccountProfile();
             if (typeof renderLobby==='function') renderLobby();
             ensureDaily();
             if (typeof showStarPick==='function') showStarPick();
@@ -2840,6 +2859,30 @@
             sessionStorage.removeItem('yfm_restored_account');
             accountUser=null;window.yfmAccountReady=false;
             document.getElementById('account-gate').style.display='flex';
+            document.getElementById('account-form').style.display='block';
+            document.getElementById('account-profile').style.display='none';
+        }
+        function renderAccountProfile() {
+            const profile=document.getElementById('account-profile');
+            if (!accountUser || !profile) return;
+            profile.style.display='flex';
+            document.getElementById('account-profile-name').textContent=accountUser.user_metadata?.owner_name || accountUser.user_metadata?.username || teamName;
+            document.getElementById('account-profile-photo').src=localStorage.getItem('fm_owner_avatar') || 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#55367d"/><circle cx="24" cy="18" r="9" fill="#d8b4fe"/><ellipse cx="24" cy="45" rx="17" ry="14" fill="#d8b4fe"/></svg>');
+        }
+        async function changeAccountPhoto(input) {
+            const file=input.files?.[0]; input.value='';
+            if (!file || !file.type.startsWith('image/')) return;
+            if (file.size>5*1024*1024) return alert('사진은 5MB 이하로 선택해줘.');
+            try {
+                const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas');
+                canvas.width=160;canvas.height=160;
+                const ctx=canvas.getContext('2d'),side=Math.min(bitmap.width,bitmap.height);
+                ctx.drawImage(bitmap,(bitmap.width-side)/2,(bitmap.height-side)/2,side,side,0,0,160,160);
+                bitmap.close();
+                const photo=canvas.toDataURL('image/jpeg',.72);
+                localStorage.setItem('fm_owner_avatar',photo);accountDirty=true;renderAccountProfile();
+                await uploadAccountSnapshot(true);
+            } catch(e) {alert('프로필 사진을 저장하지 못했어.');}
         }
 
         function saveData() { if (window.__wiping) return; if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.setItem('fm_items', JSON.stringify(items)); 
