@@ -791,7 +791,7 @@
                     <button class="fm-nav-item" onclick="replayTutorial()"><span class="fm-ico">📖</span><span>튜토리얼</span></button>
                 </nav>
                 <div id="account-profile">
-                    <label title="프로필 사진 변경" style="cursor:pointer;flex:none"><img id="account-profile-photo" alt="프로필 사진"><input type="file" accept="image/*" onchange="changeAccountPhoto(this)" style="display:none"></label>
+                    <button type="button" title="프로필 사진 변경" aria-label="프로필 사진 변경" onclick="document.getElementById('account-profile-input').click()" style="flex:none"><img id="account-profile-photo" alt="프로필 사진"></button><input id="account-profile-input" type="file" accept="image/*" onchange="changeAccountPhoto(this)" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
                     <span id="account-profile-name"></span>
                     <button id="account-profile-logout" onclick="signOutGameAccount()">로그아웃</button>
                 </div>
@@ -823,6 +823,12 @@
                 <p id="owner-rank-status" role="status" style="font-size:12px;color:#c4b5fd;min-height:18px;margin-top:9px"></p>
             </div>
             <div id="owner-rank-list" style="background:#19152c;border:1px solid #64518b;border-radius:14px;overflow:hidden"><div style="padding:18px;color:#cbd5e1">순위를 불러오는 중...</div></div>
+            <div id="owner-rank-detail" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:120;align-items:center;justify-content:center;padding:16px;background:#000b">
+                <div style="background:#1c1630;border:1px solid #7863a8;border-radius:16px;padding:20px;width:min(100%,480px);max-height:85vh;overflow:auto">
+                    <div style="display:flex;gap:12px;align-items:start"><h2 id="owner-rank-detail-title" style="flex:1;font-size:18px;font-weight:900"></h2><button type="button" onclick="document.getElementById('owner-rank-detail').style.display='none'" aria-label="닫기" style="font-size:25px">×</button></div>
+                    <p style="font-size:12px;color:#cbd5e1;margin:8px 0">공개된 선발 11명 · 매일 자정 갱신</p><div id="owner-rank-detail-list"></div>
+                </div>
+            </div>
             <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">현재 순위는 플레이어가 등록한 기록이며 경기 기록을 서버에서 검증하지 않아.</p>
         </div>
     </div>
@@ -2636,100 +2642,124 @@
             if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true}});
             return ownerRankClient;
         }
+        function ownerRankSnapshot() {
+            const lineup=players.filter(p=>p.isStarting).sort((a,b)=>(Number(a.slotIndex)||0)-(Number(b.slotIndex)||0));
+            if (lineup.length!==11) return null;
+            const owner=(accountUser?.user_metadata?.owner_name || accountUser?.user_metadata?.username || '').trim().slice(0,16);
+            if (!owner) return null;
+            return {
+                owner_name:owner, club_name:teamName.trim().slice(0,20)||'내 팀',
+                pending_ovr:getTeamOvr(),
+                pending_lineup:lineup.map(p=>({name:String(p.name||'선수').slice(0,30),position:String(p.position||'-').slice(0,4),ovr:getCalculatedOvr(p)}))
+            };
+        }
         async function checkOwnerRankRegistration() {
             if (ownerRankChecking) return ownerRankChecking;
             ownerRankChecking = (async () => {
-                const button = document.getElementById('owner-rank-submit');
-                const client = getOwnerRankClient();
-                const {data:{session},error:sessionError} = await client.auth.getSession();
-                if (sessionError) throw sessionError;
-                if (!session?.user?.id) { ownerRankRegistered = false; if(button){button.disabled=false;button.textContent='내 구단 처음 등록';} return false; }
-                const {data,error} = await client.from('owner_rankings').select('user_id,is_blocked').eq('user_id',session.user.id).maybeSingle();
-                if (error) throw error;
-                ownerRankRegistered = !!data;
-                if (button) {button.disabled = !!data;button.textContent = data ? (data.is_blocked ? '관리자에 의해 등록 제한됨' : '등록 완료 · OVR 자동 갱신') : '내 구단 처음 등록';}
+                const button=document.getElementById('owner-rank-submit');
+                const {data:{session},error:sessionError}=await getOwnerRankClient().auth.getSession();
+                if(sessionError) throw sessionError;
+                if(!session?.user?.id || session.user.is_anonymous) {
+                    ownerRankRegistered=false;
+                    if(button){button.disabled=false;button.textContent='내 구단 등록';}
+                    return false;
+                }
+                const {data,error}=await getOwnerRankClient().from('owner_rankings_v2').select('user_id').eq('user_id',session.user.id).maybeSingle();
+                if(error) throw error;
+                ownerRankRegistered=!!data;
+                if(button){button.disabled=!!data;button.textContent=data?'등록 완료 · 매일 자정 갱신':'내 구단 등록';}
                 return !!data;
-            })().finally(() => { ownerRankChecking = null; });
+            })().finally(()=>{ownerRankChecking=null;});
             return ownerRankChecking;
         }
         function queueOwnerRankSync() {
-            if (!ownerRankRegistered || document.hidden || window.__wiping) return;
+            if(!ownerRankRegistered || !window.yfmAccountReady || document.hidden || window.__wiping) return;
             clearTimeout(ownerRankSyncTimer);
-            ownerRankSyncTimer = setTimeout(syncOwnerRank, 1200);
+            ownerRankSyncTimer=setTimeout(syncOwnerRank,1200);
         }
         async function syncOwnerRank() {
-            if (!ownerRankRegistered || document.hidden || window.__wiping) return;
-            const starters=players.filter(p=>p.isStarting);
-            if (starters.length !== 11) return;
-            const club=teamName.trim().slice(0,12)||'내 팀', ovr=getTeamOvr(), signature=club+'|'+ovr;
-            if (signature === ownerRankLastSent) return;
+            if(!ownerRankRegistered || !window.yfmAccountReady || document.hidden || window.__wiping) return;
+            const snapshot=ownerRankSnapshot();
+            if(!snapshot) return;
+            const signature=JSON.stringify(snapshot);
+            if(signature===ownerRankLastSent) return;
             try {
-                const client=getOwnerRankClient(), {data:{session}}=await client.auth.getSession();
-                if (!session?.user?.id) return;
-                const {data,error}=await client.from('owner_rankings').update({club_name:club,pending_ovr:ovr}).eq('user_id',session.user.id).eq('is_blocked',false).select('user_id');
-                if (error) throw error;
-                if (!data?.length) {ownerRankRegistered=false;return;}
+                const {data:{session}}=await getOwnerRankClient().auth.getSession();
+                if(!session?.user?.id || session.user.is_anonymous) return;
+                const {data,error}=await getOwnerRankClient().from('owner_rankings_v2').update(snapshot).eq('user_id',session.user.id).select('user_id');
+                if(error) throw error;
+                if(!data?.length){ownerRankRegistered=false;return;}
                 ownerRankLastSent=signature;
-                if (document.querySelector('.screen.active')?.id==='screen-owner-rank') ownerRankStatus('현재 OVR이 저장됐어. 순위에는 다음 자정에 반영돼.');
-            } catch(e) { console.warn('구단주 순위 OVR 저장 실패:',e); }
+                if(document.querySelector('.screen.active')?.id==='screen-owner-rank') ownerRankStatus('현재 베스트 11을 저장했어. 공개 순위에는 다음 자정에 반영돼.');
+            } catch(e){console.warn('구단주 순위 저장 실패:',e);}
         }
-        setInterval(() => {
+        setInterval(()=>{
             const day=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
-            if (day!==ownerRankDay) {ownerRankDay=day;if(document.querySelector('.screen.active')?.id==='screen-owner-rank') loadOwnerRank();}
-            if (ownerRankRegistered) queueOwnerRankSync();
+            if(day!==ownerRankDay){ownerRankDay=day;if(document.querySelector('.screen.active')?.id==='screen-owner-rank') loadOwnerRank();}
+            if(ownerRankRegistered) queueOwnerRankSync();
         },60000);
-        document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});}});
-        setTimeout(()=>checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{}),2500);
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden && window.yfmAccountReady)checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});});
         async function loadOwnerRank() {
-            const mine = document.getElementById('owner-rank-mine'), list = document.getElementById('owner-rank-list');
-            const starters = players.filter(p => p.isStarting);
-            if (mine) mine.textContent = `${teamName} · 선발 ${starters.length}/11명 · 평균 OVR ${getTeamOvr()}`;
-            if (list) list.textContent = '순위를 불러오는 중...';
+            const mine=document.getElementById('owner-rank-mine'),list=document.getElementById('owner-rank-list');
+            const starters=players.filter(p=>p.isStarting);
+            if(mine) mine.textContent=`${accountUser?.user_metadata?.owner_name || '구단주'} · ${teamName} · 선발 ${starters.length}/11명 · 평균 OVR ${getTeamOvr()}`;
+            if(list) list.textContent='순위를 불러오는 중...';
             try {
-                const client = getOwnerRankClient();
                 await checkOwnerRankRegistration();
-                const { data, error } = await client.from('owner_rankings').select('club_name,average_ovr').eq('is_blocked', false).order('average_ovr', {ascending:false}).order('created_at', {ascending:true}).limit(50);
-                if (error) throw error;
-                if (!list || document.querySelector('.screen.active')?.id !== 'screen-owner-rank') return;
+                const {data,error}=await getOwnerRankClient().from('owner_rankings_v2')
+                    .select('published_owner_name,published_club_name,published_ovr,published_lineup,created_at')
+                    .order('published_ovr',{ascending:false}).order('created_at',{ascending:true}).limit(50);
+                if(error) throw error;
+                if(!list || document.querySelector('.screen.active')?.id!=='screen-owner-rank') return;
                 list.replaceChildren();
-                if (!data.length) { list.textContent = '아직 등록된 구단이 없어. 첫 번째로 등록해봐!'; list.style.padding = '18px'; return; }
-                list.style.padding = '0';
-                data.forEach((row, i) => {
-                    const item = document.createElement('div');
-                    item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 15px;border-bottom:1px solid #45375e';
-                    const rank = document.createElement('b'); rank.style.cssText = 'width:35px;flex-shrink:0;color:#c4b5fd'; rank.textContent = `${i + 1}위`;
-                    const name = document.createElement('span'); name.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'; name.textContent = row.club_name;
-                    const score = document.createElement('b'); score.textContent = `OVR ${row.average_ovr}`;
-                    item.append(rank, name, score); list.append(item);
+                if(!data?.length){list.textContent='아직 등록된 구단이 없어. 첫 번째로 등록해봐!';list.style.padding='18px';return;}
+                list.style.padding='0';
+                data.forEach((row,i)=>{
+                    const item=document.createElement('button');
+                    item.type='button';item.style.cssText='display:flex;align-items:center;gap:10px;padding:12px 15px;border-bottom:1px solid #45375e;width:100%;color:white;text-align:left;background:transparent;cursor:pointer';
+                    const rank=document.createElement('b');rank.style.cssText='width:40px;flex:none;color:#c4b5fd';rank.textContent=`${i+1}위`;
+                    const names=document.createElement('span');names.style.cssText='flex:1;min-width:0';
+                    const owner=document.createElement('strong');owner.style.cssText='display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';owner.textContent=row.published_owner_name;
+                    const club=document.createElement('small');club.style.cssText='display:block;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';club.textContent=row.published_club_name;
+                    names.append(owner,club);
+                    const score=document.createElement('b');score.style.cssText='white-space:nowrap';score.textContent=`OVR ${row.published_ovr}`;
+                    item.append(rank,names,score);item.addEventListener('click',()=>showOwnerRankLineup(row));list.append(item);
                 });
-                ownerRankStatus(ownerRankRegistered?'순위는 매일 한국 시간 자정에 갱신돼.':'처음 등록하면 이후 OVR은 자동으로 저장돼.');
-            } catch (e) { if (list) list.textContent = '순위를 불러오지 못했어.'; ownerRankStatus(e.message || '연결 오류', true); }
+                ownerRankStatus(ownerRankRegistered?'매일 한국 시간 자정에 현재 OVR과 베스트 11이 반영돼.':'등록하면 현재 기록이 표시되고 이후 매일 자정에 갱신돼.');
+            } catch(e){if(list)list.textContent='순위를 불러오지 못했어.';ownerRankStatus(e.message||'연결 오류',true);}
+        }
+        function showOwnerRankLineup(row) {
+            const modal=document.getElementById('owner-rank-detail'),title=document.getElementById('owner-rank-detail-title'),body=document.getElementById('owner-rank-detail-list');
+            title.textContent=`${row.published_owner_name} · ${row.published_club_name} · OVR ${row.published_ovr}`;
+            body.replaceChildren();
+            (Array.isArray(row.published_lineup)?row.published_lineup:[]).forEach((p,i)=>{
+                const line=document.createElement('div');line.style.cssText='display:flex;gap:10px;padding:8px;border-bottom:1px solid #45375e';
+                const pos=document.createElement('b');pos.style.cssText='width:38px;color:#c4b5fd';pos.textContent=String(p.position||'-');
+                const name=document.createElement('span');name.style.cssText='flex:1';name.textContent=String(p.name||`선수 ${i+1}`);
+                const ovr=document.createElement('b');ovr.textContent=`OVR ${Number(p.ovr)||0}`;
+                line.append(pos,name,ovr);body.append(line);
+            });
+            if(!body.childNodes.length)body.textContent='등록된 선발 명단이 없어.';
+            modal.style.display='flex';
         }
         async function submitOwnerRank() {
-            const starters = players.filter(p => p.isStarting), button = document.getElementById('owner-rank-submit');
-            if (starters.length !== 11) return ownerRankStatus('선발 11명을 모두 배치한 뒤 등록해줘.', true);
-            if (button) button.disabled = true;
+            const snapshot=ownerRankSnapshot(),button=document.getElementById('owner-rank-submit');
+            if(!snapshot)return ownerRankStatus('계정 구단주명과 선발 11명을 확인한 뒤 등록해줘.',true);
+            if(button)button.disabled=true;
             ownerRankStatus('등록 중...');
             try {
-                const client = getOwnerRankClient();
-                if (await checkOwnerRankRegistration()) return ownerRankStatus('이미 등록된 구단이야. 이후 OVR은 자동으로 저장돼.');
-                let { data: { session }, error: sessionError } = await client.auth.getSession();
-                if (sessionError) throw sessionError;
-                if (!session) {
-                    const result = await client.auth.signInAnonymously();
-                    if (result.error) throw result.error;
-                    session = result.data.session;
-                }
-                if (!session?.user?.id) throw new Error('익명 로그인에 실패했어.');
-                const club=teamName.trim().slice(0,12)||'내 팀',ovr=getTeamOvr();
-                const { error } = await client.from('owner_rankings').insert({user_id:session.user.id,club_name:club,average_ovr:ovr,pending_ovr:ovr});
-                if (error) throw error;
-                ownerRankRegistered=true;ownerRankLastSent=club+'|'+ovr;
-                await loadOwnerRank(); ownerRankStatus('등록 완료! 이후 OVR 변화는 자동 저장되고 매일 자정 순위에 반영돼.');
-            } catch (e) { ownerRankStatus(e.message || '등록에 실패했어.', true); }
-            finally { if (button) button.disabled = ownerRankRegistered; }
+                if(await checkOwnerRankRegistration())return ownerRankStatus('이미 등록된 계정이야. 베스트 11은 자동 저장돼.');
+                const {data:{session},error:sessionError}=await getOwnerRankClient().auth.getSession();
+                if(sessionError)throw sessionError;
+                if(!session?.user?.id || session.user.is_anonymous)throw new Error('로그인한 뒤 등록해줘.');
+                const {error}=await getOwnerRankClient().from('owner_rankings_v2').insert({user_id:session.user.id,...snapshot});
+                if(error)throw error;
+                ownerRankRegistered=true;ownerRankLastSent=JSON.stringify(snapshot);
+                await loadOwnerRank();ownerRankStatus('등록 완료! 계정당 한 순위로 유지되고 매일 자정에 갱신돼.');
+            } catch(e){ownerRankStatus(e.message||'등록에 실패했어.',true);}
+            finally{if(button)button.disabled=ownerRankRegistered;}
         }
-        
+
         // Supabase Auth가 비밀번호를 해시·검증한다. 진행도 테이블은 auth.uid() RLS로 격리한다.
         let accountMode = 'login', accountSaving = false, accountLegacyUser = null, accountMigrationSave = null;
         var accountDirty = false;
@@ -2879,6 +2909,7 @@
             accountUser=user;window.yfmAccountReady=true;
             document.getElementById('account-gate').style.display='none';
             renderAccountProfile();
+            checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});
             if (typeof renderLobby==='function') renderLobby();
             ensureDaily();
             if (typeof showStarPick==='function') showStarPick();
@@ -2892,6 +2923,7 @@
             await getOwnerRankClient().auth.signOut();
             sessionStorage.removeItem('yfm_restored_account');
             accountUser=null;window.yfmAccountReady=false;
+            ownerRankRegistered=false;ownerRankLastSent='';
             document.getElementById('account-gate').style.display='flex';
             document.getElementById('account-form').style.display='block';
             document.getElementById('account-profile').style.display='none';
@@ -2904,19 +2936,25 @@
             document.getElementById('account-profile-photo').src=localStorage.getItem('fm_owner_avatar') || 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#55367d"/><circle cx="24" cy="18" r="9" fill="#d8b4fe"/><ellipse cx="24" cy="45" rx="17" ry="14" fill="#d8b4fe"/></svg>');
         }
         async function changeAccountPhoto(input) {
-            const file=input.files?.[0]; input.value='';
+            const file=input.files?.[0];
             if (!file || !file.type.startsWith('image/')) return;
             if (file.size>5*1024*1024) return alert('사진은 5MB 이하로 선택해줘.');
+            let imageUrl='';
             try {
-                const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas');
+                imageUrl=URL.createObjectURL(file);
+                const img=new Image();
+                img.src=imageUrl;
+                await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;if(img.complete && img.naturalWidth)resolve();});
+                const canvas=document.createElement('canvas');
                 canvas.width=160;canvas.height=160;
-                const ctx=canvas.getContext('2d'),side=Math.min(bitmap.width,bitmap.height);
-                ctx.drawImage(bitmap,(bitmap.width-side)/2,(bitmap.height-side)/2,side,side,0,0,160,160);
-                bitmap.close();
+                const ctx=canvas.getContext('2d'),side=Math.min(img.naturalWidth,img.naturalHeight);
+                ctx.drawImage(img,(img.naturalWidth-side)/2,(img.naturalHeight-side)/2,side,side,0,0,160,160);
                 const photo=canvas.toDataURL('image/jpeg',.72);
                 localStorage.setItem('fm_owner_avatar',photo);accountDirty=true;renderAccountProfile();
                 await uploadAccountSnapshot(true);
-            } catch(e) {alert('프로필 사진을 저장하지 못했어.');}
+                if(accountDirty) alert('사진은 기기에 저장됐지만 서버 저장에 실패했어. 잠시 후 다시 시도해줘.');
+            } catch(e) {console.warn('프로필 사진 처리 실패:',e);alert('사진을 읽지 못했어. JPG나 PNG 사진으로 다시 시도해줘.');}
+            finally {if(imageUrl)URL.revokeObjectURL(imageUrl);input.value='';}
         }
 
         function saveData() { if (window.__wiping) return; if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.setItem('fm_items', JSON.stringify(items)); 
