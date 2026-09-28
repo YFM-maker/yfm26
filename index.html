@@ -738,7 +738,7 @@
       <form id="account-form" onsubmit="submitGameAccount(event)" style="width:min(100%,420px);padding:28px;border:1px solid #7662a6;border-radius:20px;background:#19132d;color:white;box-shadow:0 20px 70px #0009">
         <h1 id="account-title" style="font-size:26px;font-weight:900;margin:0 0 8px">게임 로그인</h1>
         <p style="font-size:13px;color:#d2c5eb;margin-bottom:20px">로그인하면 다른 기기에서도 진행도를 이어서 플레이할 수 있어.</p>
-        <label id="account-owner-label" style="display:none;margin-bottom:14px">구단주명 <small>(2~16자)</small><input id="account-owner-name" autocomplete="nickname" maxlength="16" style="display:block;width:100%;padding:12px;margin-top:6px;border-radius:9px;background:#100c20;border:1px solid #675788;color:white"></label>
+        <label id="account-owner-label" style="display:none;margin-bottom:14px">구단주명 <small>(구단명과 별개 · 2~16자)</small><input id="account-owner-name" autocomplete="nickname" maxlength="16" style="display:block;width:100%;padding:12px;margin-top:6px;border-radius:9px;background:#100c20;border:1px solid #675788;color:white"></label>
         <label style="display:block;margin-bottom:14px">아이디 <small>(3~10자)</small><input id="account-id" autocomplete="username" required minlength="3" maxlength="10" pattern="[A-Za-z0-9!@#\^*]{3,10}" style="display:block;width:100%;padding:12px;margin-top:6px;border-radius:9px;background:#100c20;border:1px solid #675788;color:white"></label>
         <label style="display:block;margin-bottom:8px">비밀번호 <small>(7~15자)</small><span style="display:flex;margin-top:6px"><input id="account-password" type="password" autocomplete="current-password" required minlength="7" maxlength="15" pattern="[A-Za-z0-9!@#\^*]{7,15}" style="flex:1;min-width:0;padding:12px;border-radius:9px 0 0 9px;background:#100c20;border:1px solid #675788;color:white"><button type="button" onclick="toggleAccountPassword()" id="account-eye" aria-label="비밀번호 표시" style="padding:0 12px;background:#342651;border:1px solid #675788;border-radius:0 9px 9px 0">👁</button></span></label>
         <p style="color:#fbbf24;font-size:12px;line-height:1.5;margin:10px 0 18px;font-weight:800">⚠️ 절대 다른 사이트나 실제 계정에서 쓰는 비밀번호를 사용하지 마. 이 게임만을 위한 새로운 비밀번호를 만들어.</p>
@@ -2731,7 +2731,7 @@
         }
         
         // Supabase Auth가 비밀번호를 해시·검증한다. 진행도 테이블은 auth.uid() RLS로 격리한다.
-        let accountMode = 'login', accountSaving = false;
+        let accountMode = 'login', accountSaving = false, accountLegacyUser = null, accountMigrationSave = null;
         var accountDirty = false;
         let accountUser = null, accountLastSnapshot = '', accountLastWrite = 0;
         const accountDeviceKey = 'yfm_cloud_owner';
@@ -2762,7 +2762,18 @@
             try {
                 const {data:{session},error} = await getOwnerRankClient().auth.getSession();
                 if (error) throw error;
-                if (session?.user && !session.user.is_anonymous) { await enterGameAccount(session.user); return; }
+                if (session?.user && !session.user.is_anonymous) {
+                    if (!session.user.user_metadata?.owner_name) {
+                        accountLegacyUser = session.user;
+                        if (accountMode !== 'signup') toggleAccountMode();
+                        document.getElementById('account-id').value = session.user.user_metadata?.username || '';
+                        document.getElementById('account-title').textContent = '기존 기록에 계정 연결';
+                        form.style.display = 'block';
+                        accountMessage('기존 진행도를 유지하면서 아이디·새 비밀번호·구단주명을 등록해줘.');
+                        return;
+                    }
+                    await enterGameAccount(session.user); return;
+                }
                 form.style.display = 'block';
             } catch (error) { form.style.display = 'block'; accountMessage('서버 연결에 실패했어. 인터넷 연결을 확인해줘.'); }
         }
@@ -2777,11 +2788,34 @@
             accountMessage('계정 확인 중...');
             try {
                 const client = getOwnerRankClient(), email = accountEmail(id);
+                if (accountLegacyUser && accountMode === 'signup' && accountLegacyUser.user_metadata?.username?.toLowerCase() === id.toLowerCase()) {
+                    const {data,error} = await client.auth.updateUser({password,data:{username:id,owner_name:ownerName}});
+                    if (error) throw error;
+                    accountLegacyUser=null;
+                    await enterGameAccount(data.user);
+                    return;
+                }
+                if (accountLegacyUser && accountMode === 'signup' && !accountMigrationSave) {
+                    const old=await client.from('game_progress').select('save_data').eq('user_id',accountLegacyUser.id).maybeSingle();
+                    if (old.error) throw old.error;
+                    accountMigrationSave=old.data?.save_data || accountSnapshot();
+                }
                 const result = accountMode === 'signup'
                     ? await client.auth.signUp({email,password,options:{data:{username:id,owner_name:ownerName}}})
                     : await client.auth.signInWithPassword({email,password});
                 if (result.error) throw result.error;
                 if (!result.data.session) throw new Error('Supabase Auth의 이메일 확인을 꺼야 아이디 가입 후 바로 로그인할 수 있어.');
+                if (accountLegacyUser && accountMode === 'signup') {
+                    const migration=accountMigrationSave;
+                    const copied=await client.from('game_progress').upsert({user_id:result.data.user.id,save_data:migration},{onConflict:'user_id'});
+                    if (copied.error) throw copied.error;
+                    restoreAccountSnapshot(migration);
+                    localStorage.setItem(accountDeviceKey,result.data.user.id);
+                    sessionStorage.setItem('yfm_restored_account',result.data.user.id);
+                    accountLegacyUser=null;accountMigrationSave=null;
+                    location.reload(); return;
+                }
+                accountLegacyUser=null;
                 await enterGameAccount(result.data.user);
             } catch(error) {
                 console.warn('게임 계정 로그인 실패:',error);
@@ -2866,7 +2900,7 @@
             const profile=document.getElementById('account-profile');
             if (!accountUser || !profile) return;
             profile.style.display='flex';
-            document.getElementById('account-profile-name').textContent=accountUser.user_metadata?.owner_name || accountUser.user_metadata?.username || teamName;
+            document.getElementById('account-profile-name').textContent=accountUser.user_metadata?.owner_name || accountUser.user_metadata?.username || '구단주';
             document.getElementById('account-profile-photo').src=localStorage.getItem('fm_owner_avatar') || 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" fill="#55367d"/><circle cx="24" cy="18" r="9" fill="#d8b4fe"/><ellipse cx="24" cy="45" rx="17" ry="14" fill="#d8b4fe"/></svg>');
         }
         async function changeAccountPhoto(input) {
