@@ -805,6 +805,18 @@
         </div>
     </div>
 
+    <div id="screen-friendly" class="screen bg-gradient-dark flex-col overflow-y-auto p-5 sm:p-10">
+        <button onclick="switchScreen('screen-lobby')" class="text-left text-sky-300 font-bold mb-6">← 로비</button>
+        <div class="w-full max-w-2xl mx-auto bg-gray-900 border border-sky-700 rounded-2xl p-6 space-y-5">
+            <h2 class="text-3xl font-black">🌐 온라인 친선경기</h2>
+            <p class="text-gray-300 text-sm">각자의 선발 11명으로 경기해. 방장이 경기를 계산하고 두 화면에 중계해. 전후반마다 각자 전술·교체 정지 3회, 한 번당 15초.</p>
+            <div class="flex flex-wrap gap-3"><button onclick="friendlyCreate()" class="fm-btn pri">4자리 방 만들기</button><input id="friendly-join-code" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4자리 코드" class="bg-gray-800 rounded-xl p-3 w-32 text-white font-black tracking-widest"><button onclick="friendlyJoin()" class="fm-btn">코드로 참가</button></div>
+            <div class="text-4xl font-black text-sky-300" id="friendly-code"></div><div id="friendly-status" role="status" class="text-sm text-gray-300 min-h-8">팀 관리에서 선발 11명을 구성한 뒤 방을 만들어줘.</div>
+            <div id="friendly-pause-count" class="text-xs text-gray-400"></div>
+            <p class="text-xs text-gray-400">경기 기록은 친선전으로만 남으며 토큰·미션·선수 체력·구단주 랭킹에는 영향을 주지 않아. 초대 코드는 생성 후 2시간 동안 유효해.</p>
+        </div>
+    </div>
+
     <!-- 일일 미션 / 업적 -->
     <div id="mission-modal" class="fixed inset-0 bg-black/90 z-[70] hidden flex-col items-center justify-center p-2 sm:p-5 backdrop-blur-md">
       <div class="bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl w-full max-w-2xl max-h-[94vh] max-h-[94dvh] flex flex-col min-h-0">
@@ -822,7 +834,7 @@
     <!-- 2. 게임 모드 선택 화면 -->
     <div id="screen-mode-select" class="screen bg-gradient-dark flex-col relative">
         <button onclick="switchScreen('screen-lobby')" class="absolute top-6 left-6 text-2xl font-bold hover:text-blue-400">&lt; 로비로 돌아가기</button>
-        <div class="flex flex-1 items-center justify-center gap-5 p-8 pt-24 overflow-auto">
+        <div class="flex flex-1 items-center justify-start gap-5 p-8 pt-24 overflow-auto">
             <div class="w-96 h-96 shrink-0 bg-gray-800 rounded-3xl border-4 border-yellow-500 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition shadow-[0_0_40px_rgba(234,179,8,0.3)] group" onclick="switchScreen('screen-saudi')">
                 <span class="text-7xl mb-4 group-hover:scale-110 transition">💰</span>
                 <h2 class="text-4xl font-black text-yellow-500 mb-2">사우디 모드</h2>
@@ -837,6 +849,7 @@
                 <span class="text-7xl mb-4">🏟️</span><h2 class="text-4xl font-black text-emerald-400 mb-2">리그 모드</h2>
                 <p class="text-gray-400 font-bold text-center px-6">K리그2 → 프리미어리그<br>14개 리그 승격 도전 · 모든 팀과 한 번씩</p>
             </div>
+            <div class="w-80 h-96 shrink-0 bg-gray-800 rounded-3xl border-4 border-cyan-400 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition" onclick="switchScreen('screen-friendly')"><span class="text-7xl mb-4">🌐</span><h2 class="text-3xl font-black text-cyan-300 mb-2">온라인 친선</h2><p class="text-gray-400 font-bold text-center px-6">4자리 코드로 친구와 경기</p></div>
             <div class="w-80 h-96 shrink-0 bg-gray-800 rounded-3xl border-4 border-fuchsia-500 flex flex-col items-center justify-center cursor-pointer hover:scale-105 transition shadow-[0_0_40px_rgba(217,70,239,0.3)] relative" onclick="switchScreen('screen-rogue')">
                 <span class="absolute top-4 right-4 text-xs font-black bg-fuchsia-500 text-white px-2 py-1 rounded-full">NEW</span>
                 <span class="text-7xl mb-4">🎲</span><h2 class="text-4xl font-black text-fuchsia-300 mb-2">로그라이크</h2>
@@ -903,6 +916,11 @@
             </div>
             <div class="mt-actions"><button id="btn-forfeit" class="mt-btn" onclick="forfeitMatch()" title="0:3 패배 처리">🏳️ 나가기</button><button id="btn-speed" class="mt-btn" onclick="toggleSpeed()">배속 x1</button><button id="btn-shout" class="mt-btn" onclick="openShouts()" title="선수 심리에 따라 다른 반응 · 경기 시간 10분 쿨타임">📣 터치라인 외침</button><button id="btn-tactics" class="mt-btn primary" onclick="openTactics()">⚙️ 전술 / 교체</button></div>
         </div>
+        <div id="friendly-match-controls" class="hidden bg-slate-950/90 border-b border-sky-700 px-3 py-1 flex-wrap items-center gap-2 text-xs font-bold" style="z-index:22;position:relative">
+            <span id="friendly-countdown">▶ 경기 진행 중</span><button onclick="friendlyPause()" class="mt-btn">⏸ 전술·교체 (15초)</button>
+            <span class="text-gray-400">감정표현:</span><button onclick="friendlySendEmoji('😜')">😜</button><button onclick="friendlySendEmoji('😂')">😂</button><button onclick="friendlySendEmoji('😢')">😢</button><button onclick="friendlySendEmoji('😡')">😡</button><button onclick="friendlySendEmoji('😎')">😎</button>
+            <button onclick="friendlyLeave()" class="ml-auto text-red-300">나가기</button><span id="friendly-reaction" class="hidden bg-fuchsia-900 text-white rounded-lg px-2 py-1"></span>
+        </div>
         <div class="poss-bar"><i id="poss-home" style="width:50%;background:#3b82f6"></i><i id="poss-away" style="width:50%;background:#ef4444"></i></div>
         <div class="mom-bar" title="경기 흐름(모멘텀): 최근 공격 점유·슈팅·득점으로 계산"><span class="mom-mid"></span><i id="mom-fill"></i><em id="mom-label"></em></div>
 
@@ -920,6 +938,11 @@
         </div>
         <div id="match-comm" class="match-comm"></div>
 
+        <div id="friendly-guest-panel" class="hidden absolute inset-0 z-[66] bg-black/95 flex-col p-4 sm:p-8 overflow-y-auto gap-4">
+            <div class="flex justify-between gap-2 items-center"><b class="text-xl">원정팀 전술 · 교체</b><button class="fm-btn" onclick="document.getElementById('friendly-guest-panel').classList.replace('flex','hidden')">닫기</button></div>
+            <p class="text-gray-300 text-xs">전술과 교체를 선택하면 방장 경기 화면에 적용돼. 15초 뒤 자동 재개돼.</p><div id="friendly-guest-tactic" class="flex flex-wrap gap-2"></div><div id="friendly-guest-instr" class="text-sm"></div><div id="friendly-guest-sub" class="overflow-y-auto max-h-[54vh]"></div>
+        </div>
+        <div id="friendly-guest-result" class="hidden absolute inset-0 z-[67] bg-black/90 flex-col items-center justify-center gap-5 text-3xl font-black text-center p-6"></div>
         <div id="pk-overlay" class="absolute inset-0 z-[56] hidden flex-col items-center justify-center bg-black/85 backdrop-blur-sm p-6">
             <div class="text-lg font-bold text-yellow-300 mb-1">승부차기</div>
             <div id="pk-score" class="text-6xl font-black mb-6">0 : 0</div>
@@ -3050,7 +3073,7 @@
 
         const globalSideNav = document.querySelector('#screen-lobby .fm-side');
         if (globalSideNav) { globalSideNav.id = 'fm-global-side'; document.body.appendChild(globalSideNav); }
-        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7};
+        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7,'screen-friendly':1};
         function updatePersistentNav(screenId) {
             const show = screenId !== 'screen-match'; document.body.classList.toggle('has-global-nav', show); document.body.classList.toggle('in-match', !show);
             document.querySelectorAll('#fm-global-side .fm-nav-item').forEach((button,index)=>button.classList.toggle('active', show && index===navScreenIndex[screenId]));
@@ -5436,6 +5459,7 @@
             if (mode === 'league') { const cc = clubById(e.id); if (cc) e = { ...e, lineup: clubLineup(cc), formation: clubForm(cc) }; }
             if (mode === 'worldcup' && worldCupNationalPlayers(e)) e = { ...e, lineup: null, formation: '4-3-3' };
             if (mode === 'career' || mode === 'europa') { const cc = clClub(e.name); if (cc) e = { ...e, lineup: clubLineup(cc), formation: clubForm(cc) }; else if (CUP_EXTRA_ROSTERS[e.name]) { const pool = CUP_EXTRA_ROSTERS[e.name], used = { GK:0, DF:0, MF:0, FW:0 }; e = { ...e, formation:'4-3-3', lineup: formationsLayouts['4-3-3'].map(slot => ({name:pool[slot.pos][used[slot.pos]++],pos:slot.pos})) }; } }
+            if (mode === 'friendly' && e.onlineTeam) { const team=e.onlineTeam; return {formation:formationsLayouts[team.formation]?team.formation:'4-3-3',list:team.players.map(p=>({...p,det:p.pos})),ace:-1}; }
             const formation = e.formation && formationsLayouts[e.formation] ? e.formation : '4-2-3-1', layout = formationsLayouts[formation];
             const used = { GK: 0, DF: 0, MF: 0, FW: 0 }, nums = { GK: [1, 12, 23], DF: [2, 3, 4, 5, 15], MF: [6, 8, 10, 14, 16], FW: [9, 7, 11, 17, 19] };
             const names = layout.map((slot, i) => { const c = e.lineup && e.lineup[i], k = used[slot.pos]++; const national = mode === 'worldcup' && worldCupNationalPlayers(e); return c ? (c.name || c) : national?.[slot.pos]?.[k] || `${e.name} ${nums[slot.pos][k] || 20 + k}번`; });
@@ -5498,8 +5522,8 @@
         }
         function getAwayRoster(mode, e) {
             const k = lineupKey(mode, e);
-            if (preLineup && preLineup.k === k && preLineup.r && preLineup.r.list && !((mode === 'worldcup' && worldCupNationalPlayers(e) || mode === 'europa' && CUP_EXTRA_ROSTERS[e.name]) && preLineup.r.list.some(p => / \d+번$/.test(p.name)))) return preLineup.r;
-            const r = buildAwayRoster(mode, e); preLineup = { k, r };
+            if (mode !== 'friendly' && preLineup && preLineup.k === k && preLineup.r && preLineup.r.list && !((mode === 'worldcup' && worldCupNationalPlayers(e) || mode === 'europa' && CUP_EXTRA_ROSTERS[e.name]) && preLineup.r.list.some(p => / \d+번$/.test(p.name)))) return preLineup.r;
+            const r = buildAwayRoster(mode, e); if (mode === 'friendly') return r; preLineup = { k, r };
             try { localStorage.setItem('fm_prelineup', JSON.stringify(preLineup)); } catch (x) {}
             return r;
         }
@@ -5781,8 +5805,8 @@
             awayLayout.forEach((slot, idx) => {
                 const R = roster.list[idx] || { name: `CPU ${slot.pos}`, ovr: Math.round(Number(enemyData.ovr) || 60) }, pName = R.name;
                 let mappedX = slot.x * 0.45 + 50;
-                const playerOvr = R.ovr + AWAY_ADJ; // 표시 OVR은 그대로, 내부 밸런스 보정치만 더함
-                awayPlayers.push({ id: 'cpu_'+idx, name: pName, ovr: playerOvr, displayOvr: R.ovr, attr: genAttr(playerOvr, slot.pos, pName), det: slotDetail(slot), rl: roleFor(genAttr(playerOvr, slot.pos, pName), slotDetail(slot)), trait: traitOf(pName, slot.pos), role: slot.pos, baseX: mappedX, baseY: 100 - slot.y, x: mappedX, y: 100 - slot.y, targetX: mappedX, targetY: 100 - slot.y, isHome: false, phase: Math.random()*100, isRedCarded: false, cards: 0 });
+                const playerOvr = R.ovr + (mode === 'friendly' ? 0 : AWAY_ADJ); // 표시 OVR은 그대로, 내부 밸런스 보정치만 더함
+                awayPlayers.push({ id: mode === 'friendly' ? 'guest_'+R.id : 'cpu_'+idx, name: pName, ovr: playerOvr, displayOvr: R.ovr, attr: mode === 'friendly' ? R.attr : genAttr(playerOvr, slot.pos, pName), det: slotDetail(slot), rl: roleFor(mode === 'friendly' ? R.attr : genAttr(playerOvr, slot.pos, pName), slotDetail(slot)), trait: mode === 'friendly' ? R.trait : traitOf(pName, slot.pos), role: slot.pos, baseX: mappedX, baseY: 100 - slot.y, x: mappedX, y: 100 - slot.y, targetX: mappedX, targetY: 100 - slot.y, isHome: false, phase: Math.random()*100, isRedCarded: false, cards: 0 });
                 if (idx === roster.ace) awayPlayers[awayPlayers.length - 1].star = true;
             });
 
@@ -5803,7 +5827,7 @@
             if (mode === 'league') { currentMatchState.leagueRound = leagueState.round; currentMatchState.leagueSeason = leagueState.season; currentMatchState.leaguePlayoff = !!enemyData.playoff; }
             currentMatchState.forms = forms; currentMatchState.venue = venue; currentMatchState.formBase = matchFormation; currentMatchState.formF = { h: formationFactor(homeLayout, matchFormation), a: formationFactor(awayLayout, enemyFormation) }; setupMiracle(currentMatchState);
 
-            document.getElementById('match-mode-text').innerText = mode === 'league' ? leagueMatchLabel(enemyData) : mode === 'saudi' ? '사우디 모드' : mode === 'rogue' ? prematchLabel('rogue', enemyData) : mode === 'europa' ? `유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}` : mode === 'worldcup' ? `월드컵 ${worldCupState.round}` : (careerState.round === 2 ? '결승전' : `${careerState.round}강 ${careerState.leg}차전`);
+            document.getElementById('match-mode-text').innerText = mode === 'friendly' ? '온라인 친선경기' : mode === 'league' ? leagueMatchLabel(enemyData) : mode === 'saudi' ? '사우디 모드' : mode === 'rogue' ? prematchLabel('rogue', enemyData) : mode === 'europa' ? `유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}` : mode === 'worldcup' ? `월드컵 ${worldCupState.round}` : (careerState.round === 2 ? '결승전' : `${careerState.round}강 ${careerState.leg}차전`);
             document.getElementById('match-enemy-name').innerText = enemyData.name; 
             const enemyLogo = document.getElementById('match-enemy-logo'), enemyLogoUrl = enemyData.logo || clubLogoUrl(enemyData.id || enemyData.name);
             enemyLogo.src = enemyLogoUrl || ''; enemyLogo.classList.toggle('hidden', !enemyLogoUrl);
@@ -5812,6 +5836,7 @@
             document.getElementById('match-score-away').innerText = '0';
             updateTeamNameUI();
             
+            if (mode === 'friendly') { currentMatchState.awaySubsLeft=5; currentMatchState.awayOutIds=[]; }
             document.getElementById('btn-tactics').style.display = 'block'; document.getElementById('btn-forfeit').style.display = 'block'; { const bs = document.getElementById('btn-shout'); if (bs) bs.style.display = ''; } closeTactics();
             switchScreen('screen-match'); initEngineUI(); prepareMatchAudioAndStart(currentMatchState);
         }
@@ -5847,7 +5872,7 @@
                 if (currentMatchState !== st || st.ended) return;
                 const dt = Math.min(100, now - st.last); st.last = now;
                 const step = SIM_MS / matchSpeed * (st.mode === 'saudi' ? SAUDI_STEP : 1) * (st.sp && st.sp.kind === 'corner' ? 1.7 : st.cornerHold ? 1.25 : 1); // 코너킥 정렬은 천천히, 공은 적당히
-                if (!st.isPaused && !st.userPaused) {
+                if (!st.isPaused && !st.userPaused && !st.friendlyPause) {
                     st.acc += dt;
                     while (st.acc >= step) {
                         st.acc -= step; saveSnap(st); st.time += MIN_PER_TICK * (st.mode === 'saudi' ? SAUDI_TIME : 1) * (st.wasteUntil && st.time < st.wasteUntil ? 1.2 : 1);
@@ -6122,7 +6147,7 @@
             const endAwayLogo = st.enemy.logo || clubLogoUrl(st.enemy.id || st.enemy.name);
             document.getElementById('end-away-logo').innerHTML = endAwayLogo ? `<img class="club-crest club-crest-user-large" src="${leagueEsc(endAwayLogo)}" alt="${leagueEsc(st.enemy.name)} 엠블럼" onerror="this.style.display='none'">` : '<span class="text-3xl" aria-hidden="true">🛡️</span>';
             let rewardText = ""; let userWon = st.scoreHome > st.scoreAway; let draw = st.scoreHome === st.scoreAway;
-            if (!st.forfeit) { dailyOnMatch(st.scoreHome, st.scoreAway); dailyOnHard(st); }
+            if (!st.forfeit && st.mode !== 'friendly') { dailyOnMatch(st.scoreHome, st.scoreAway); dailyOnHard(st); }
             const gdBonus = userWon ? (st.scoreHome - st.scoreAway) * 10 : 0;
 
             let totalPos = st.stats.homePos + st.stats.awayPos;
@@ -6826,6 +6851,298 @@
             Promise.all(workers).catch(()=>{});
         }
         preloadGameImages();
+// Online friendly extension. Bundled into YFM_beta42.4.html below the existing game code.
+let friendlyRoom = null, friendlyPoll = null, friendlyEvents = null, friendlyStream = null;
+let friendlySeq = 0, friendlySending = false, friendlyStarting = false, friendlyGuestView = false;
+let friendlyGuestTactic='bal', friendlyGuestInstr={atk:'bal',def:'mid',tempo:'normal',width:'normal',pass:'normal',trap:'off'};
+const friendlyEmoji = ['😜','😂','😢','😡','😎'];
+const friendlyClient = () => getOwnerRankClient(); // 구단주 랭킹과 같은 Supabase 로그인/프로젝트 재사용
+const friendlyError = e => { const box=document.getElementById('friendly-status'); if(box) box.textContent=e?.message||String(e); };
+const friendlyRpc = async (fn,args) => { const {data,error}=await friendlyClient().rpc(fn,args); if(error) throw error; return data; };
+async function friendlyIdentity() {
+  const client=friendlyClient();let {data:{session},error}=await client.auth.getSession();if(error)throw error;
+  if(!session){const result=await client.auth.signInAnonymously();if(result.error)throw result.error;session=result.data.session;}
+  return session.user.id;
+}
+function friendlyRoster(){
+  const xi=players.filter(p=>p.isStarting).sort((a,b)=>a.slotIndex-b.slotIndex);
+  if(xi.length!==11||xi.some((p,i)=>p.slotIndex!==i))throw Error('팀 관리에서 선발 11명을 모두 배치해줘.');
+  const layout=getLayout(currentFormation);
+  const pack=(p,det)=>({id:String(p.id).replace(/[^a-zA-Z0-9_-]/g,''),name:String(p.name).slice(0,40),pos:p.position,ovr:getCalculatedOvr(p),attr:matchAttrs(p,det),trait:ensure(p).trait});
+  const benchDet=p=>slotDetail(layout.find(x=>x.pos===p.position)||layout.find(x=>x.pos!=='GK'));
+  return {name:teamName.slice(0,18),formation:currentFormation,players:xi.map((p,i)=>pack(p,slotDetail(layout[i]))),bench:benchIds.map(id=>players.find(p=>p.id===id)).filter(Boolean).slice(0,9).map(p=>pack(p,benchDet(p)))};
+}
+function friendlyShowRoom(){
+  const r=friendlyRoom, s=document.getElementById('friendly-status');if(!r||!s)return;
+  s.textContent=`방 코드 ${r.code} · ${r.status==='waiting'?'상대 입장 대기 중':r.status==='ended'?'경기 종료':`${r.host_team?.name||'홈'} vs ${r.guest_team?.name||'원정'}`}`;
+  document.getElementById('friendly-code').textContent=r.code;
+  const badge=document.getElementById('friendly-pause-count');
+  if(badge)badge.textContent=`${r.half===1?'전반':'후반'} 정지 ${r.host_pauses}/3 · ${r.guest_pauses}/3`;
+}
+async function friendlyCreate(){
+  try{friendlyMe=await friendlyIdentity();friendlyRoom=await friendlyRpc('friendly_create',{p_team:friendlyRoster()});friendlyShowRoom();friendlyWatch();}
+  catch(e){friendlyError(e);}
+}
+async function friendlyJoin(){
+  try{friendlyMe=await friendlyIdentity();const code=document.getElementById('friendly-join-code').value.trim();friendlyRoom=await friendlyRpc('friendly_join',{p_code:code,p_team:friendlyRoster()});friendlyShowRoom();friendlyWatch();friendlyStartGuest();}
+  catch(e){friendlyError(e);}
+}
+function friendlyStopWatch(){
+  clearInterval(friendlyPoll);clearInterval(friendlyEvents);clearInterval(friendlyStream);
+  friendlyPoll=friendlyEvents=friendlyStream=null;
+  if(friendlyChannel){friendlyClient().removeChannel(friendlyChannel);friendlyChannel=null;}
+}
+let friendlyChannel=null;
+function friendlyWatch(){
+  friendlyStopWatch(); if(!friendlyRoom)return;
+  const id=friendlyRoom.id;
+  friendlyChannel=friendlyClient().channel('friendly-'+id)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'friendly_rooms',filter:`id=eq.${id}`},e=>friendlyRoomUpdate(e.new))
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'friendly_actions',filter:`room_id=eq.${id}`},e=>friendlyAction(e.new)).subscribe();
+  friendlyPoll=setInterval(friendlyRefresh,1800);friendlyEvents=setInterval(friendlyReadActions,900);
+  friendlyStream=setInterval(friendlyPublish,900);
+  friendlyRefresh();friendlyReadActions();
+}
+async function friendlyRefresh(){
+  if(!friendlyRoom)return;
+  try{const {data,error}=await friendlyClient().from('friendly_rooms').select('*').eq('id',friendlyRoom.id).single();if(error)throw error;friendlyRoomUpdate(data);}
+  catch(e){friendlyError(e);}
+}
+function friendlyRoomUpdate(r){
+  if(!friendlyRoom||r.id!==friendlyRoom.id)return;
+  friendlyRoom=r;friendlyShowRoom();
+  if(r.status==='playing'&&r.guest_id&&r.guest_team){
+    if(friendlyIsHost()&&!friendlyStarting&&(!currentMatchState||currentMatchState.mode!=='friendly'))friendlyStartHost();
+    if(!friendlyIsHost()&&!friendlyGuestView)friendlyStartGuest();
+    if(friendlyGuestView&&r.snapshot)friendlyDrawGuest(r.snapshot);
+  }
+  if(r.status==='ended'&&friendlyGuestView){friendlyGuestView=false;friendlyEndGuest(r.snapshot);}
+  if(r.status==='ended'&&friendlyIsHost()&&currentMatchState?.mode==='friendly'&&!currentMatchState.ended){currentMatchState.ended=true;finishMatch();}
+  if(friendlyIsHost()&&currentMatchState?.mode==='friendly'){
+    const paused=!!r.pause_until&&Date.parse(r.pause_until)>Date.now();
+    currentMatchState.friendlyPause=paused;
+    if(!paused&&document.getElementById('tactics-panel').classList.contains('flex'))closeTactics();
+    if(paused&&r.pause_by!==r.host_id)currentMatchState.userPaused=true;
+    else if(!paused&&r.pause_by!==r.host_id&&document.getElementById('tactics-panel').classList.contains('hidden'))currentMatchState.userPaused=false;
+  }
+  const countdown=document.getElementById('friendly-countdown');
+  if(countdown)countdown.textContent=r.pause_until&&Date.parse(r.pause_until)>Date.now()?`⏸ ${Math.ceil((Date.parse(r.pause_until)-Date.now())/1000)}초`:'▶ 경기 진행 중';
+}
+function friendlyIsHost(){return friendlyRoom&&friendlyRoom.host_id===friendlyMe;}
+let friendlyMe=null;
+async function friendlyStartHost(){
+  if(friendlyStarting||!friendlyRoom||!friendlyIsHost())return;friendlyStarting=true;
+  try{
+    prepareMatch('friendly',{name:friendlyRoom.guest_team.name,ovr:Math.round(friendlyRoom.guest_team.players.reduce((s,p)=>s+p.ovr,0)/11),formation:friendlyRoom.guest_team.formation,lineup:friendlyRoom.guest_team.players,onlineTeam:friendlyRoom.guest_team});
+    if(!currentMatchState||currentMatchState.mode!=='friendly')throw Error('경기 준비에 실패했어');
+    document.getElementById('match-mode-text').textContent='온라인 친선경기';
+    document.getElementById('btn-speed').style.display='none';document.getElementById('btn-shout').style.display='none';
+    document.getElementById('friendly-match-controls').classList.remove('hidden');
+    currentMatchState.ai={mode:'normal',line:0,freq:1,own:1,press:2,block:1};
+    await friendlyPublish();
+  }catch(e){friendlyError(e);friendlyStarting=false;}
+}
+function friendlyStartGuest(){
+  if(friendlyGuestView||!friendlyRoom?.guest_team)return;
+  friendlyGuestView=true;switchScreen('screen-match');
+  document.getElementById('match-mode-text').textContent='온라인 친선경기';
+  document.getElementById('match-home-name').textContent=friendlyRoom.host_team.name;
+  document.getElementById('match-enemy-name').textContent=friendlyRoom.guest_team.name;
+  document.getElementById('match-pitch-lines').innerHTML=PITCH_H;
+  document.getElementById('btn-speed').style.display='none';document.getElementById('btn-shout').style.display='none';
+  document.getElementById('btn-tactics').textContent='⚙️ 내 전술 / 교체';
+  document.getElementById('friendly-match-controls').classList.remove('hidden');
+  document.getElementById('match-ht-overlay').classList.add('hidden');
+  startMatchAudio();playMatchSound('start');
+  document.getElementById('match-engine').replaceChildren();matchElements={};
+  const shadow=document.createElement('div');shadow.id='match-ball-shadow';document.getElementById('match-engine').append(shadow);matchElements.shadow=shadow;
+  const ball=document.createElement('div');ball.id='match-ball';document.getElementById('match-engine').append(ball);matchElements.ball=ball;
+  const marker=document.createElement('div');marker.className='sp-marker';document.getElementById('match-engine').append(marker);matchElements.spm=marker;
+  const line=document.createElement('div');line.className='off-line';document.getElementById('match-engine').append(line);matchElements.offl=line;
+  if(friendlyRoom.snapshot)friendlyDrawGuest(friendlyRoom.snapshot);
+}
+function friendlySnapshot(st){
+  const fields=['id','name','role','det','isHome','isRedCarded','isCaptain','ace','ovr','displayOvr','stam','cards','injured','x','y','baseX','baseY'];
+  const pack=p=>({...Object.fromEntries(fields.map(k=>[k,p[k]])),rating:liveRating(st,p)});
+  return {time:st.time,htDone:st.htDone,ended:st.ended,scoreHome:st.scoreHome,scoreAway:st.scoreAway,stats:st.stats,playerStats:st.playerStats,
+    ball:{x:st.ball.x,y:st.ball.y,ownerId:st.ball.ownerId},homePlayers:st.homePlayers.map(pack),awayPlayers:st.awayPlayers.map(pack),sp:st.sp&&{x:st.sp.x,y:st.sp.y,kind:st.sp.kind,t:st.sp.t,lineX:st.sp.lineX}};
+}
+async function friendlyPublish(){
+  if(!friendlyIsHost()||friendlySending||currentMatchState?.mode!=='friendly'||!friendlyRoom||friendlyRoom.status!=='playing')return;
+  friendlySending=true;
+  try{await friendlyRpc('friendly_push',{p_room:friendlyRoom.id,p_snapshot:friendlySnapshot(currentMatchState),p_end:!!currentMatchState.ended});}
+  catch(e){friendlyError(e);}finally{friendlySending=false;}
+}
+function friendlyDrawGuest(s){
+  if(!friendlyGuestView||!s||document.querySelector('.screen.active')?.id!=='screen-match')return;
+  const st={...s,ball:{...s.ball,px:s.ball.x,py:s.ball.y,snap:true},homePlayers:s.homePlayers||[],awayPlayers:s.awayPlayers||[],stats:s.stats||{homePos:0,awayPos:0}};
+  for(const p of [...st.homePlayers,...st.awayPlayers]){
+    p.px=p.x;p.py=p.y;
+    if(!matchElements[p.id])makeDot(p);
+  }
+  for(const [id,el] of Object.entries(matchElements))if(!['ball','shadow','spm','offl'].includes(id)&&![...st.homePlayers,...st.awayPlayers].some(p=>String(p.id)===String(id))){el.remove();delete matchElements[id];}
+  document.getElementById('match-score-home').textContent=s.scoreHome;
+  document.getElementById('match-score-away').textContent=s.scoreAway;
+  updateClock(st,0);render(st,120,1);
+  document.getElementById('side-squad').innerHTML=st.awayPlayers.map(p=>{const v=st.playerStats?.[p.id]||{};return `<div class="sq-row"><span class="sq-pos">${leagueEsc(p.det||p.role)}</span><span class="sq-name">${leagueEsc(p.name)} · OVR ${Math.round(p.displayOvr??p.ovr)} ${'⚽'.repeat(v.goals||0)}${v.assists?`🅰️${v.assists}`:''}</span><span class="sq-rating">⭐${p.rating||'–'}</span><span class="sq-stam">${Math.round(p.stam??100)}%</span></div>`}).join('');
+  document.getElementById('side-stats').innerHTML=statBars(st);
+  const n=(st.stats.homePos||0)+(st.stats.awayPos||0),percent=n?100*st.stats.homePos/n:50;
+  document.getElementById('poss-home').style.width=percent+'%';document.getElementById('poss-away').style.width=(100-percent)+'%';
+}
+async function friendlyReadActions(){
+  if(!friendlyRoom||friendlyRoom.status!=='playing')return;
+  try{const {data,error}=await friendlyClient().from('friendly_actions').select('*').eq('room_id',friendlyRoom.id).gt('id',friendlySeq).order('id').limit(100);if(error)throw error;for(const a of data){friendlyAction(a);}}
+  catch(e){friendlyError(e);}
+}
+function friendlyAction(a){
+  if(!friendlyRoom||a.room_id!==friendlyRoom.id||a.id<=friendlySeq)return;
+  friendlySeq=a.id;
+  if(a.kind==='emoji'){
+    if(a.user_id!==friendlyMe||friendlyIsHost())friendlyReaction(a.payload.emoji,a.user_id===friendlyRoom.host_id?'홈':'원정');
+    return;
+  }
+  if(!friendlyIsHost())return;
+  const st=currentMatchState;if(!st||st.mode!=='friendly')return;
+  if(a.kind==='leave'){st.ended=true;if(a.user_id===friendlyRoom.host_id)st.scoreAway=Math.max(3,st.scoreAway);else st.scoreHome=Math.max(3,st.scoreHome);finishMatch();return;}
+  // DB 함수가 행동을 기록할 때 정지 권한과 15초 제한을 이미 검사한다.
+  if(a.user_id!==friendlyRoom.guest_id)return;
+  if(a.kind==='tactics'&&['atk','bal','def'].includes(a.payload.tactic)){
+    const t=a.payload.tactic,raw=a.payload.instr||{},valid=(key,table,base)=>Object.hasOwn(table,raw[key])?raw[key]:base;
+    const i={atk:valid('atk',ATK,'bal'),def:valid('def',DEFI,'mid'),tempo:valid('tempo',TEMPO,'normal'),width:valid('width',WIDTH,'normal'),pass:valid('pass',PASSLEN,'normal'),trap:valid('trap',TRAP,'off')};
+    st.awayInstr=i;st.awayStyle=i.atk;
+    st.ai={mode:t,line:TACTICS[t].line+(ATK[i.atk].line||0)+(DEFI[i.def].line||0)+(i.trap==='on'?4:0),
+      freq:TACTICS[t].freq*(ATK[i.atk].freq||1)*(TEMPO[i.tempo].speed||1)*(PASSLEN[i.pass].speed||1),
+      own:TACTICS[t].own*(ATK[i.atk].own||1)*(WIDTH[i.width].own||1)*(PASSLEN[i.pass].own||1),
+      press:DEFI[i.def].pressN||2,block:t==='def'?0.85:DEFI[i.def].opp||1};
+    comm(st,`📋 ${st.enemy.name} 전술 변경: ${TACTICS[t].label}`,'sub');
+  }
+  if(a.kind==='sub')friendlyApplyGuestSub(st,String(a.payload.out),String(a.payload.in),a.payload);
+}
+function friendlyApplyGuestSub(st,outId,inId,action){
+  const team=friendlyRoom.guest_team,slot=st.awayPlayers.findIndex(p=>p.id===outId),old=st.awayPlayers[slot],next=team.bench.find(p=>p.id===inId);
+  if(!old||!next||st.awaySubsLeft<=0||old.isRedCarded||st.awayPlayers.some(p=>p.id==='guest_'+inId)||st.awayOutIds?.includes('guest_'+inId)||((old.role==='GK')!==(next.pos==='GK')))return;
+  const incomingOvr=Number(action.ovr),validOvr=Number.isFinite(incomingOvr)&&incomingOvr>=20&&incomingOvr<=200;
+  const incomingAttrs=action.attr&&typeof action.attr==='object'&&ATTRS.every(k=>Number.isFinite(action.attr[k])&&action.attr[k]>=0&&action.attr[k]<=200);
+  const np={...old,id:'guest_'+next.id,name:next.name,ovr:validOvr?incomingOvr:next.ovr,displayOvr:validOvr?Math.round(incomingOvr):next.ovr,attr:incomingAttrs?action.attr:next.attr,trait:next.trait,stam:100,cards:0,isRedCarded:false,injured:0,enter:st.time};
+  if(old.teamMean)starCompress(np,old.teamMean);
+  if(old.gapShift)shiftPlayer(np,old.gapShift);
+  if(old.sideF)scaleSide([np],old.sideF);
+  st.awayPlayers[slot]=np;st.awayOutIds ||= [];st.awayOutIds.push(old.id);st.awaySubsLeft--;
+  if(st.ball.ownerId===old.id)st.ball.ownerId=np.id;
+  matchElements[old.id]?.remove();delete matchElements[old.id];makeDot(np);
+  st.playerStats[np.id]={goals:0};comm(st,`🔄 ${st.enemy.name}: ${old.name} OUT → ${np.name} IN`,'sub');
+}
+async function friendlyPause(){
+  if(!friendlyRoom||friendlyRoom.status!=='playing')return;
+  try{friendlyRoom=await friendlyRpc('friendly_pause',{p_room:friendlyRoom.id});friendlyRoomUpdate(friendlyRoom);
+    if(friendlyIsHost())friendlyOriginalOpenTactics();else friendlyGuestPanel();}
+  catch(e){friendlyError(e);}
+}
+function friendlyGuestPanel(){
+  const panel=document.getElementById('friendly-guest-panel');panel.classList.remove('hidden');panel.classList.add('flex');friendlyRenderGuestPanel();
+}
+function friendlyRenderGuestPanel(){
+  const r=friendlyRoom,p=document.getElementById('friendly-guest-panel');if(!r||!p)return;
+  const st=r.snapshot||{},active=st.awayPlayers||[],used=new Set(active.map(x=>x.id));
+  const roomBench=r.guest_team.bench.filter(x=>!used.has('guest_'+x.id));
+  document.getElementById('friendly-guest-tactic').innerHTML='<b class="w-full">팀 성향</b>'+['atk','bal','def'].map(t=>`<button class="fm-btn ${friendlyGuestTactic===t?'pri':''}" onclick="friendlySendTactics('${t}')">${TACTICS[t].label}</button>`).join('');
+  document.getElementById('friendly-guest-instr').innerHTML=[['공격 방식','atk',ATK],['수비 방식','def',DEFI],['템포','tempo',TEMPO],['공격 폭','width',WIDTH],['패스 길이','pass',PASSLEN],['오프사이드 트랩','trap',TRAP]].map(([label,key,table])=>`<div class="mb-2"><b class="text-xs text-gray-300">${label}</b><div class="flex flex-wrap gap-1">${Object.entries(table).map(([k,v])=>`<button class="fm-btn ${friendlyGuestInstr[key]===k?'pri':''}" onclick="friendlyGuestSetInstr('${key}','${k}')">${v.n}</button>`).join('')}</div></div>`).join('');
+  document.getElementById('friendly-guest-sub').innerHTML=active.map(x=>`<div class="flex items-center gap-2 border-b border-gray-700 py-1"><span class="w-24 truncate">${leagueEsc(x.name)}</span><select class="text-white bg-gray-800 rounded p-1" onchange="if(this.value)friendlySendSub('${leagueEsc(x.id)}',this.value)"><option value="">교체할 선수</option>${roomBench.filter(y=>(y.pos==='GK')===(x.role==='GK')).map(y=>`<option value="${leagueEsc(y.id)}">${leagueEsc(y.name)} · OVR ${y.ovr}</option>`).join('')}</select></div>`).join('');
+}
+async function friendlySendTactics(tactic){try{friendlyGuestTactic=tactic;friendlyRenderGuestPanel();await friendlyRpc('friendly_action',{p_room:friendlyRoom.id,p_kind:'tactics',p_payload:{tactic,instr:friendlyGuestInstr}});friendlyError({message:'전술이 적용됐어.'});}catch(e){friendlyError(e);}}
+function friendlyGuestSetInstr(key,value){const tables={atk:ATK,def:DEFI,tempo:TEMPO,width:WIDTH,pass:PASSLEN,trap:TRAP};if(!Object.hasOwn(tables,key)||!Object.hasOwn(tables[key],value))return;friendlyGuestInstr[key]=value;friendlySendTactics(friendlyGuestTactic);}
+async function friendlySendSub(out,inId){try{
+  const p=players.find(x=>String(x.id)===inId),target=friendlyRoom.snapshot?.awayPlayers?.find(x=>x.id===out);
+  const payload={out,in:inId};if(p&&target){payload.ovr=Math.round(getCalculatedOvr(p)*aptitude(p,target.det)*moraleF(p));payload.attr=matchAttrs(p,target.det);}
+  await friendlyRpc('friendly_action',{p_room:friendlyRoom.id,p_kind:'sub',p_payload:payload});friendlyError({message:'교체 요청을 보냈어.'});
+}catch(e){friendlyError(e);}}
+async function friendlySendEmoji(emoji){try{await friendlyRpc('friendly_action',{p_room:friendlyRoom.id,p_kind:'emoji',p_payload:{emoji}});if(!friendlyIsHost())friendlyReaction(emoji,'나');}catch(e){friendlyError(e);}}
+function friendlyReaction(emoji,from){if(!friendlyEmoji.includes(emoji))return;const box=document.getElementById('friendly-reaction');box.textContent=`${from}: ${emoji}`;box.classList.remove('hidden');clearTimeout(friendlyReaction.timer);friendlyReaction.timer=setTimeout(()=>box.classList.add('hidden'),2200);}
+function friendlyEndGuest(s){
+  finishMatchAudio();playMatchSound('end');
+  document.getElementById('friendly-guest-panel').classList.replace('flex','hidden');
+  document.getElementById('friendly-match-controls').classList.add('hidden');
+  const result=document.getElementById('friendly-guest-result');result.textContent=`경기 종료 · ${friendlyRoom.host_team.name} ${s?.scoreHome??0} : ${s?.scoreAway??0} ${friendlyRoom.guest_team.name}`;
+  result.classList.remove('hidden');result.classList.add('flex');
+}
+function friendlyResetUi(){
+  document.getElementById('btn-speed').style.display='';
+  document.getElementById('btn-shout').style.display='';
+  document.getElementById('btn-tactics').textContent='⚙️ 전술 / 교체';
+  document.getElementById('friendly-guest-panel').classList.replace('flex','hidden');
+  document.getElementById('friendly-match-controls').classList.add('hidden');
+}
+async function friendlyLeave(){
+  if(!friendlyRoom)return switchScreen('screen-lobby');
+  if(friendlyRoom.status==='playing'){try{await friendlyRpc('friendly_action',{p_room:friendlyRoom.id,p_kind:'leave',p_payload:{}});}catch(e){friendlyError(e);}}
+  else if(friendlyIsHost()){try{await friendlyRpc('friendly_leave',{p_room:friendlyRoom.id});}catch(e){friendlyError(e);}}
+  if(friendlyIsHost()&&currentMatchState?.mode==='friendly'&&!currentMatchState.ended){
+    currentMatchState.ended=true;currentMatchState.scoreAway=Math.max(3,currentMatchState.scoreAway);finishMatch();
+    try{await friendlyRpc('friendly_push',{p_room:friendlyRoom.id,p_snapshot:friendlySnapshot(currentMatchState),p_end:true});}catch(e){friendlyError(e);}
+  }
+  friendlyStopWatch();friendlyRoom=null;friendlyGuestView=false;friendlyStarting=false;
+  finishMatchAudio();friendlyResetUi();
+  document.getElementById('friendly-guest-result').classList.replace('flex','hidden');
+  switchScreen('screen-lobby');
+}
+let friendlyCountdownTimer=setInterval(()=>{
+  if(!friendlyRoom)return;
+  const ms=Date.parse(friendlyRoom.pause_until||0)-Date.now(),active=ms>0;
+  const label=document.getElementById('friendly-countdown');if(label)label.textContent=active?`⏸ 교체 가능 ${Math.ceil(ms/1000)}초`:'▶ 경기 진행 중';
+  if(friendlyIsHost()&&currentMatchState?.mode==='friendly'){
+    currentMatchState.friendlyPause=active;
+    if(!active&&document.getElementById('tactics-panel').classList.contains('flex'))closeTactics();
+    else if(!active&&document.getElementById('tactics-panel').classList.contains('hidden')&&!currentMatchState.isPaused)currentMatchState.userPaused=false;
+  }
+  if(!active)document.getElementById('friendly-guest-panel').classList.replace('flex','hidden');
+},250);
+const friendlyOriginalOpenTactics=openTactics;
+openTactics=function(){
+  if(currentMatchState?.mode==='friendly'||friendlyGuestView){
+    if(friendlyRoom?.pause_by===friendlyMe&&Date.parse(friendlyRoom.pause_until)>Date.now())return friendlyIsHost()?friendlyOriginalOpenTactics():friendlyGuestPanel();
+    return friendlyPause();
+  }
+  return friendlyOriginalOpenTactics();
+};
+const friendlyOriginalAiUpdate=aiUpdate;
+aiUpdate=function(st){if(st.mode==='friendly')return;return friendlyOriginalAiUpdate(st);};
+const friendlyOriginalFinish=finishMatch;
+finishMatch=function(){
+  if(currentMatchState?.mode!=='friendly')return friendlyOriginalFinish();
+  const st=currentMatchState;if(st.resultProcessed)return;st.resultProcessed=true;st.ended=true;
+  finishMatchAudio();friendlyPublish();
+  document.getElementById('friendly-match-controls').classList.add('hidden');
+  document.getElementById('match-end-title').textContent='온라인 친선경기 종료';
+  document.getElementById('match-end-score').textContent=`${st.scoreHome} : ${st.scoreAway}`;
+  document.getElementById('match-end-reward').textContent='친선경기 · 토큰/미션/체력 변동 없음';
+  document.getElementById('match-end-overlay').classList.replace('hidden','flex');
+};
+const friendlyOriginalEndFlow=endMatchFlow;
+endMatchFlow=function(){if(currentMatchState?.mode==='friendly'){document.getElementById('match-end-overlay').classList.replace('flex','hidden');friendlyStopWatch();friendlyRoom=null;friendlyStarting=false;friendlyResetUi();switchScreen('screen-lobby');return;}return friendlyOriginalEndFlow();};
+const friendlyOriginalHalf=halfTime;
+halfTime=function(){friendlyOriginalHalf();if(currentMatchState?.mode==='friendly')friendlyPublish();};
+const friendlyOriginalSecond=startSecondHalf;
+startSecondHalf=async function(){if(currentMatchState?.mode==='friendly'){
+  try{
+    while(friendlySending)await new Promise(resolve=>setTimeout(resolve,120));
+    await friendlyPublish();
+    friendlyRoom=await friendlyRpc('friendly_advance_half',{p_room:friendlyRoom.id});friendlyRoomUpdate(friendlyRoom);
+  }catch(e){friendlyError(e);return;}
+}return friendlyOriginalSecond();};
+const friendlyOriginalResume=resumeFromBreak;
+resumeFromBreak=function(){if(currentMatchState?.mode==='friendly')return startSecondHalf();return friendlyOriginalResume();};
+const friendlyOriginalForfeit=forfeitMatch;
+forfeitMatch=function(){if(currentMatchState?.mode==='friendly'||friendlyGuestView)return friendlyLeave();return friendlyOriginalForfeit();};
+const friendlyOriginalCpuHalf=cpuHalftimeAdapt;
+cpuHalftimeAdapt=function(st){if(st.mode==='friendly')return;return friendlyOriginalCpuHalf(st);};
+const friendlyOriginalClose=closeTactics;
+closeTactics=function(){if(currentMatchState?.mode==='friendly'&&friendlyRoom?.pause_until&&Date.parse(friendlyRoom.pause_until)>Date.now()){
+  friendlyOriginalClose();currentMatchState.userPaused=true;pauseMatchCrowd();return;
+}return friendlyOriginalClose();};
+const friendlyOriginalSpeed=toggleSpeed;
+toggleSpeed=function(){if(currentMatchState?.mode==='friendly')return;return friendlyOriginalSpeed();};
+const friendlyOriginalShout=openShouts;
+openShouts=function(){if(currentMatchState?.mode==='friendly')return;return friendlyOriginalShout();};
         setInterval(dailyTick, 15000);
         document.addEventListener('visibilitychange', dailyTick);
     </script>
