@@ -417,6 +417,27 @@
         @keyframes enhancementCriticalGlow {0%{box-shadow:0 0 0 #a855f7}50%{box-shadow:0 0 45px 20px #a855f7,0 0 110px 36px #7c3aed}100%{box-shadow:0 0 20px 7px #c084fc}}
         .enhance-critical-shake{animation:enhancementCriticalShake .17s linear 7}
         .enhance-critical-glow{animation:enhancementCriticalGlow .8s ease-out both;filter:drop-shadow(0 0 20px #a855f7)}
+        /* 강화: 모루 위 카드에 망치질과 불꽃이 반복되는 작업대 연출 */
+        #enhance-effect-overlay { background: radial-gradient(ellipse at 50% 72%,rgba(132,64,21,.26),transparent 55%),rgba(5,4,10,.96); }
+        #enhance-anim-box { position:relative; max-width:94vw; }
+        #enhance-processing-text { font-size:clamp(21px,4vw,34px); margin-bottom:8px; color:#ffdab0; letter-spacing:.12em; text-shadow:0 0 18px #f97316aa; }
+        .forge-stage { width:min(340px,85vw); height:min(365px,65vh); position:relative; display:flex; align-items:center; justify-content:center; isolation:isolate; }
+        .forge-stage.hidden { display:none; }
+        .forge-stage::before { content:''; position:absolute; inset:12% 1% 5%; z-index:-2; background:radial-gradient(ellipse,rgba(239,115,32,.27),transparent 67%); animation:forgeHeat 1.9s ease-in-out infinite; }
+        .forge-anvil { position:absolute; bottom:8%; width:70%; height:29px; border-radius:45% 45% 10px 10px; border-top:5px solid #94a3b8; background:linear-gradient(180deg,#485466,#18212c); box-shadow:0 16px 0 -5px #25303b,0 28px 0 -9px #101820,0 0 36px #fb923c44; }
+        .forge-card { width:clamp(110px,36vw,170px); z-index:1; display:flex; align-items:center; justify-content:center; filter:drop-shadow(0 0 15px #fb923c77); animation:forgeCard 0.75s ease-in-out infinite; transform-origin:50% 85%; }
+        .forge-card .player-card { max-width:100%; }
+        .forge-hammer { position:absolute; top:7%; right:9%; width:140px; height:145px; z-index:3; transform-origin:90% 12%; animation:forgeStrike .75s cubic-bezier(.55,.05,.45,1) infinite; pointer-events:none; }
+        .forge-hammer::before { content:''; position:absolute; left:67px; top:28px; width:13px; height:112px; border-radius:7px; background:linear-gradient(90deg,#63381e,#c08444 44%,#5c321c); box-shadow:1px 2px 5px #0008; transform:rotate(-32deg); }
+        .forge-hammer::after { content:''; position:absolute; left:27px; top:12px; width:92px; height:38px; border:3px solid #a7b7c8; border-radius:7px; background:linear-gradient(160deg,#8998a7,#334155 52%,#141b28); box-shadow:0 5px 8px #0009; transform:rotate(-32deg); }
+        .forge-sparks { position:absolute; inset:0; z-index:4; pointer-events:none; }
+        .forge-sparks i { position:absolute; left:49%; top:46%; width:5px; height:5px; border-radius:50%; background:#ffecad; box-shadow:0 0 11px 3px #ff7b16; opacity:0; animation:forgeSpark .75s ease-out infinite; --sx:0px; --sy:-65px; }
+        .forge-sparks i:nth-child(2){--sx:55px;--sy:-33px;animation-delay:.035s}.forge-sparks i:nth-child(3){--sx:-50px;--sy:-48px;animation-delay:.07s}.forge-sparks i:nth-child(4){--sx:70px;--sy:18px;animation-delay:.1s}.forge-sparks i:nth-child(5){--sx:-74px;--sy:12px;animation-delay:.04s}.forge-sparks i:nth-child(6){--sx:25px;--sy:56px;animation-delay:.08s}.forge-sparks i:nth-child(7){--sx:-22px;--sy:53px;animation-delay:.11s}.forge-sparks i:nth-child(8){--sx:5px;--sy:-83px;animation-delay:.02s}
+        @keyframes forgeStrike { 0%,23%{transform:translate(12px,-30px) rotate(22deg)} 40%,48%{transform:translate(-15px,33px) rotate(-27deg)} 72%,100%{transform:translate(12px,-30px) rotate(22deg)} }
+        @keyframes forgeCard { 0%,37%,58%,100%{transform:translateY(0) rotate(0)} 46%{transform:translateY(3px) rotate(-2deg)} }
+        @keyframes forgeSpark { 0%,36%{opacity:0;transform:translate(0,0) scale(.35)} 47%{opacity:1;transform:translate(0,0) scale(1)} 85%,100%{opacity:0;transform:translate(var(--sx),var(--sy)) scale(.2)} }
+        @keyframes forgeHeat { 50%{opacity:.45;transform:scale(1.12)} }
+        @media (prefers-reduced-motion: reduce) { .forge-stage::before,.forge-card,.forge-hammer,.forge-sparks i { animation:none; } .forge-sparks i {display:none;} }
         #enhance-confirm:disabled{pointer-events:none}
         /* Give the Korean name glyphs breathing room inside the clipped name box. */
         .player-card .card-name,
@@ -551,19 +572,7 @@
         .lobby-image-button img{width:100%;height:100%;object-fit:contain}
         .bgm-image-button{width:clamp(42px,5vw,58px);height:clamp(42px,5vw,58px);filter:drop-shadow(0 3px 8px rgba(0,0,0,.6))}
         .bgm-image-button img{width:100%;height:100%;object-fit:contain}
-        .bgm-main-button{width:clamp(54px,6vw,70px);height:clamp(54px,6vw,70px);opacity:.82;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);border-radius:50%;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-        .bgm-main-button img{filter:brightness(0) invert(1);opacity:.9}
-        #bgm-controls{border-radius:20px!important;padding:9px 12px 9px 9px!important;gap:10px!important;background:rgba(3,7,18,.78)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);max-width:min(410px,calc(100vw - 100px))}
-        .bgm-cover-wrap{width:76px;height:76px;border-radius:12px;overflow:hidden;flex:none;background:linear-gradient(145deg,#334155,#111827);box-shadow:0 5px 16px rgba(0,0,0,.4);position:relative}
-        .bgm-cover{width:100%;height:100%;display:block;object-fit:cover}
-        .bgm-cover-fallback{position:absolute;inset:0;display:grid;place-items:center;font-size:30px;color:rgba(255,255,255,.78);background:linear-gradient(145deg,#334155,#111827)}
-        .bgm-track-info{width:170px;min-width:0;align-self:center}
-        .bgm-track-title{font-size:14px;line-height:1.2;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .bgm-track-artist{margin-top:4px;font-size:11px;line-height:1.2;font-weight:650;color:#aab4c5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .bgm-track-buttons{display:flex;align-items:center;gap:5px;margin-top:9px}
-        #bgm-controls .bgm-image-button{width:34px;height:34px}
-        #bgm-controls #bgm-play-state{width:38px;height:38px}
-        @media(max-width:520px){#bgm-controls{max-width:calc(100vw - 82px);padding:7px!important;gap:8px!important}.bgm-cover-wrap{width:62px;height:62px}.bgm-track-info{width:132px}.bgm-track-title{font-size:12px}.bgm-track-artist{font-size:10px}.bgm-track-buttons{margin-top:6px;gap:3px}#bgm-controls .bgm-image-button{width:29px;height:29px}#bgm-controls #bgm-play-state{width:33px;height:33px}}
+        .bgm-main-button{width:clamp(54px,6vw,70px);height:clamp(54px,6vw,70px)}
         .lobby-image-button:hover,.bgm-image-button:hover{transform:scale(1.08);filter:drop-shadow(0 0 10px rgba(255,255,255,.55))}
         .lobby-image-button:focus-visible,.bgm-image-button:focus-visible{outline:2px solid #fbbf24;outline-offset:4px;border-radius:12px}
         @media(max-width:400px){#screen-lobby .lobby-image-button{width:40px;height:40px}#screen-lobby>div.fixed{gap:4px}#bgm-widget{gap:6px}#bgm-controls{gap:4px;padding:4px}.bgm-image-button{width:30px;height:30px}.bgm-main-button{width:42px;height:42px}}
@@ -580,6 +589,48 @@
         #opening img { width: 100%; height: 100%; object-fit: cover; opacity: 0; animation: opImg 5.6s ease forwards; }
         @keyframes opImg { 0% { opacity: 0; transform: scale(1.04); } 14% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1); } }
         @keyframes opOut { to { opacity: 0; visibility: hidden; } }
+        /* 경기 밖 화면의 메뉴 모션: 짧고 작은 움직임으로 정보 가독성을 유지 */
+        #bgm-controls{border-radius:20px!important;padding:9px 12px 9px 9px!important;gap:10px!important;background:rgba(3,7,18,.78)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);max-width:min(410px,calc(100vw - 100px))}
+        .bgm-cover-wrap{width:76px;height:76px;border-radius:12px;overflow:hidden;flex:none;background:linear-gradient(145deg,#334155,#111827);box-shadow:0 5px 16px rgba(0,0,0,.4);position:relative}
+        .bgm-cover{width:100%;height:100%;display:block;object-fit:cover}
+        .bgm-cover-fallback{position:absolute;inset:0;display:grid;place-items:center;font-size:30px;color:rgba(255,255,255,.78);background:linear-gradient(145deg,#334155,#111827)}
+        .bgm-track-info{width:170px;min-width:0;align-self:center}
+        .bgm-track-title{font-size:14px;line-height:1.2;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .bgm-track-artist{margin-top:4px;font-size:11px;line-height:1.2;font-weight:650;color:#aab4c5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .bgm-track-buttons{display:flex;align-items:center;gap:5px;margin-top:9px}
+        #bgm-controls .bgm-image-button{width:34px;height:34px}
+        #bgm-controls #bgm-play-state{width:38px;height:38px}
+        @media(max-width:520px){#bgm-controls{max-width:calc(100vw - 82px);padding:7px!important;gap:8px!important}.bgm-cover-wrap{width:62px;height:62px}.bgm-track-info{width:132px}.bgm-track-title{font-size:12px}.bgm-track-artist{font-size:10px}.bgm-track-buttons{margin-top:6px;gap:3px}#bgm-controls .bgm-image-button{width:29px;height:29px}#bgm-controls #bgm-play-state{width:33px;height:33px}}
+        @keyframes menuScreenEnter { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes menuCardEnter { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
+        @keyframes menuDialogEnter { from { opacity: 0; scale: .975; translate: 0 8px; } to { opacity: 1; scale: 1; translate: 0 0; } }
+        @keyframes menuAmbient { 0%,100% { background-position: 0% 20%,center; } 50% { background-position: 100% 75%,center; } }
+        @keyframes navGlow { 0%,100% { box-shadow: inset 3px 0 0 rgba(196,181,253,.65), 0 0 0 rgba(139,92,246,0); } 50% { box-shadow: inset 3px 0 0 #c4b5fd, 0 0 16px rgba(139,92,246,.32); } }
+        .screen.active:not(#screen-match) { animation: menuScreenEnter .3s ease-out both; }
+        .screen.active.bg-gradient-dark:not(#screen-match) { background-image: radial-gradient(ellipse 62% 75% at 18% 15%, rgba(92,56,158,.26), transparent 72%),linear-gradient(135deg,#1a202c,#2d3748); background-size: 150% 150%,cover; animation: menuScreenEnter .3s ease-out both, menuAmbient 13s ease-in-out infinite .3s; }
+        body:not(.in-match) #screen-lobby .fm-nav-item.active { animation: navGlow 3.8s ease-in-out infinite; }
+        body:not(.in-match) #fm-grid > .fm-card,
+        body:not(.in-match) :is(#screen-mode-select, #screen-career-select, #screen-saudi) :is(.group, .league-panel),
+        body:not(.in-match) :is(#screen-league, #screen-league-rankings, #screen-owner-rank, #screen-recruit, #screen-enhance, #screen-fusion, #screen-manager, #screen-stats, #screen-cup, #screen-career, #screen-rogue) :is(.league-panel, .bg-gray-800, .bg-gray-900) { animation: menuCardEnter .42s cubic-bezier(.2,.8,.2,1) both; }
+        body:not(.in-match) #fm-grid > .fm-card:nth-child(2n) { animation-delay: 55ms; }
+        body:not(.in-match) #fm-grid > .fm-card:nth-child(3n) { animation-delay: 100ms; }
+        body:not(.in-match) :is(#screen-lobby .fm-card, #screen-mode-select .group) { position: relative; isolation: isolate; transition: transform .26s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease,filter .25s ease; }
+        body:not(.in-match) :is(#screen-lobby .fm-card, #screen-mode-select .group)::after { content: ''; position: absolute; inset: 0; border-radius: inherit; z-index: 2; pointer-events: none; opacity: 0; background: linear-gradient(112deg,transparent 30%,rgba(216,203,255,.18) 48%,rgba(255,255,255,.24) 50%,transparent 69%); background-size: 250% 100%; background-position: 100% 0; transition: opacity .22s ease,background-position .72s ease; }
+        @media (hover:hover) {
+            body:not(.in-match) :is(#screen-lobby .fm-card, #screen-mode-select .group):hover { box-shadow: 0 15px 32px rgba(10,5,30,.4),0 0 23px rgba(139,92,246,.25); transform: translateY(-3px); }
+            body:not(.in-match) :is(#screen-lobby .fm-card, #screen-mode-select .group):hover::after { opacity: 1; background-position: 0 0; }
+        }
+        body:not(.in-match) :is(#screen-lobby, #screen-mode-select, #screen-career-select, #screen-league, #screen-league-rankings, #screen-saudi, #screen-recruit, #screen-enhance, #screen-fusion, #screen-manager, #screen-stats, #screen-owner-rank, #screen-career, #screen-cup, #screen-rogue) :is(button, .fm-card, .league-panel, .fm-nav-item) { transition: transform .18s ease, box-shadow .22s ease, filter .2s ease, border-color .2s ease, background-color .2s ease; }
+        @media (hover:hover) { body:not(.in-match) .screen.active:not(#screen-match) button:hover { filter: brightness(1.12); } }
+        body:not(.in-match) .screen.active:not(#screen-match) button:active { transform: scale(.975); }
+        body:not(.in-match) :is(#team-detail-modal, #prematch-modal, #mission-modal, #save-modal).flex > :first-child { animation: menuDialogEnter .26s cubic-bezier(.2,.8,.2,1) both; }
+        @media (prefers-reduced-motion: reduce) {
+            .screen.active:not(#screen-match), .screen.active.bg-gradient-dark:not(#screen-match), body:not(.in-match) #screen-lobby .fm-nav-item.active, body:not(.in-match) #fm-grid > .fm-card,
+            body:not(.in-match) :is(#screen-mode-select, #screen-career-select, #screen-saudi) :is(.group, .league-panel),
+            body:not(.in-match) :is(#screen-league, #screen-league-rankings, #screen-owner-rank, #screen-recruit, #screen-enhance, #screen-fusion, #screen-manager, #screen-stats, #screen-cup, #screen-career, #screen-rogue) :is(.league-panel, .bg-gray-800, .bg-gray-900),
+            body:not(.in-match) :is(#team-detail-modal, #prematch-modal, #mission-modal, #save-modal).flex > :first-child { animation: none; }
+            body:not(.in-match) :is(#screen-lobby .fm-card, #screen-mode-select .group)::after { display:none; }
+        }
 /* 태블릿 가로/작은 노트북: 화면 구성 요소를 약 80% 크기로 조밀하게 배치 */
 @media (min-width:761px) and (max-width:1366px), (min-width:761px) and (max-height:820px) {
     html { font-size:13px; }
@@ -616,7 +667,7 @@
 @media (max-width:760px) { #screen-saudi { padding:12px; } #screen-saudi h1 { font-size:22px; margin:42px 0 14px; } #saudi-team-list { gap:10px; padding:8px 8px 18px; } #saudi-team-list > div { flex-basis:180px; } }
 </style></head>
 <body>
-    <div id="opening" onclick="event.stopPropagation()" onpointerdown="event.stopPropagation()"><img src="https://github.com/user-attachments/assets/28966488-5b0a-4ccd-9f03-0f637271dcaa" alt=""></div>
+    <div id="opening" onclick="event.stopPropagation()" onpointerdown="event.stopPropagation()"><img src="https://github.com/user-attachments/assets/c12a40ec-da7e-41aa-a0d3-8d72489d55c9" alt=""></div>
     <div id="first-play-welcome" class="fixed inset-0 z-[9998] flex items-center justify-center bg-black" style="opacity:0;visibility:hidden;transition:opacity .8s ease,visibility .8s ease"><img src="https://github.com/user-attachments/assets/1216d605-f2ac-4b31-9a84-294df99e277e" alt="환영 이미지" class="w-full h-full object-cover"></div>
     <script>
         // Prevent held Space from repeatedly activating focused game controls.
@@ -1172,7 +1223,11 @@
         <div id="enhance-effect-overlay" onclick="skipEnhancementStart(event)" class="fixed inset-0 bg-black/90 z-50 hidden flex-col items-center justify-center">
             <div id="enhance-flash" class="fixed inset-0 pointer-events-none hidden"></div>
             <div id="enhance-anim-box" class="flex flex-col items-center text-center">
-                <h1 id="enhance-processing-text" class="text-6xl font-black text-purple-500 mb-8 tracking-widest anim-heartbeat">강화 중...</h1>
+                <h1 id="enhance-processing-text" class="font-black">선수 카드 강화 중</h1>
+                <div id="enhance-forge-stage" class="forge-stage" aria-hidden="true">
+                    <div class="forge-anvil"></div><div id="enhance-forge-card" class="forge-card"></div><div class="forge-hammer"></div>
+                    <div class="forge-sparks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                </div>
                 <div id="enhance-result-box" class="hidden flex-col items-center">
                     <div id="enhance-result-status" class="text-7xl font-black mb-4"></div>
                     <div id="enhance-result-orb" class="w-40 relative mb-4"></div>
@@ -1509,7 +1564,6 @@
             const url = bgmUrls[index];
             return url.includes('/Jason.Derulo.-.Colors.') ? 'jason-derulo-colors' : url;
         }
-
         // 22개 파일 중 Colors가 2개이므로 실제 곡은 21곡.
         // 한 셔플 턴에서는 21곡을 정확히 한 번씩만 재생하고,
         // 전부 소진된 뒤에만 새 순서를 다시 섞습니다.
@@ -6276,13 +6330,17 @@
             saveAch(); saveData(); achCheckSquads(); updateTokensUI();
             ovl.classList.replace('hidden','flex');
             proc.classList.remove('hidden'); res.classList.replace('flex','hidden');
+            const forgeStage = document.getElementById('enhance-forge-stage');
+            document.getElementById('enhance-forge-card').innerHTML = playerCardMarkup({...p,level:startLevel},{tier:getPlayerTier(p),position:p.position,ovr:getCalculatedOvr({...p,level:startLevel}),condition:p.cond,className:'orb-card-effect'});
+            forgeStage.classList.remove('hidden');
             res.classList.remove('anim-success','anim-fail'); orb.classList.remove('enhance-critical-shake','enhance-critical-glow');
             flash.classList.remove('anim-flash-white','enhance-critical-flash'); flash.classList.add('hidden');
-            box.classList.add('anim-shake');
-            let hb = setInterval(() => SFX.playTone(150,'sine',0.3,0.2),800);
+            const hammerSound = () => { SFX.playTone(240,'triangle',0.09,0.095); SFX.playTone(98,'sine',0.13,0.06); };
+            hammerSound();
+            let hb = setInterval(hammerSound,750);
             try {
                 await enhancementPauseOrClick(2000);
-                clearInterval(hb); hb = null; box.classList.remove('anim-shake'); proc.classList.add('hidden');
+                clearInterval(hb); hb = null; proc.classList.add('hidden'); forgeStage.classList.add('hidden');
                 flash.classList.replace('hidden','anim-flash-white');
                 if (success) SFX.enhanceSuccess(); else SFX.enhanceFail();
                 const showResult = (level,title,description,isCritical=false) => {
