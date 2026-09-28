@@ -785,6 +785,7 @@
                     <button class="fm-nav-item" onclick="switchScreen('screen-fusion')"><span class="fm-ico">🧬</span><span>진화</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-stats')"><span class="fm-ico">📊</span><span>기록실</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-owner-rank')"><span class="fm-ico">🏆</span><span>구단주 TOP 50</span></button>
+                    <button class="fm-nav-item" onclick="switchScreen('screen-social')"><span class="fm-ico">👥</span><span>소셜</span></button>
                     <div class="fm-nav-sep"></div>
                     <button class="fm-nav-item" onclick="openMissions()"><span class="fm-ico">🎯</span><span>미션</span><i id="fm-mission-dot" class="fm-dot" style="display:none"></i><img id="mission-btn" alt="" hidden></button>
                     <button class="fm-nav-item" onclick="openSave()"><span class="fm-ico">💾</span><span>저장 관리</span></button>
@@ -831,6 +832,35 @@
             </div>
             <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">현재 순위는 플레이어가 등록한 기록이며 경기 기록을 서버에서 검증하지 않아.</p>
         </div>
+    </div>
+
+    <div id="screen-social" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px;color:white">
+      <div style="width:min(100%,1050px);margin:0 auto;padding-bottom:80px">
+        <h1 style="font-size:28px;font-weight:900;margin-bottom:6px">👥 소셜</h1>
+        <p style="color:#cbd5e1;font-size:13px;margin-bottom:18px">아이디로 친구를 찾고 메시지를 주고받아 봐.</p>
+        <form onsubmit="searchSocialUser(event)" style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="social-search-id" maxlength="10" autocomplete="off" placeholder="친구 아이디 입력" aria-label="친구 아이디" style="flex:1;min-width:0;background:#1b1430;border:1px solid #69538c;color:white;padding:10px;border-radius:9px">
+          <button type="submit" style="background:#7c3aed;border-radius:9px;padding:10px 16px;font-weight:800">검색</button>
+        </form>
+        <div id="social-search-result" style="margin-bottom:16px"></div>
+        <p id="social-status" role="status" style="min-height:20px;color:#c4b5fd;font-size:12px;margin-bottom:12px"></p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px">
+          <section style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:15px">
+            <h2 style="font-weight:900;font-size:18px;margin-bottom:12px">친구 · 요청</h2><div id="social-friends-list">불러오는 중...</div>
+          </section>
+          <section style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:15px">
+            <h2 style="font-weight:900;font-size:18px;margin-bottom:12px">🏆 친구 순위</h2><div id="social-friends-rank">불러오는 중...</div>
+          </section>
+        </div>
+        <section style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:15px;margin-top:14px">
+          <h2 id="social-chat-title" style="font-weight:900;font-size:18px;margin-bottom:12px">친구를 선택하면 대화할 수 있어</h2>
+          <div id="social-chat-messages" style="height:300px;overflow-y:auto;background:#0d0a19;border-radius:10px;padding:12px">친구 목록에서 대화할 친구를 골라줘.</div>
+          <form id="social-chat-form" onsubmit="sendSocialMessage(event)" style="display:flex;gap:8px;margin-top:10px">
+            <input id="social-chat-input" maxlength="500" placeholder="메시지 입력 (최대 500자)" aria-label="메시지" disabled style="flex:1;min-width:0;background:#100c20;border:1px solid #69538c;border-radius:9px;color:white;padding:10px">
+            <button id="social-chat-send" type="submit" disabled style="background:#7c3aed;border-radius:9px;padding:10px 16px;font-weight:800">보내기</button>
+          </form>
+        </section>
+      </div>
     </div>
 
     <!-- 일일 미션 / 업적 -->
@@ -2760,6 +2790,148 @@
             finally{if(button)button.disabled=ownerRankRegistered;}
         }
 
+        let socialFriendId=null, socialFriendName='', socialRefreshBusy=false, socialFriends=[];
+        const socialClient=()=>getOwnerRankClient();
+        function socialStatus(message,failed=false){
+            const el=document.getElementById('social-status');
+            if(el){el.textContent=message;el.style.color=failed?'#fca5a5':'#c4b5fd';}
+        }
+        function socialRow(label,subtext,actions=[]) {
+            const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:7px;padding:9px 0;border-bottom:1px solid #493a62';
+            const info=document.createElement('span');info.style.cssText='flex:1;min-width:0';
+            const title=document.createElement('strong');title.style.cssText='display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';title.textContent=label;
+            const sub=document.createElement('small');sub.style.cssText='color:#cbd5e1;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';sub.textContent=subtext||'';
+            info.append(title,sub);row.append(info);
+            actions.forEach(([caption,handler])=>{
+                const button=document.createElement('button');button.type='button';button.textContent=caption;
+                button.style.cssText='flex:none;background:#503486;border-radius:7px;padding:6px 9px;font-size:12px;font-weight:800';
+                button.addEventListener('click',handler);row.append(button);
+            });
+            return row;
+        }
+        async function refreshSocial(){
+            if(!accountUser || socialRefreshBusy || document.querySelector('.screen.active')?.id!=='screen-social')return;
+            socialRefreshBusy=true;
+            try {
+                const me=accountUser.id;
+                const {data:links,error}=await socialClient().from('social_friendships')
+                    .select('id,requester_id,addressee_id,status,created_at')
+                    .or(`requester_id.eq.${me},addressee_id.eq.${me}`).order('created_at',{ascending:false});
+                if(error)throw error;
+                const ids=[...new Set((links||[]).map(x=>x.requester_id===me?x.addressee_id:x.requester_id))];
+                let profiles=[],rankings=[];
+                if(ids.length){
+                    const [p,r]=await Promise.all([
+                        socialClient().from('social_profiles').select('user_id,username,owner_name').in('user_id',ids),
+                        socialClient().from('owner_rankings_v2').select('user_id,published_club_name,published_ovr').in('user_id',ids)
+                    ]);
+                    if(p.error)throw p.error;if(r.error)throw r.error;
+                    profiles=p.data||[];rankings=r.data||[];
+                }
+                const profileById=new Map(profiles.map(p=>[p.user_id,p])),rankById=new Map(rankings.map(r=>[r.user_id,r]));
+                const list=document.getElementById('social-friends-list'),rankList=document.getElementById('social-friends-rank');
+                list.replaceChildren();rankList.replaceChildren();
+                socialFriends=(links||[]).filter(l=>l.status==='accepted').map(l=>l.requester_id===me?l.addressee_id:l.requester_id);
+                if(!links?.length)list.textContent='아직 친구나 요청이 없어.';
+                for(const link of links||[]){
+                    const otherId=link.requester_id===me?link.addressee_id:link.requester_id;
+                    const profile=profileById.get(otherId),name=profile?.owner_name||profile?.username||'구단주';
+                    const display=`${name} · @${profile?.username||'알 수 없음'}`;
+                    if(link.status==='accepted')list.append(socialRow(display,'친구',[['대화',()=>openSocialChat(otherId,name)]]));
+                    else if(link.addressee_id===me)list.append(socialRow(display,'받은 친구 요청',[['수락',()=>answerSocialRequest(link.id,true)],['거절',()=>answerSocialRequest(link.id,false)]]));
+                    else list.append(socialRow(display,'친구 수락 대기 중',[['취소',()=>answerSocialRequest(link.id,false)]]));
+                }
+                const ranked=socialFriends.map(id=>({id,profile:profileById.get(id),rank:rankById.get(id)}))
+                    .filter(x=>x.rank).sort((a,b)=>b.rank.published_ovr-a.rank.published_ovr);
+                if(!ranked.length)rankList.textContent='친구의 등록된 구단이 아직 없어.';
+                ranked.forEach((entry,i)=>rankList.append(socialRow(`${i+1}위 · ${entry.profile?.owner_name||entry.profile?.username||'구단주'}`,
+                    `${entry.rank.published_club_name} · OVR ${entry.rank.published_ovr}`)));
+                if(socialFriendId && !socialFriends.includes(socialFriendId)){
+                    socialFriendId=null;document.getElementById('social-chat-title').textContent='친구를 선택하면 대화할 수 있어';
+                    document.getElementById('social-chat-messages').textContent='친구 목록에서 대화할 친구를 골라줘.';
+                    document.getElementById('social-chat-input').disabled=true;document.getElementById('social-chat-send').disabled=true;
+                }
+                socialStatus('친구 목록을 불러왔어.');
+            } catch(e){console.warn('소셜 불러오기 실패:',e);socialStatus('소셜 데이터를 불러오지 못했어. SQL 설치와 연결을 확인해줘.',true);}
+            finally{socialRefreshBusy=false;}
+        }
+        async function searchSocialUser(event){
+            event.preventDefault();
+            const name=document.getElementById('social-search-id').value.trim().toLowerCase(),box=document.getElementById('social-search-result');
+            box.replaceChildren();
+            if(!/^[a-z0-9!@#^*]{3,10}$/.test(name))return socialStatus('정확한 아이디(3~10자)를 입력해줘.',true);
+            try {
+                const {data,error}=await socialClient().from('social_profiles').select('user_id,username,owner_name').eq('username',name).maybeSingle();
+                if(error)throw error;
+                if(!data)return socialStatus('검색한 아이디가 없어.',true);
+                if(data.user_id===accountUser?.id)return socialStatus('내 계정이야.');
+                box.append(socialRow(`${data.owner_name} · @${data.username}`,'아이디로 검색한 구단주',[
+                    ['친구 요청',()=>sendSocialRequest(data.user_id)]
+                ]));
+                socialStatus('검색 결과를 찾았어.');
+            } catch(e){socialStatus(e.message||'검색에 실패했어.',true);}
+        }
+        async function sendSocialRequest(otherId){
+            if(!accountUser || otherId===accountUser.id)return;
+            try {
+                const {error}=await socialClient().from('social_friendships').insert({requester_id:accountUser.id,addressee_id:otherId});
+                if(error)throw error;
+                document.getElementById('social-search-result').replaceChildren();
+                socialStatus('친구 요청을 보냈어. 상대가 수락하면 대화할 수 있어.');await refreshSocial();
+            } catch(e){socialStatus(e.code==='23505'?'이미 요청했거나 친구인 계정이야.':e.message||'요청에 실패했어.',true);}
+        }
+        async function answerSocialRequest(id,accept){
+            try {
+                const query=socialClient().from('social_friendships');
+                const {error}=accept?await query.update({status:'accepted'}).eq('id',id):await query.delete().eq('id',id);
+                if(error)throw error;
+                socialStatus(accept?'친구 요청을 수락했어.':'요청을 정리했어.');await refreshSocial();
+            } catch(e){socialStatus(e.message||'요청을 처리하지 못했어.',true);}
+        }
+        async function openSocialChat(id,name){
+            if(!socialFriends.includes(id))return;
+            socialFriendId=id;socialFriendName=name;
+            document.getElementById('social-chat-title').textContent=`${name}님과 대화`;
+            document.getElementById('social-chat-input').disabled=false;document.getElementById('social-chat-send').disabled=false;
+            await loadSocialMessages();
+        }
+        async function loadSocialMessages(){
+            if(!accountUser || !socialFriendId || document.hidden || document.querySelector('.screen.active')?.id!=='screen-social')return;
+            const me=accountUser.id,other=socialFriendId,box=document.getElementById('social-chat-messages');
+            try {
+                const {data,error}=await socialClient().from('social_messages').select('id,sender_id,body,created_at')
+                    .or(`and(sender_id.eq.${me},receiver_id.eq.${other}),and(sender_id.eq.${other},receiver_id.eq.${me})`)
+                    .order('created_at',{ascending:false}).limit(50);
+                if(error)throw error;
+                if(other!==socialFriendId)return;
+                const lastId=box.dataset.lastId,nearBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;
+                box.replaceChildren();
+                if(!data?.length)box.textContent='아직 메시지가 없어. 먼저 말을 걸어봐.';
+                (data||[]).reverse().forEach(msg=>{
+                    const row=document.createElement('div');row.style.cssText=`display:flex;justify-content:${msg.sender_id===me?'flex-end':'flex-start'};margin:5px 0`;
+                    const bubble=document.createElement('div');bubble.style.cssText=`max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere;background:${msg.sender_id===me?'#6d36b3':'#302447'};padding:8px 11px;border-radius:11px;font-size:13px`;
+                    bubble.textContent=msg.body;row.append(bubble);box.append(row);
+                });
+                box.dataset.lastId=String(data?.[0]?.id||'');
+                if(nearBottom || lastId!==box.dataset.lastId)box.scrollTop=box.scrollHeight;
+            } catch(e){socialStatus('메시지를 불러오지 못했어.',true);}
+        }
+        async function sendSocialMessage(event){
+            event.preventDefault();
+            const input=document.getElementById('social-chat-input'),body=input.value.trim(),other=socialFriendId;
+            if(!accountUser || !socialFriends.includes(other) || !body || body.length>500)return;
+            const send=document.getElementById('social-chat-send');send.disabled=true;
+            try {
+                const {error}=await socialClient().from('social_messages').insert({sender_id:accountUser.id,receiver_id:other,body});
+                if(error)throw error;
+                input.value='';await loadSocialMessages();
+            } catch(e){socialStatus(e.message||'메시지를 보내지 못했어.',true);}
+            finally{send.disabled=false;}
+        }
+        setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)loadSocialMessages();},10000);
+        setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)refreshSocial();},30000);
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden && document.querySelector('.screen.active')?.id==='screen-social'){refreshSocial();loadSocialMessages();}});
+
         // Supabase Auth가 비밀번호를 해시·검증한다. 진행도 테이블은 auth.uid() RLS로 격리한다.
         let accountMode = 'login', accountSaving = false, accountLegacyUser = null, accountMigrationSave = null;
         var accountDirty = false;
@@ -2924,6 +3096,9 @@
             sessionStorage.removeItem('yfm_restored_account');
             accountUser=null;window.yfmAccountReady=false;
             ownerRankRegistered=false;ownerRankLastSent='';
+            socialFriendId=null;socialFriends=[];
+            document.getElementById('social-search-result').replaceChildren();
+            document.getElementById('social-chat-messages').textContent='친구 목록에서 대화할 친구를 골라줘.';
             document.getElementById('account-gate').style.display='flex';
             document.getElementById('account-form').style.display='block';
             document.getElementById('account-profile').style.display='none';
@@ -3302,7 +3477,7 @@
 
         const globalSideNav = document.querySelector('#screen-lobby .fm-side');
         if (globalSideNav) { globalSideNav.id = 'fm-global-side'; document.body.appendChild(globalSideNav); }
-        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7};
+        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7,'screen-social':8};
         function updatePersistentNav(screenId) {
             const show = screenId !== 'screen-match'; document.body.classList.toggle('has-global-nav', show); document.body.classList.toggle('in-match', !show);
             document.querySelectorAll('#fm-global-side .fm-nav-item').forEach((button,index)=>button.classList.toggle('active', show && index===navScreenIndex[screenId]));
@@ -3320,6 +3495,7 @@
             if (screenId === 'screen-league') renderLeague();
             if (screenId === 'screen-league-rankings') renderLeagueRankings();
             if (screenId === 'screen-owner-rank') loadOwnerRank();
+            if (screenId === 'screen-social') refreshSocial();
             if (screenId === 'screen-saudi') initSaudiMode();
             if (screenId === 'screen-rogue') renderRogue();
             if (screenId === 'screen-stats') renderStats();
