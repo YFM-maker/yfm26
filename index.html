@@ -789,7 +789,7 @@
                     <button class="fm-nav-item" onclick="openSave()"><span class="fm-ico">💾</span><span>저장 관리</span></button>
                     <button class="fm-nav-item" onclick="replayTutorial()"><span class="fm-ico">📖</span><span>튜토리얼</span></button>
                 </nav>
-                <div id="yfm-account-widget"><img class="yfm-avatar" id="yfm-avatar" alt="내 프로필" onclick="document.getElementById('yfm-avatar-file').click()"><input id="yfm-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="setYfmAvatar(this)"><div style="min-width:0;flex:1"><div id="yfm-account-name">로그인 필요</div><button type="button" onclick="logoutYfm()">로그아웃</button></div></div>
+                <div id="yfm-account-widget"><img class="yfm-avatar" id="yfm-avatar" alt="내 프로필" onclick="document.getElementById('yfm-avatar-file').click()"><input id="yfm-avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden onchange="setYfmAvatar(this)"><div style="min-width:0;flex:1"><div id="yfm-account-name">로그인 필요</div><div id="yfm-cloud-status" style="font-size:10px;color:#a5f3fc;cursor:pointer" onclick="resolveYfmCloudConflict()" title="클라우드 저장 상태"></div><button type="button" onclick="logoutYfm()">로그아웃</button></div></div>
             </aside>
             <main class="fm-main">
                 <header class="fm-top">
@@ -6731,7 +6731,7 @@
                 keys.forEach(k => localStorage.removeItem(k));
                 localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
                 localStorage.setItem('fm_tutorial_pending_v1', '1');                        // 새 스토리는 항상 튜토리얼부터
-                window.__wiping = true; setTimeout(() => location.reload(), 700);
+                window.__wiping = true; yfmCloudLast=''; setTimeout(() => {window.__wiping=false;yfmCloudSave(true).finally(()=>location.reload());}, 700);
             } catch (e) {
                 if (backupUrl) URL.revokeObjectURL(backupUrl);
                 saveMsg('백업 파일을 만들거나 새 파일로 전환하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도하세요.', true);
@@ -6750,7 +6750,7 @@
             Object.entries(o.data).forEach(([k, v]) => { if (k.startsWith('fm_')) localStorage.setItem(k, v); });
             localStorage.setItem('fm_has_reset_tokens_v29', 'true');
             localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
-            location.reload();
+            yfmCloudSave(true).finally(()=>location.reload());
         }
         function importSaveFile(inp) {
             const f = inp.files && inp.files[0]; if (!f) return;
@@ -6771,7 +6771,7 @@
 
 
         // Supabase Auth uses an internal deterministic address; users only see their ID.
-        var yfmAccount=null, yfmRegisterMode=false;
+        var yfmAccount=null, yfmRegisterMode=false, yfmCloudRevision=0, yfmCloudLast='', yfmCloudBusy=false, yfmCloudBlocked=false, yfmCloudStarted=false;
         const yfmAuthStorage={
             getItem(key){return (localStorage.getItem('yfm_auth_keep')==='1'?localStorage:sessionStorage).getItem(key) || (key.startsWith('sb-')?localStorage.getItem(key):null);},
             setItem(key,value){const target=localStorage.getItem('yfm_auth_keep')==='1'?localStorage:sessionStorage;target.setItem(key,value);(target===localStorage?sessionStorage:localStorage).removeItem(key);},
@@ -6783,9 +6783,53 @@
         function yfmCurrentData(){const data={};Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>data[k]=localStorage.getItem(k));return data;}
         function yfmRestore(data){Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));Object.entries(data||{}).forEach(([k,v])=>{if(k.startsWith('fm_')&&typeof v==='string')localStorage.setItem(k,v);});}
         function yfmSwitchSave(id){const old=localStorage.getItem('yfm_active_uid');if(old===id)return false;if(old)localStorage.setItem('yfm_account_save_'+old,JSON.stringify(yfmCurrentData()));const saved=localStorage.getItem('yfm_account_save_'+id);if(saved){yfmRestore(JSON.parse(saved));localStorage.setItem('yfm_active_uid',id);return true;}if(old){yfmRestore({});localStorage.setItem('yfm_active_uid',id);return true;}localStorage.setItem('yfm_active_uid',id);return false;}
-        async function bootYfmAuth(){try{const client=getOwnerRankClient();const {data:{session},error}=await client.auth.getSession();if(error)throw error;if(!session?.user?.id||session.user.is_anonymous){setYfmAuthMode(false);return;}const {data:row,error:profileError}=await client.from('yfm_accounts').select('username').eq('user_id',session.user.id).maybeSingle();if(profileError)throw profileError;if(!row){setYfmAuthMode(false);return;}yfmAccount={id:session.user.id,username:row.username};if(yfmSwitchSave(yfmAccount.id)){location.reload();return;}document.getElementById('yfm-account-name').textContent=yfmAccount.username;document.getElementById('yfm-avatar').src=localStorage.getItem('yfm_avatar_'+yfmAccount.id)||yfmDefaultAvatar;document.getElementById('yfm-auth-gate').hidden=true;showStarPick();maybeStartTutorial();checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});}catch(e){document.getElementById('yfm-auth-error').textContent='계정을 확인하지 못했어: '+e.message;}}
+        function yfmCloudStatus(message,bad=false){const el=document.getElementById('yfm-cloud-status');if(el){el.textContent=message;el.style.color=bad?'#fda4af':'#a5f3fc';}}
+        function yfmCloudDigest(data){return JSON.stringify(Object.keys(data).sort().map(k=>[k,data[k]]));}
+        async function yfmCloudSave(force=false){
+          if(!yfmAccount||yfmCloudBusy||yfmCloudBlocked||document.hidden&&!force||window.__wiping)return;
+          const data=yfmCurrentData(),current=yfmCloudDigest(data);if(!force&&current===yfmCloudLast)return;
+          yfmCloudBusy=true;yfmCloudStatus('클라우드 저장 중...');
+          try{const {data:revision,error}=await getOwnerRankClient().rpc('yfm_store_cloud_save',{p_payload:{app:'YFM',v:23,owner_id:yfmAccount.id,owner_name:yfmAccount.username,at:new Date().toISOString(),data},p_revision:yfmCloudRevision});
+            if(error)throw error;yfmCloudRevision=Number(revision);yfmCloudLast=current;localStorage.setItem('yfm_cloud_synced_'+yfmAccount.id,current);yfmCloudStatus('☁ 저장됨');
+          }catch(e){if(/CLOUD_SAVE_CONFLICT/.test(e.message)){yfmCloudBlocked=true;yfmCloudStatus('⚠ 다른 기기 변경 · 눌러서 선택',true);}else{yfmCloudStatus('⚠ 저장 실패 · 다시 시도 중',true);console.warn('클라우드 저장:',e);}}
+          finally{yfmCloudBusy=false;}
+        }
+        async function resolveYfmCloudConflict(){if(!yfmAccount||!yfmCloudBlocked)return;try{const {data:remote,error}=await getOwnerRankClient().from('yfm_cloud_saves').select('payload,revision').eq('user_id',yfmAccount.id).maybeSingle();if(error||!remote)throw error||Error('서버 기록을 찾을 수 없어.');if(!confirm('다른 기기에서 진행한 기록이 있어. 이 기기의 진행 상황을 버리고 서버 기록을 불러올까?\n취소하면 이 기기 기록을 서버에 덮어쓸 수 있어.')){if(!confirm('정말 이 기기의 기록으로 서버 기록을 덮어쓸까?'))return;yfmCloudRevision=Number(remote.revision);yfmCloudBlocked=false;await yfmCloudSave(true);return;}localStorage.setItem('yfm_account_save_'+yfmAccount.id,JSON.stringify(yfmCurrentData()));yfmRestore(remote.payload.data);yfmCloudRevision=Number(remote.revision);yfmCloudLast=yfmCloudDigest(remote.payload.data);localStorage.setItem('yfm_cloud_synced_'+yfmAccount.id,yfmCloudLast);location.reload();}catch(e){yfmCloudStatus('서버 기록 확인 실패: '+e.message,true);}}
+        async function bootYfmAuth(){try{
+          const client=getOwnerRankClient();const {data:{session},error}=await client.auth.getSession();if(error)throw error;
+          if(!session?.user?.id||session.user.is_anonymous){setYfmAuthMode(false);return;}
+          const {data:row,error:profileError}=await client.from('yfm_accounts').select('username').eq('user_id',session.user.id).maybeSingle();if(profileError)throw profileError;if(!row){setYfmAuthMode(false);return;}
+          yfmAccount={id:session.user.id,username:row.username};yfmCloudStatus('클라우드 기록 확인 중...');
+          const {data:remote,error:cloudError}=await client.from('yfm_cloud_saves').select('payload,revision').eq('user_id',yfmAccount.id).maybeSingle();if(cloudError)throw cloudError;
+          const previousUid=localStorage.getItem('yfm_active_uid'),currentData=yfmCurrentData(),justRestored=sessionStorage.getItem('yfm_cloud_restored_'+yfmAccount.id)==='1';sessionStorage.removeItem('yfm_cloud_restored_'+yfmAccount.id);
+          if(previousUid&&previousUid!==yfmAccount.id)localStorage.setItem('yfm_account_save_'+previousUid,JSON.stringify(currentData));
+          if(remote){
+            if(!remote.payload?.data||remote.payload.owner_id!==yfmAccount.id)throw Error('서버 저장 데이터의 계정이 일치하지 않아.');
+            yfmCloudRevision=Number(remote.revision);yfmCloudLast=yfmCloudDigest(remote.payload.data);
+            const synced=localStorage.getItem('yfm_cloud_synced_'+yfmAccount.id);
+            // Keep unsynced local progress intact; ask which copy should win.
+            if(!justRestored&&previousUid===yfmAccount.id&&synced&&yfmCloudDigest(currentData)!==synced&&yfmCloudDigest(currentData)!==yfmCloudLast){
+              yfmCloudBlocked=true;yfmCloudStatus('⚠ 저장 충돌 · 눌러서 선택',true);
+            }else if(!justRestored&&(previousUid!==yfmAccount.id||yfmCloudDigest(currentData)!==yfmCloudLast)){
+              if(previousUid===yfmAccount.id)localStorage.setItem('yfm_account_save_'+yfmAccount.id,JSON.stringify(currentData));
+              yfmRestore(remote.payload.data);localStorage.setItem('yfm_active_uid',yfmAccount.id);sessionStorage.setItem('yfm_cloud_restored_'+yfmAccount.id,'1');
+              localStorage.setItem('yfm_cloud_synced_'+yfmAccount.id,yfmCloudLast);location.reload();return;
+            }
+            localStorage.setItem('yfm_active_uid',yfmAccount.id);localStorage.setItem('yfm_cloud_synced_'+yfmAccount.id,yfmCloudLast);
+          }else{
+            // First login on this account: upload its previous local progress before opening the game.
+            if(yfmSwitchSave(yfmAccount.id)){location.reload();return;}
+            await yfmCloudSave(true);
+            if(!yfmCloudRevision){document.getElementById('yfm-auth-error').textContent='첫 클라우드 저장에 실패했어. SQL 설치와 인터넷 연결을 확인해줘.';return;}
+          }
+          document.getElementById('yfm-account-name').textContent=yfmAccount.username;
+          document.getElementById('yfm-avatar').src=localStorage.getItem('yfm_avatar_'+yfmAccount.id)||yfmDefaultAvatar;
+          document.getElementById('yfm-auth-gate').hidden=true;if(!yfmCloudBlocked)yfmCloudStatus('☁ 저장됨');
+          if(!yfmCloudStarted){yfmCloudStarted=true;setInterval(()=>yfmCloudSave(),7000);document.addEventListener('visibilitychange',()=>{if(document.hidden)yfmCloudSave(true);});}
+          showStarPick();maybeStartTutorial();checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});
+        }catch(e){document.getElementById('yfm-auth-error').textContent='계정/클라우드 기록을 확인하지 못했어: '+e.message;}}
         async function submitYfmAuth(event){event.preventDefault();const username=document.getElementById('yfm-username').value,password=document.getElementById('yfm-password').value,box=document.getElementById('yfm-auth-error'),button=document.getElementById('yfm-auth-submit');if(!/^[A-Za-z0-9!@#^*]{3,10}$/.test(username)||!/^[A-Za-z0-9!@#^*]{5,15}$/.test(password)){box.textContent='아이디/비밀번호 길이와 허용 문자를 확인해줘.';return;}button.disabled=true;box.textContent='계정을 확인하는 중...';try{const client=getOwnerRankClient(),email=yfmEmail(username);let result;if(yfmRegisterMode){result=await client.auth.signUp({email,password,options:{data:{yfm_username:username}}});if(!result.error&&!result.data.session)throw Error('Supabase에서 이메일 확인을 끄고 다시 시도해줘.');}else result=await client.auth.signInWithPassword({email,password});if(result.error)throw result.error;localStorage.setItem('yfm_auth_keep',document.getElementById('yfm-remember').checked?'1':'0');if(!document.getElementById('yfm-remember').checked){const key='sb-'+new URL(OWNER_RANK_URL).hostname.split('.')[0]+'-auth-token';const token=localStorage.getItem(key);if(token){sessionStorage.setItem(key,token);localStorage.removeItem(key);}}await bootYfmAuth();}catch(e){box.textContent=yfmRegisterMode?'가입 실패: 아이디가 이미 사용 중이거나 인증 설정을 확인해줘. ('+e.message+')':'로그인 실패: 아이디 또는 비밀번호를 확인해줘. ('+e.message+')';}finally{button.disabled=false;}}
-        async function logoutYfm(){if(!yfmAccount)return;const old=yfmAccount.id;localStorage.setItem('yfm_account_save_'+old,JSON.stringify(yfmCurrentData()));yfmRestore({});localStorage.removeItem('yfm_active_uid');try{await getOwnerRankClient().auth.signOut();}finally{yfmAccount=null;location.reload();}}
+        async function logoutYfm(){if(!yfmAccount)return;const old=yfmAccount.id;localStorage.setItem('yfm_account_save_'+old,JSON.stringify(yfmCurrentData()));await yfmCloudSave(true);yfmRestore({});localStorage.removeItem('yfm_active_uid');try{await getOwnerRankClient().auth.signOut();}finally{yfmAccount=null;location.reload();}}
         function setYfmAvatar(input){const file=input.files?.[0];input.value='';if(!file||!yfmAccount)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>4*1024*1024){alert('PNG, JPEG, WebP 형식의 4MB 이하 사진만 선택해줘.');return;}const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const ctx=canvas.getContext('2d'),size=Math.min(img.width,img.height);ctx.drawImage(img,(img.width-size)/2,(img.height-size)/2,size,size,0,0,128,128);try{const result=canvas.toDataURL('image/jpeg',.75);localStorage.setItem('yfm_avatar_'+yfmAccount.id,result);document.getElementById('yfm-avatar').src=result;}catch(e){alert('사진을 저장할 공간이 부족해.');}URL.revokeObjectURL(url);};img.onerror=()=>URL.revokeObjectURL(url);img.src=url;}
 
         // ================= 일일 미션 =================
