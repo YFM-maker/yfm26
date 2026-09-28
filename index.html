@@ -6,6 +6,7 @@
     <title>Yongsan Football Manager</title>
     <link rel="icon" type="image/png" href="https://github.com/user-attachments/assets/f6034f7a-4400-423b-9dbc-6829a2f90645">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&display=swap');
         
@@ -664,6 +665,7 @@
                     <button class="fm-nav-item" onclick="switchScreen('screen-enhance')"><span class="fm-ico">⬆️</span><span>강화</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-fusion')"><span class="fm-ico">🧬</span><span>진화</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-stats')"><span class="fm-ico">📊</span><span>기록실</span></button>
+                    <button class="fm-nav-item" onclick="switchScreen('screen-owner-rank')"><span class="fm-ico">🏆</span><span>구단주 TOP 50</span></button>
                     <div class="fm-nav-sep"></div>
                     <button class="fm-nav-item" onclick="openMissions()"><span class="fm-ico">🎯</span><span>미션</span><i id="fm-mission-dot" class="fm-dot" style="display:none"></i><img id="mission-btn" alt="" hidden></button>
                     <button class="fm-nav-item" onclick="openSave()"><span class="fm-ico">💾</span><span>저장 관리</span></button>
@@ -682,6 +684,22 @@
                 </header>
                 <div class="fm-grid" id="fm-grid"></div>
             </main>
+        </div>
+    </div>
+
+    <!-- 온라인 구단주 순위: 선발 11명의 평균 OVR -->
+    <div id="screen-owner-rank" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px">
+        <div style="width:min(100%,760px);margin:0 auto;color:white">
+            <h1 style="font-size:clamp(22px,4vw,32px);font-weight:900;margin:0 0 6px">구단주 TOP 50</h1>
+            <p style="font-size:13px;color:#cbd5e1;margin:0 0 16px">선발 11명 평균 OVR 순위 · 같은 점수는 먼저 등록한 구단 우선</p>
+            <div style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:15px;margin-bottom:16px">
+                <div id="owner-rank-mine" style="font-weight:800;margin-bottom:9px">내 팀 정보를 불러오는 중...</div>
+                <button id="owner-rank-submit" type="button" onclick="submitOwnerRank()" style="background:#7c3aed;border-radius:9px;padding:9px 14px;font-weight:800;color:#fff">내 구단 등록 · 갱신</button>
+                <button type="button" onclick="loadOwnerRank()" style="background:#334155;border-radius:9px;padding:9px 14px;font-weight:800;color:#fff;margin-left:7px">순위 새로고침</button>
+                <p id="owner-rank-status" role="status" style="font-size:12px;color:#c4b5fd;min-height:18px;margin-top:9px"></p>
+            </div>
+            <div id="owner-rank-list" style="background:#19152c;border:1px solid #64518b;border-radius:14px;overflow:hidden"><div style="padding:18px;color:#cbd5e1">순위를 불러오는 중...</div></div>
+            <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">현재 순위는 플레이어가 등록한 기록이며 경기 기록을 서버에서 검증하지 않아.</p>
         </div>
     </div>
 
@@ -1994,6 +2012,68 @@
             const starters = players.filter(p => p.isStarting);
             return starters.length ? Math.round(starters.reduce((sum, p) => sum + getCalculatedOvr(p), 0) / starters.length) : 0;
         }
+
+        // Supabase 프로젝트 설정 → API Keys에서 Publishable key를 복사해 넣으세요.
+        // Secret key / service_role key는 절대 이 HTML 파일에 넣지 마세요.
+        const OWNER_RANK_URL = 'https://wgnnwherrljscxcclkdr.supabase.co';
+        const OWNER_RANK_PUBLISHABLE_KEY = 'sb_publishable_yBpUGiF77N7k-ArjiW__uw_KPvL4yp2';
+        let ownerRankClient = null;
+        function ownerRankStatus(message, failed = false) {
+            const el = document.getElementById('owner-rank-status');
+            if (el) { el.textContent = message; el.style.color = failed ? '#fca5a5' : '#c4b5fd'; }
+        }
+        function getOwnerRankClient() {
+            if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(OWNER_RANK_URL)) throw new Error('HTML의 OWNER_RANK_URL에 프로젝트 URL을 입력해줘.');
+            if (!OWNER_RANK_PUBLISHABLE_KEY.startsWith('sb_publishable_') && !OWNER_RANK_PUBLISHABLE_KEY.startsWith('eyJ')) throw new Error('HTML의 OWNER_RANK_PUBLISHABLE_KEY에 Supabase Publishable key를 입력해줘.');
+            if (!window.supabase?.createClient) throw new Error('Supabase 연결 스크립트를 불러오지 못했어. 인터넷 연결을 확인해줘.');
+            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true}});
+            return ownerRankClient;
+        }
+        async function loadOwnerRank() {
+            const mine = document.getElementById('owner-rank-mine'), list = document.getElementById('owner-rank-list');
+            const starters = players.filter(p => p.isStarting);
+            if (mine) mine.textContent = `${teamName} · 선발 ${starters.length}/11명 · 평균 OVR ${getTeamOvr()}`;
+            if (list) list.textContent = '순위를 불러오는 중...';
+            try {
+                const client = getOwnerRankClient();
+                const { data, error } = await client.from('owner_rankings').select('club_name,average_ovr').eq('is_blocked', false).order('average_ovr', {ascending:false}).order('created_at', {ascending:true}).limit(50);
+                if (error) throw error;
+                if (!list || document.querySelector('.screen.active')?.id !== 'screen-owner-rank') return;
+                list.replaceChildren();
+                if (!data.length) { list.textContent = '아직 등록된 구단이 없어. 첫 번째로 등록해봐!'; list.style.padding = '18px'; return; }
+                list.style.padding = '0';
+                data.forEach((row, i) => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 15px;border-bottom:1px solid #45375e';
+                    const rank = document.createElement('b'); rank.style.cssText = 'width:35px;flex-shrink:0;color:#c4b5fd'; rank.textContent = `${i + 1}위`;
+                    const name = document.createElement('span'); name.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'; name.textContent = row.club_name;
+                    const score = document.createElement('b'); score.textContent = `OVR ${row.average_ovr}`;
+                    item.append(rank, name, score); list.append(item);
+                });
+                ownerRankStatus('최신 순위를 불러왔어.');
+            } catch (e) { if (list) list.textContent = '순위를 불러오지 못했어.'; ownerRankStatus(e.message || '연결 오류', true); }
+        }
+        async function submitOwnerRank() {
+            const starters = players.filter(p => p.isStarting), button = document.getElementById('owner-rank-submit');
+            if (starters.length !== 11) return ownerRankStatus('선발 11명을 모두 배치한 뒤 등록해줘.', true);
+            if (button) button.disabled = true;
+            ownerRankStatus('등록 중...');
+            try {
+                const client = getOwnerRankClient();
+                let { data: { session }, error: sessionError } = await client.auth.getSession();
+                if (sessionError) throw sessionError;
+                if (!session) {
+                    const result = await client.auth.signInAnonymously();
+                    if (result.error) throw result.error;
+                    session = result.data.session;
+                }
+                if (!session?.user?.id) throw new Error('익명 로그인에 실패했어.');
+                const { error } = await client.from('owner_rankings').upsert({user_id:session.user.id,club_name:teamName.trim().slice(0, 12) || '내 팀',average_ovr:getTeamOvr()}, {onConflict:'user_id'});
+                if (error) throw error;
+                await loadOwnerRank(); ownerRankStatus('내 구단 기록을 등록했어.');
+            } catch (e) { ownerRankStatus(e.message || '등록에 실패했어.', true); }
+            finally { if (button) button.disabled = false; }
+        }
         
         function saveData() { if (window.__wiping) return; if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.setItem('fm_items', JSON.stringify(items)); 
             localStorage.setItem('fm_players', JSON.stringify(players)); 
@@ -2336,7 +2416,7 @@
 
         const globalSideNav = document.querySelector('#screen-lobby .fm-side');
         if (globalSideNav) { globalSideNav.id = 'fm-global-side'; document.body.appendChild(globalSideNav); }
-        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6};
+        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7};
         function updatePersistentNav(screenId) {
             const show = screenId !== 'screen-match'; document.body.classList.toggle('has-global-nav', show); document.body.classList.toggle('in-match', !show);
             document.querySelectorAll('#fm-global-side .fm-nav-item').forEach((button,index)=>button.classList.toggle('active', show && index===navScreenIndex[screenId]));
@@ -2353,6 +2433,7 @@
             if (screenId === 'screen-enhance') { renderProbTable(); selectedEnhancePlayerId = null; document.getElementById('enhance-none-selected').classList.remove('hidden'); document.getElementById('enhance-panel').classList.add('hidden'); renderEnhanceList(); }
             if (screenId === 'screen-league') renderLeague();
             if (screenId === 'screen-league-rankings') renderLeagueRankings();
+            if (screenId === 'screen-owner-rank') loadOwnerRank();
             if (screenId === 'screen-saudi') initSaudiMode();
             if (screenId === 'screen-rogue') renderRogue();
             if (screenId === 'screen-stats') renderStats();
