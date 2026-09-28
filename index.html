@@ -2803,9 +2803,9 @@
             if (data?.save_data) {
                 const remote=JSON.stringify(data.save_data.data);
                 // 계정의 서버 기록을 우선한다. 다른 계정의 로컬 데이터는 업로드하지 않는다.
-                const justRestored=sessionStorage.getItem('yfm_restored_account')===user.id;
-                if (justRestored) sessionStorage.removeItem('yfm_restored_account');
-                if (!justRestored && (previousOwner !== user.id || !window.yfmHadLocalProgress || JSON.stringify(accountSnapshot().data)!==remote)) {
+                // 시작 과정에서 자동 생성·정리되는 로컬 키가 서버 값과 달라도 복원은 탭당 한 번만 한다.
+                const restoredThisTab=sessionStorage.getItem('yfm_restored_account')===user.id;
+                if (!restoredThisTab && (previousOwner !== user.id || !window.yfmHadLocalProgress || JSON.stringify(accountSnapshot().data)!==remote)) {
                     restoreAccountSnapshot(data.save_data);
                     sessionStorage.setItem('yfm_restored_account',user.id);
                     localStorage.setItem(accountDeviceKey,user.id);
@@ -2837,6 +2837,7 @@
         async function signOutGameAccount() {
             await uploadAccountSnapshot(true);
             await getOwnerRankClient().auth.signOut();
+            sessionStorage.removeItem('yfm_restored_account');
             accountUser=null;window.yfmAccountReady=false;
             document.getElementById('account-gate').style.display='flex';
         }
