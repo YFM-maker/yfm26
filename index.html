@@ -779,6 +779,7 @@
                 <nav class="fm-nav">
                     <button class="fm-nav-item active" onclick="switchScreen('screen-lobby')"><span class="fm-ico">🏠</span><span>홈</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-mode-select')"><span class="fm-ico">⚽</span><span>경기 · 대회</span></button>
+                    <button class="fm-nav-item" onclick="switchScreen('screen-online-friendly')"><span class="fm-ico">🌐</span><span>온라인 친선</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-manager')"><span class="fm-ico">📋</span><span>팀 관리</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-recruit')"><span class="fm-ico">🔍</span><span>선수 영입</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-enhance')"><span class="fm-ico">⬆️</span><span>강화</span></button>
@@ -807,6 +808,9 @@
                         
                     </div>
                 </header>
+                <div id="fm-online-match-entry" style="flex:none;padding:10px 18px 0;display:flex;justify-content:flex-end">
+                    <button type="button" onclick="switchScreen('screen-online-friendly')" style="background:linear-gradient(110deg,#7c3aed,#4f46e5);color:#fff;border:1px solid #a78bfa;border-radius:12px;padding:10px 16px;font-weight:900;box-shadow:0 4px 16px #4c1d9580">🌐 온라인 친선 매치</button>
+                </div>
                 <div class="fm-grid" id="fm-grid"></div>
             </main>
         </div>
@@ -832,6 +836,51 @@
             </div>
             <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">현재 순위는 플레이어가 등록한 기록이며 경기 기록을 서버에서 검증하지 않아.</p>
         </div>
+    </div>
+
+    <div id="screen-online-friendly" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px;color:white">
+      <div style="width:min(100%,760px);margin:0 auto;padding-bottom:80px">
+        <h1 style="font-size:clamp(24px,4vw,32px);font-weight:900;margin:0 0 6px">🌐 온라인 친선</h1>
+        <p style="color:#cbd5e1;font-size:13px;margin:0 0 18px">4자리 방 코드로 참가하거나, 수락한 친구에게 매치를 신청해.</p>
+        <div style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:16px;margin-bottom:14px">
+          <h2 style="font-size:18px;font-weight:900;margin:0 0 12px">방 만들기 / 참가하기</h2>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button type="button" onclick="yfmOnlineCreateRoom()" style="background:#7c3aed;border-radius:9px;padding:10px 14px;font-weight:800">새 방 만들기</button>
+            <input id="yfm-online-code" inputmode="numeric" autocomplete="one-time-code" maxlength="4" pattern="[0-9]{4}" placeholder="4자리 코드" aria-label="4자리 방 코드" style="width:130px;background:#100c20;border:1px solid #69538c;color:white;padding:10px;border-radius:9px;text-align:center;letter-spacing:.2em">
+            <button type="button" onclick="yfmOnlineJoinRoom()" style="background:#334155;border-radius:9px;padding:10px 14px;font-weight:800">코드로 참가</button>
+          </div>
+          <p id="yfm-online-status" role="status" style="min-height:20px;color:#c4b5fd;font-size:13px;margin:12px 0 0">로그인 상태를 확인하는 중...</p>
+        </div>
+        <div id="yfm-online-room" style="display:none;background:#19152c;border:1px solid #64518b;border-radius:14px;padding:16px;margin-bottom:14px">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div style="flex:1"><div style="font-size:12px;color:#cbd5e1">방 코드</div><div id="yfm-online-room-code" style="font-size:30px;letter-spacing:.22em;font-weight:900;color:#facc15"></div></div>
+            <button type="button" onclick="yfmOnlineCopyCode()" style="background:#334155;border-radius:9px;padding:9px 12px;font-weight:800">코드 복사</button>
+            <button type="button" onclick="yfmOnlineLeaveRoom()" style="background:#7f1d1d;border-radius:9px;padding:9px 12px;font-weight:800">방 나가기</button>
+          </div>
+          <div id="yfm-online-members" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:14px 0"></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button id="yfm-online-ready" type="button" onclick="yfmOnlineToggleReady()" style="background:#0f766e;border-radius:9px;padding:10px 14px;font-weight:800">준비하기</button>
+            <button id="yfm-online-start" type="button" onclick="yfmOnlineStart()" disabled style="display:none;background:#7c3aed;border-radius:9px;padding:10px 14px;font-weight:800;opacity:.75">친선전 시작</button>
+          </div>
+          <p id="yfm-online-room-status" style="color:#cbd5e1;font-size:12px;margin:10px 0 0">친구가 참가하면 준비 버튼을 눌러줘.</p>
+          <div id="yfm-online-emojis" style="display:none;margin-top:14px;padding-top:12px;border-top:1px solid #493b65">
+            <div style="font-size:12px;color:#cbd5e1;margin-bottom:8px">상대에게 감정표현 보내기</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="yfmOnlineEmoji('😝')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">😝</button><button type="button" onclick="yfmOnlineEmoji('🤬')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">🤬</button><button type="button" onclick="yfmOnlineEmoji('😭')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">😭</button><button type="button" onclick="yfmOnlineEmoji('🤣')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">🤣</button><button type="button" onclick="yfmOnlineEmoji('🖕')" style="background:#342651;border:1px solid #69538c;border-radius:8px;padding:7px 10px;font-size:21px">🖕</button></div>
+            <p id="yfm-online-emoji-feed" aria-live="polite" style="min-height:28px;font-size:20px;margin:8px 0 0"></p>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px">
+          <section style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:16px">
+            <h2 style="font-size:18px;font-weight:900;margin:0 0 10px">친구에게 신청</h2>
+            <div id="yfm-online-friends" style="font-size:13px;color:#cbd5e1">친구 목록을 불러오는 중...</div>
+          </section>
+          <section style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:16px">
+            <h2 style="font-size:18px;font-weight:900;margin:0 0 10px">받은 매치 신청</h2>
+            <div id="yfm-online-invites" style="font-size:13px;color:#cbd5e1">신청을 확인하는 중...</div>
+          </section>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:14px">상대가 참가한 뒤 두 명 모두 준비하면, 방장 화면에 친선전 시작 버튼이 보여.</p>
+      </div>
     </div>
 
     <div id="screen-social" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px;color:white">
@@ -959,7 +1008,11 @@
                 <div class="mt-score" id="match-score-away">0</div>
                 <div class="mt-name"><span id="match-enemy-name">적 팀</span><img id="match-enemy-logo" class="club-crest hidden" alt="상대 구단 엠블럼"><span class="kit" style="background:#dc2626"></span></div>
             </div>
-            <div class="mt-actions"><button id="btn-forfeit" class="mt-btn" onclick="forfeitMatch()" title="0:3 패배 처리">🏳️ 나가기</button><button id="btn-speed" class="mt-btn" onclick="toggleSpeed()">배속 x1</button><button id="btn-shout" class="mt-btn" onclick="openShouts()" title="선수 심리에 따라 다른 반응 · 경기 시간 10분 쿨타임">📣 터치라인 외침</button><button id="btn-tactics" class="mt-btn primary" onclick="openTactics()">⚙️ 전술 / 교체</button></div>
+            <div class="mt-actions"><button id="btn-forfeit" class="mt-btn" onclick="forfeitMatch()" title="온라인 친선 기권">🏳️ 나가기</button><button id="btn-speed" class="mt-btn" onclick="toggleSpeed()">배속 x1</button><button id="btn-shout" class="mt-btn" onclick="openShouts()" title="선수 심리에 따라 다른 반응 · 경기 시간 10분 쿨타임">📣 터치라인 외침</button><button id="btn-tactics" class="mt-btn primary" onclick="openTactics()">⚙️ 전술 / 교체</button></div>
+        <div id="online-match-reaction" style="display:none;position:absolute;z-index:75;top:78px;left:50%;transform:translateX(-50%);font-size:52px;filter:drop-shadow(0 4px 10px #000);pointer-events:none"></div>
+        <div id="online-match-emojis" style="display:none;position:absolute;z-index:48;right:12px;bottom:12px;gap:6px;background:#111827dd;border:1px solid #475569;border-radius:14px;padding:6px">
+            <button onclick="yfmOnlineEmoji('😝')" aria-label="장난">😝</button><button onclick="yfmOnlineEmoji('🤬')" aria-label="화남">🤬</button><button onclick="yfmOnlineEmoji('😭')" aria-label="슬픔">😭</button><button onclick="yfmOnlineEmoji('🤣')" aria-label="웃음">🤣</button><button onclick="yfmOnlineEmoji('🖕')" aria-label="도발">🖕</button>
+        </div>
         </div>
         <div class="poss-bar"><i id="poss-home" style="width:50%;background:#3b82f6"></i><i id="poss-away" style="width:50%;background:#ef4444"></i></div>
         <div class="mom-bar" title="경기 흐름(모멘텀): 최근 공격 점유·슈팅·득점으로 계산"><span class="mom-mid"></span><i id="mom-fill"></i><em id="mom-label"></em></div>
@@ -3301,6 +3354,7 @@
             const nextCard = n ? `<div class="fm-card fm-span-8"><div class="fm-card-h">다음 경기 · ${esc(n.label)}<b>${esc(n.detail)}</b></div><div class="fm-card-b"><div class="fm-next"><div class="fm-next-team">${userCrestMarkup(true)}<b>${esc(teamName)}</b><span>OVR ${avg}</span></div><div class="fm-vs">${esc(n.comp)}<div>VS</div></div><div class="fm-next-team">${n.kind === 'league' ? n.crest.replace(/<span[^>]*>[^<]*<\/span>/, '') : (clubLogoUrl(n.name) ? `<img src="${clubLogoUrl(n.name)}" alt="" onerror="this.style.display='none'">` : '<span style="font-size:40px">🛡️</span>')}<b>${esc(n.name)}</b><span>OVR ${n.ovr}</span></div></div><div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px"><button class="fm-btn" onclick="switchScreen('screen-manager')">📋 전술 · 라인업</button><button class="fm-btn pri" onclick="lobbyContinue()">경기 시작 ▶</button></div></div></div>`
                 : `<div class="fm-card fm-span-8"><div class="fm-card-h">다음 경기<b>일정 없음</b></div><div class="fm-card-b"><p class="fm-empty">진행 중인 리그 경기가 없어. 리그 시즌을 시작하거나 다음 시즌으로 넘어가 봐.</p><div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="fm-btn pri" onclick="switchScreen('screen-league')">🏟️ 리그 시작하기</button></div></div></div>`;
             const teamCard = `<div class="fm-card fm-span-4"><div class="fm-card-h">팀 현황<button class="fm-link" onclick="switchScreen('screen-manager')">팀 관리 ›</button></div><div class="fm-card-b"><div class="fm-stat"><div><small>평균 OVR</small><b>${avg}</b></div><div><small>체력</small><b>${cond}%</b>${meter(cond, cond >= 70 ? '#34d399' : cond >= 45 ? '#fbbf24' : '#fb7185')}</div><div><small>사기</small><b>${morale >= 85 ? '😊' : morale >= 70 ? '🙂' : morale >= 50 ? '😐' : '😕'}</b>${meter(morale, '#8b5cf6')}</div></div><div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><small style="color:var(--fm-mute);font-size:11px;font-weight:700">최근 5경기</small>${formHtml}</div><div style="text-align:right;font-size:13px;color:var(--fm-mute)">${ace ? `⭐ 에이스 <b style="color:#fff">${esc(ace.name)}</b><br>` : ''}${inj ? `🚑 부상 ${inj}명` : '부상자 없음'}</div></div></div></div>`;
+            const onlineCard = `<div class="fm-card fm-span-6"><div class="fm-card-h">🌐 온라인 친선 매치<b>친구와 실시간으로 대결</b></div><div class="fm-card-b"><p class="fm-empty">4자리 방 코드를 만들거나 친구 방에 참가해 경기를 시작해.</p><button class="fm-btn pri" style="margin-top:12px" onclick="switchScreen('screen-online-friendly')">온라인 친선 들어가기</button></div></div>`;
             const news = (S.news || []).slice(0, 5), newsCardH = `<div class="fm-card fm-span-6"><div class="fm-card-h">받은 소식<button class="fm-link" onclick="openNews()">전체 보기 ›</button></div><div class="fm-card-b"><div class="fm-news">${news.length ? news.map(x => `<div class="fm-news-item ${x.read ? '' : 'unread'}" onclick="openNews()"><span class="ic">${x.icon || '📰'}</span><div class="min-w-0"><b>${esc(x.title)}</b><small>${esc(x.tag || '')}</small></div></div>`).join('') : '<p class="fm-empty">아직 소식이 없어요. 경기를 치르면 경기 리포트와 이적설, 시상 소식이 여기에 쌓여요.</p>'}</div></div></div>`;
             const social = socialFeedItems().slice(0, 5), socialCardH = `<div class="fm-card fm-span-6"><div class="fm-card-h">소셜 피드<button class="fm-link" onclick="openSocialFeed()">전체 보기 ›</button></div><div class="fm-card-b"><div class="fm-news">${social.length ? social.map(x => `<div class="fm-news-item" onclick="openSocialFeed()"><span class="ic">${x.type==='media'?'📰':x.type==='journalist'?'✍️':x.type==='data'?'📊':'💬'}</span><div class="min-w-0"><div style="display:flex;gap:6px;align-items:baseline;min-width:0"><b style="white-space:nowrap">${x.type==='fan'?'@':''}${esc(x.name)}</b>${x.type==='fan'&&x.match?`<span style="font-size:10px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.match)}</span>`:''}</div><small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.text)}</small></div></div>`).join('') : '<p class="fm-empty">아직 소셜 반응이 없어요. 경기를 치르거나 새 소식이 생기면 팬들의 반응이 올라와요.</p>'}</div></div></div>`;
             const saudiCard = `<div class="fm-card fm-span-6"><div class="fm-card-h">사우디 모드<b>친선경기</b></div><div class="fm-card-b"><p class="fm-empty">상대를 선택하고 사우디 친선경기에 도전해 봐.</p><div style="margin-top:12px"><button class="fm-btn pri" onclick="switchScreen('screen-saudi')">💰 사우디 모드 시작</button></div></div></div>`;
@@ -3318,7 +3372,7 @@
             } else {
                 rankingCard = `<div class="fm-card fm-span-6"><div class="fm-card-h">리그 순위<button class="fm-link" onclick="openLeagueDetails()">자세히 보기 ›</button></div><div class="fm-card-b"><p class="fm-empty">아직 리그 시즌을 시작하지 않았어. 시즌을 시작하면 이곳에 순위가 표시돼.</p><button class="fm-btn pri" style="margin-top:12px" onclick="switchScreen('screen-league')">🏟️ 리그 시작하기</button></div></div>`;
             }
-            grid.innerHTML = nextCard + teamCard + newsCardH + socialCardH + saudiCard + compCard + rankingCard;
+            grid.innerHTML = nextCard + teamCard + onlineCard + newsCardH + socialCardH + saudiCard + compCard + rankingCard;
             updateNewsBadge(); updateMissionIcon();
         }
         function openLeagueDetails() { switchScreen('screen-league-rankings'); }
@@ -3518,7 +3572,7 @@
 
         const globalSideNav = document.querySelector('#screen-lobby .fm-side');
         if (globalSideNav) { globalSideNav.id = 'fm-global-side'; document.body.appendChild(globalSideNav); }
-        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7,'screen-social':8};
+        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-online-friendly':2,'screen-manager':3,'screen-recruit':4,'screen-enhance':5,'screen-fusion':6,'screen-stats':7,'screen-owner-rank':8,'screen-social':9};
         function updatePersistentNav(screenId) {
             const show = screenId !== 'screen-match'; document.body.classList.toggle('has-global-nav', show); document.body.classList.toggle('in-match', !show);
             document.querySelectorAll('#fm-global-side .fm-nav-item').forEach((button,index)=>button.classList.toggle('active', show && index===navScreenIndex[screenId]));
@@ -3537,6 +3591,7 @@
             if (screenId === 'screen-league-rankings') renderLeagueRankings();
             if (screenId === 'screen-owner-rank') loadOwnerRank();
             if (screenId === 'screen-social') refreshSocial();
+            if (screenId === 'screen-online-friendly' && window.yfmOnlineUiLoad) window.yfmOnlineUiLoad();
             if (screenId === 'screen-saudi') initSaudiMode();
             if (screenId === 'screen-rogue') renderRogue();
             if (screenId === 'screen-stats') renderStats();
@@ -3809,14 +3864,14 @@
             def: { label: '수비적', icon: '🛡️', desc: '라인 하강 · 실점 위험↓ · 슈팅↓', color: 'bg-emerald-600', line: -7, own: 0.85, opp: 0.8, freq: 0.8 }
         };
         let tacSel = null;
-        function openTactics() { const st = currentMatchState; if (!st) return; pauseMatchCrowd(); st.userPaused = true; st.tacSnap = JSON.stringify([st.tactic, st.instr]); st.tacSessionEntered = new Set(); st.tacSessionAvailable = new Set(); tacSel = null; renderTactics(); document.getElementById('tactics-panel').classList.replace('hidden', 'flex'); }
+        function openTactics() { const st = currentMatchState; if (!st) return; pauseMatchCrowd(); st.userPaused = true; if (st.online) { try { window.yfmOnline.pause(); } catch (_) {} } st.tacSnap = JSON.stringify([st.tactic, st.instr]); st.tacSessionEntered = new Set(); st.tacSessionAvailable = new Set(); tacSel = null; renderTactics(); document.getElementById('tactics-panel').classList.replace('hidden', 'flex'); }
         function closeTactics() {
             document.getElementById('tactics-panel').classList.replace('flex', 'hidden'); const st = currentMatchState; if (!st) return;
-            st.userPaused = false; if (!st.isPaused && !st.ended) resumeMatchCrowd(); st.last = performance.now(); st.tacSessionEntered = null; st.tacSessionAvailable = null;
+            st.userPaused = false; if (st.online) { try { window.yfmOnline.resume(); } catch (_) {} } if (!st.isPaused && !st.ended) resumeMatchCrowd(); st.last = performance.now(); st.tacSessionEntered = null; st.tacSessionAvailable = null;
             if (st.tacSnap && st.tacSnap !== JSON.stringify([st.tactic, st.instr]) && !st.ended) comm(st, `📋 전술 변경: ${TACTICS[st.tactic].label} · ${ATK[st.instr.atk].n} · ${DEFI[st.instr.def].n} · 템포 ${TEMPO[st.instr.tempo].n} · 폭 ${(WIDTH[st.instr.width] || WIDTH.normal).n} · 패스 ${(PASSLEN[st.instr.pass] || PASSLEN.normal).n}${st.instr.trap === 'on' ? ' · 오프사이드 트랩' : ''}`, 'sub');
             st.tacSnap = null; if (st.homePlayers) updateSide(st);
         }
-        function setTactic(t) { currentMatchState.tactic = t; renderTactics(); }
+        function setTactic(t) { currentMatchState.tactic = t; if (currentMatchState.online && !currentMatchState.online.isHost) { try { window.yfmOnline.sendTactic({ tactic: t }); } catch (_) {} } renderTactics(); }
 
         // ===== 경기 중 드래그 포지션 (이번 경기에만 적용 · 하프라인 너머로는 이동 불가) =====
         const tacToSlotX = px => 100 - (px - 5) / 0.45;                 // 경기장 가로 좌표(우리 진영 5~50) → 포메이션 좌표
@@ -3855,7 +3910,7 @@
                 if (before !== z.d) comm(st, `📋 포지션 변경: ${p.name} ${before} → ${z.d} (적성 ${ap}%)`, 'sub');
                 managerToast(before === z.d ? `${p.name} · ${z.d} 위치 조정` : `${p.name}: ${before} → ${z.d} · 적성 ${ap}%${ap < 100 ? (ap >= 90 ? ' ▽' : ' ▼') : ' ✓'}`);
             }
-            refreshHomeShape(st); renderTactics();
+            refreshHomeShape(st); if (st.online && !st.online.isHost) { try { window.yfmOnline.sendTactic({ positions: st.homePlayers.map(q => ({ x: q.baseX, y: q.baseY, det: q.det })) }); } catch (_) {} } renderTactics();
         }
         function renderTactics() {
             const st = currentMatchState;
@@ -3907,6 +3962,7 @@
             matchElements[outId].remove(); delete matchElements[outId]; makeDot(np);
             if (st.ball.fl && st.ball.fl.to === outId) st.ball.fl.to = np.id;
             comm(st, `🔄 교체: ${o.name} OUT → ${np.name} IN`, 'sub'); updateSide(st);
+            if (st.online && !st.online.isHost) { try { window.yfmOnline.sendSub({ outIndex: i, incoming: { name: n.name, position: n.position, role: np.role, det: np.det, ovr: Math.round(getCalculatedOvr(n)) } }); } catch (_) {} }
             tacSel = null; renderTactics();
         }
 
@@ -4451,7 +4507,7 @@
         function fixInstr() { if (!WIDTH[instr.width]) instr.width = 'normal'; if (!PASSLEN[instr.pass]) instr.pass = 'normal'; if (!TRAP[instr.trap]) instr.trap = 'off'; if (!ATK[instr.atk]) instr.atk = 'bal'; if (!DEFI[instr.def]) instr.def = 'mid'; if (!TEMPO[instr.tempo]) instr.tempo = 'normal'; }
         function renderInstr() { fixInstr(); const el = document.getElementById('instr-panel'); if (el) { const fv = famOf(currentFormation, instr.atk); el.innerHTML = instrHTML(instr, 'setInstr') + `<div class="text-xs text-gray-300 mt-1">📚 전술 숙련도 (${currentFormation} · ${STYLE_NAME[instr.atk] || '균형'}) ${famBar(fv)} <b>${famLabel(fv)}</b> ${Math.round(fv)}/100<div class="text-[11px] text-gray-500">같은 포메이션·공격 방식으로 경기할수록 올라가요. 다른 조합을 쓰면 조금씩 떨어져요.</div></div>`; } }
         function setInstr(k, v) { instr[k] = v; localStorage.setItem('fm_instr', JSON.stringify(instr)); renderInstr(); }
-        function setMatchInstr(k, v) { currentMatchState.instr[k] = v; renderTactics(); }
+        function setMatchInstr(k, v) { currentMatchState.instr[k] = v; if (currentMatchState.online && !currentMatchState.online.isHost) { try { window.yfmOnline.sendTactic({ instr: currentMatchState.instr }); } catch (_) {} } renderTactics(); }
 
         function closePlayerInfo() { document.getElementById('player-modal').classList.replace('flex', 'hidden'); }
         function showPlayerInfo(id) {
@@ -4623,6 +4679,7 @@
         function forfeitMatch() {
             const st = currentMatchState; if (!st || st.ended || st.resultProcessed) return;
             if (!confirm('기권하고 나갈까요?\n0:3 패배로 처리되며 경기 보상·성장·미션 진행이 없습니다.')) return;
+            if (st.online) { try { window.yfmOnline.forfeit(); } catch (_) {} return; }
             st.forfeit = true; st.pens = null; st.penWinner = null; st.breakKind = null;
             ['pk-overlay', 'match-ht-overlay'].forEach(id => document.getElementById(id).classList.replace('flex', 'hidden'));
             ['match-goal-overlay', 'match-card-overlay'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
@@ -5661,10 +5718,13 @@
         }
         function startSecondHalf() {
             const st = currentMatchState; if (!st) return;
+            if (st.online && !st.online.isHost) return;
+            st.secondHalfStarted = true;
             document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
             allOf(st).forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; p.stam = Math.min(100, (p.stam ?? 100) + 10); if (p.stam >= 35) p.tiredWarned = false; });
             kickoff(st, false); snapAll(st); playMatchSound('start'); resumeMatchCrowd(); comm(st, '▶ 후반 시작', 'info'); cpuHalftimeAdapt(st); updateShoutBtn(st);
             st.isPaused = false; st.last = performance.now(); st.acc = 0;
+            if (st.online) { try { window.yfmOnline.setHalf(2); } catch (_) {} }
         }
 
         const TRAITS = {
@@ -5916,6 +5976,11 @@
         const CUP_EXTRA_ROSTERS = {"미트윌란": {"GK": ["노르딘 바커르", "마크 우그보"], "DF": ["마르틴 에를리치", "라스무스 크리스텐센", "마스 베크 쇠렌센", "마그누스 옌센"], "MF": ["필리프 빌링", "홍현석", "데닐 카스티요"], "FW": ["다비드 마르티네스", "조규성", "프라이데이 에팀", "미켈 고고르사"]}, "헹크": {"GK": ["토비아스 라발"], "DF": ["조리스 카옘베", "케이든 피어", "야이마르 메디나", "크리스티안 라비치"], "MF": ["브리안 헤이넌", "단 헤이만스", "벤자민 타히로비치"], "FW": ["이토 준야", "요코야마 아유무", "라피우 두로신미"]}, "페렌츠바로시": {"GK": ["게르괴 세치", "데네시 디부스", "아담 버르거"], "DF": ["어틸러 오슈바트", "엔드레 보트커", "마리아노 고메스", "나단 조호레", "톤 라에마커르스"], "MF": ["캘럼 오다우다", "마투시 베로", "하비브 마이가", "나비 케이타", "필리프 로멘스", "아담 너지", "크리스토페르 자카리아센", "벤스 외투이시", "카두"], "FW": ["요나탄 레비", "다니엘 아르자니", "벨리코 비르만체비치", "프랑코 코바체비치", "레니 조제프", "크리스티안 리스테시"]}};
         function buildAwayRoster(mode, enemyData) {
             let e = enemyData;
+            if (mode === 'onlineFriendly' && Array.isArray(e.lineup) && e.lineup.length >= 11) {
+                const formation = e.formation && formationsLayouts[e.formation] ? e.formation : '4-3-3';
+                const layout = formationsLayouts[formation];
+                return { formation, list: layout.map((slot, i) => { const p = e.lineup[i] || {}; return { name: String(p.name || `선수 ${i + 1}`), pos: slot.pos, ovr: Math.max(1, Number(p.ovr) || Number(e.ovr) || 60), det: slotDetail(slot) }; }), ace: -1 };
+            }
             if (mode === 'league') { const cc = clubById(e.id); if (cc) e = { ...e, lineup: clubLineup(cc), formation: clubForm(cc) }; }
             if (mode === 'worldcup' && worldCupNationalPlayers(e)) e = { ...e, lineup: null, formation: '4-3-3' };
             if (mode === 'career' || mode === 'europa') { const cc = clClub(e.name); if (cc) e = { ...e, lineup: clubLineup(cc), formation: clubForm(cc) }; else if (CUP_EXTRA_ROSTERS[e.name]) { const pool = CUP_EXTRA_ROSTERS[e.name], used = { GK:0, DF:0, MF:0, FW:0 }; e = { ...e, formation:'4-3-3', lineup: formationsLayouts['4-3-3'].map(slot => ({name:pool[slot.pos][used[slot.pos]++],pos:slot.pos})) }; } }
@@ -6241,7 +6306,7 @@
             return { own: Math.round(own * 1000) / 1000, opp: Math.round(opp * 1000) / 1000, sig: `${df}-${layout.length - 1 - df - fw}-${fw}` };
         }
         function formQ(st, home) { const F = st.formF; return F ? (home ? F.h.own * F.a.opp : F.a.own * F.h.opp) : 1; }
-        function prepareMatch(mode, enemyData, matchSetup = null) {
+        function prepareMatch(mode, enemyData, matchSetup = null, onlineContext = null) {
             let userStarters = players.filter(p => p.isStarting);
             if (userStarters.length < 11 || userStarters.some(p => p.slotIndex === -1)) { autoAssignStarters(sandboxMode(mode)); saveData(); userStarters = players.filter(p => p.isStarting); }
             if(userStarters.length < 11) { alert("선발 라인업을 구성할 수 없습니다. 선수가 부족합니다."); return; }
@@ -6273,7 +6338,7 @@
             const venue = matchVenue(mode, enemyData), forms = preForms || matchForms(userStarters.reduce((sum, p) => sum + getCalculatedOvr(p), 0) / 11, Math.round(roster.list.reduce((a, x) => a + x.ovr, 0) / roster.list.length));
             scaleSide(homePlayers, sideFactor(forms, venue, true)); scaleSide(awayPlayers, sideFactor(forms, venue, false));
             currentMatchState = { 
-                mode: mode, enemy: enemyData, homePlayers, awayPlayers, awayStyle: enemyData.style || cpuStyle(enemyData), tactic: 'bal', instr: (fixInstr(), { ...instr, ...(matchSetup?.instr || {}) }), bench: matchSetup ? [...benchIds, ...players.filter(p => p.isStarting && !matchSetup.slots.includes(p.id)).map(p => p.id)].filter((id, i, list) => !matchSetup.slots.includes(id) && list.indexOf(id) === i).slice(0, 9) : [...benchIds], subsLeft: 5, homeOut: [], userPaused: false, 
+                mode: mode, enemy: enemyData, online: onlineContext, homePlayers, awayPlayers, awayStyle: enemyData.style || cpuStyle(enemyData), tactic: 'bal', instr: (fixInstr(), { ...instr, ...(matchSetup?.instr || {}) }), bench: matchSetup ? [...benchIds, ...players.filter(p => p.isStarting && !matchSetup.slots.includes(p.id)).map(p => p.id)].filter((id, i, list) => !matchSetup.slots.includes(id) && list.indexOf(id) === i).slice(0, 9) : [...benchIds], subsLeft: 5, homeOut: [], userPaused: false, 
                 scoreHome: 0, scoreAway: 0, time: 0,
                 engineInterval: null, isPaused: false,
                 ball: { x: 50, y: 50, ownerId: null },
@@ -6292,7 +6357,7 @@
             if (mode === 'league') { currentMatchState.leagueRound = leagueState.round; currentMatchState.leagueSeason = leagueState.season; currentMatchState.leaguePlayoff = !!enemyData.playoff; }
             currentMatchState.forms = forms; currentMatchState.venue = venue; currentMatchState.formBase = matchFormation; currentMatchState.formF = { h: formationFactor(homeLayout, matchFormation), a: formationFactor(awayLayout, enemyFormation) }; setupMiracle(currentMatchState);
 
-            document.getElementById('match-mode-text').innerText = mode === 'league' ? leagueMatchLabel(enemyData) : mode === 'saudi' ? '사우디 모드' : mode === 'rogue' ? prematchLabel('rogue', enemyData) : mode === 'europa' ? `유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}` : mode === 'worldcup' ? `월드컵 ${worldCupState.round}` : (careerState.round === 2 ? '결승전' : `${careerState.round}강 ${careerState.leg}차전`);
+            document.getElementById('match-mode-text').innerText = mode === 'onlineFriendly' ? '온라인 친선 경기' : mode === 'league' ? leagueMatchLabel(enemyData) : mode === 'saudi' ? '사우디 모드' : mode === 'rogue' ? prematchLabel('rogue', enemyData) : mode === 'europa' ? `유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}` : mode === 'worldcup' ? `월드컵 ${worldCupState.round}` : (careerState.round === 2 ? '결승전' : `${careerState.round}강 ${careerState.leg}차전`);
             document.getElementById('match-enemy-name').innerText = enemyData.name; 
             const enemyLogo = document.getElementById('match-enemy-logo'), enemyLogoUrl = enemyData.logo || clubLogoUrl(enemyData.id || enemyData.name);
             enemyLogo.src = enemyLogoUrl || ''; enemyLogo.classList.toggle('hidden', !enemyLogoUrl);
@@ -6301,8 +6366,9 @@
             document.getElementById('match-score-away').innerText = '0';
             updateTeamNameUI();
             
-            document.getElementById('btn-tactics').style.display = 'block'; document.getElementById('btn-forfeit').style.display = 'block'; { const bs = document.getElementById('btn-shout'); if (bs) bs.style.display = ''; } closeTactics();
+            document.getElementById('btn-tactics').style.display = 'block'; document.getElementById('btn-forfeit').style.display = 'block'; { const bs = document.getElementById('btn-shout'), speed = document.getElementById('btn-speed'); if (bs) bs.style.display = mode === 'onlineFriendly' ? 'none' : ''; if (speed) speed.style.display = mode === 'onlineFriendly' ? 'none' : ''; } closeTactics();
             switchScreen('screen-match'); initEngineUI(); prepareMatchAudioAndStart(currentMatchState);
+            { const eb = document.getElementById('online-match-emojis'); if (eb) eb.style.display = mode === 'onlineFriendly' ? 'flex' : 'none'; }
         }
 
         let matchElements = {}; 
@@ -6330,8 +6396,92 @@
 
         function drawEngine() { render(currentMatchState, 16, 1); }
 
+        function onlineSnapshot(st) {
+            const side = (list) => list.map(p => ({ name: p.name, role: p.role, det: p.det, x: p.x, y: p.y, px: p.px ?? p.x, py: p.py ?? p.y, stam: p.stam ?? 100, isRedCarded: !!p.isRedCarded, cards: p.cards || 0, injured: !!p.injured }));
+            const ballOwner = st.ball.ownerId ? allOf(st).find(p => p.id === st.ball.ownerId) : null;
+            return { time: st.time, scoreHome: st.scoreHome, scoreAway: st.scoreAway, htDone: !!st.htDone, paused: !!(st.isPaused || st.userPaused), ended: !!st.ended, home: side(st.homePlayers), away: side(st.awayPlayers), ball: { x: st.ball.x, y: st.ball.y, px: st.ball.px ?? st.ball.x, py: st.ball.py ?? st.ball.y, ownerSide: ballOwner ? (ballOwner.isHome ? 'home' : 'away') : null, ownerIndex: ballOwner ? (ballOwner.isHome ? st.homePlayers : st.awayPlayers).indexOf(ballOwner) : -1 }, stats: st.stats, tactic: st.tactic, awayStyle: st.awayStyle, half: st.secondHalfStarted ? 2 : 1 };
+        }
+        function sendOnlineSnapshot(st) {
+            if (!st?.online?.isHost || !window.yfmOnline) return;
+            try { window.yfmOnline.sendHostState(onlineSnapshot(st)); } catch (_) {}
+        }
+        function onlineCopySide(target, source) {
+            (source || []).forEach((s, i) => {
+                const p = target[i]; if (!p) return;
+                p.name = String(s.name || p.name); p.role = s.role || p.role; p.det = s.det || p.det;
+                p.x = 100 - Number(s.x ?? p.x); p.y = 100 - Number(s.y ?? p.y);
+                p.px = 100 - Number(s.px ?? s.x ?? p.x); p.py = 100 - Number(s.py ?? s.y ?? p.y);
+                p.stam = Number(s.stam ?? p.stam ?? 100); p.isRedCarded = !!s.isRedCarded; p.cards = Number(s.cards || 0); p.injured = !!s.injured;
+                p.rx = p.x; p.ry = p.y;
+                const el = matchElements[p.id]; if (el) { const name = el.querySelector('.md-name'), body = el.querySelector('.md-body'); if (name) name.textContent = p.name; if (body) body.textContent = p.det; el.style.display = p.isRedCarded ? 'none' : ''; }
+            });
+        }
+        window.applyOnlineMatchSnapshot = snap => {
+            const st = currentMatchState; if (!st?.online || st.online.isHost || !snap) return;
+            onlineCopySide(st.homePlayers, snap.away); onlineCopySide(st.awayPlayers, snap.home);
+            st.time = Number(snap.time) || 0; st.scoreHome = Number(snap.scoreAway) || 0; st.scoreAway = Number(snap.scoreHome) || 0;
+            st.htDone = !!snap.htDone; st.isPaused = !!snap.paused; st.ended = !!snap.ended;
+            if (snap.stats) st.stats = { ...snap.stats, homePos: snap.stats.awayPos || 0, awayPos: snap.stats.homePos || 0, homeShots: snap.stats.awayShots || 0, awayShots: snap.stats.homeShots || 0, homeXG: snap.stats.awayXG || 0, awayXG: snap.stats.homeXG || 0, home_corners: snap.stats.away_corners || 0, away_corners: snap.stats.home_corners || 0 };
+            st.tactic = snap.awayStyle || st.tactic; st.awayStyle = snap.tactic || st.awayStyle;
+            const b = snap.ball || {}; st.ball.x = 100 - Number(b.x ?? 50); st.ball.y = 100 - Number(b.y ?? 50); st.ball.px = 100 - Number(b.px ?? b.x ?? 50); st.ball.py = 100 - Number(b.py ?? b.y ?? 50); st.ball.rx = st.ball.x; st.ball.ry = st.ball.y; st.ball.snap = true;
+            const list = b.ownerSide === 'home' ? st.awayPlayers : b.ownerSide === 'away' ? st.homePlayers : null;
+            st.ball.ownerId = list?.[Number(b.ownerIndex)]?.id || null;
+            document.getElementById('match-score-home').textContent = st.scoreHome; document.getElementById('match-score-away').textContent = st.scoreAway;
+            render(st, 16, 1); updateClock(st, 0); updateSide(st);
+            const halftime = document.getElementById('match-ht-overlay');
+            if (st.time >= 45 && st.htDone && !st.online.halfShown && snap.half === 1) { st.online.halfShown = true; document.getElementById('ht-title').textContent = '전반 종료'; document.getElementById('ht-sub').textContent = '방장이 후반 시작을 준비하고 있습니다.'; document.getElementById('ht-go').style.display = 'none'; document.getElementById('ht-score').textContent = `${st.scoreHome} : ${st.scoreAway}`; halftime.classList.replace('hidden', 'flex'); }
+            if (st.htDone && snap.half === 2) { st.online.halfShown = false; document.getElementById('ht-go').style.display = ''; halftime.classList.replace('flex', 'hidden'); }
+            if (snap.ended && !st.resultProcessed) finishMatch();
+        };
+        window.setOnlinePause = (paused, info = {}) => {
+            const st = currentMatchState; if (!st?.online) return;
+            st.isPaused = !!paused; st.online.pausedBy = paused ? info.userId : null;
+            if (!paused && !st.userPaused && !st.ended) { st.last = performance.now(); st.acc = 0; }
+        };
+        window.rejectOnlinePause = () => {
+            const st = currentMatchState; if (!st?.online) return;
+            st.userPaused = false; document.getElementById('tactics-panel').classList.replace('flex', 'hidden');
+            if (!st.isPaused && !st.ended) { st.last = performance.now(); st.acc = 0; }
+        };
+        window.setOnlineHalf = half => {
+            const st = currentMatchState; if (!st?.online || Number(half) !== 2) return;
+            st.htDone = true; st.isPaused = false; st.online.halfShown = false;
+            document.getElementById('ht-go').style.display = ''; document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
+        };
+        window.applyOnlineOpponentAction = message => {
+            const st = currentMatchState; if (!st?.online || !st.online.isHost || !message?.data) return;
+            if (message.type === 'tactic' && TACTICS[message.data.tactic]) { st.awayStyle = message.data.tactic; st.fitC = null; }
+            if (message.type === 'tactic' && Array.isArray(message.data.positions)) { message.data.positions.forEach((q, i) => { const p = st.awayPlayers[i]; if (!p || !Number.isFinite(Number(q.x)) || !Number.isFinite(Number(q.y))) return; p.baseX = p.targetX = 100 - Number(q.x); p.baseY = p.targetY = 100 - Number(q.y); if (q.det) { p.det = q.det; p.role = grpOf(q.det); } }); st.formF.a = formationFactor(st.awayPlayers.filter(p => !p.isRedCarded).map(p => ({ pos: p.role, det: p.det })), st.enemy.formation || '4-3-3'); }
+            if (message.type === 'sub') {
+                const i = Number(message.data.outIndex), incoming = message.data.incoming, p = st.awayPlayers[i];
+                if (p && incoming?.name) { p.name = String(incoming.name); p.role = incoming.role || incoming.position || p.role; p.det = incoming.det || p.det; p.displayOvr = Number(incoming.ovr) || p.displayOvr; p.ovr = p.displayOvr + AWAY_ADJ; p.attr = genAttr(p.ovr, p.role, p.name); p.rl = roleFor(p.attr, p.det); p.stam = 100; p.isRedCarded = false; p.cards = 0; p.subIn = true; st.playerStats[p.id] = { goals: 0 }; }
+            }
+        };
+        window.applyOnlineForfeit = message => {
+            const st = currentMatchState; if (!st?.online || st.ended) return;
+            st.scoreHome = message.userId === st.online.opponentId ? 3 : 0; st.scoreAway = message.userId === st.online.opponentId ? 0 : 3; st.ended = true; finishMatch();
+        };
+        window.showOnlineEmoji = emoji => {
+            const el = document.getElementById('online-match-reaction'); if (!el) return;
+            el.textContent = emoji; el.style.display = 'block'; clearTimeout(window._onlineEmojiTimer); window._onlineEmojiTimer = setTimeout(() => { el.style.display = 'none'; }, 2500);
+        };
+        window.startOnlineMatchFromServer = message => {
+            if (!message?.teams?.length || (currentMatchState?.online && !currentMatchState.resultProcessed)) return;
+            const isHost = window.yfmOnline?.role === 'home';
+            const myId = typeof accountUser !== 'undefined' ? accountUser?.id : null;
+            const mine = message.teams.find(t => t.id === myId), opponent = message.teams.find(t => t.id !== myId);
+            if (!mine?.team || !opponent?.team) { alert('양쪽 모두 준비 상태인지 확인한 뒤 다시 시작해 주세요.'); return; }
+            const t = opponent.team;
+            const enemy = { id: `online-${opponent.id}`, name: t.clubName || '상대 구단', ownerName: t.ownerName || '상대 구단주', ovr: Number(t.ovr) || 60, formation: t.formation, lineup: t.roster, bench: t.bench || [] };
+            prepareMatch('onlineFriendly', enemy, null, { isHost, opponentId: opponent.id, roomCode: window.yfmOnline.roomCode, halfShown: false });
+        };
+
         function startMatchEngine() {
             const st = currentMatchState; st.isPaused = false; st.acc = 0; st.last = performance.now(); st.lastUi = 0; st.alpha = 1;
+            if (st.online && !st.online.isHost) {
+                const mirror = now => { if (currentMatchState !== st || st.ended) return; render(st, 80, 1); updateClock(st, 0); if (now - st.lastUi > 500) { st.lastUi = now; updateSide(st); } requestAnimationFrame(mirror); };
+                requestAnimationFrame(mirror); return;
+            }
             const loop = now => {
                 if (currentMatchState !== st || st.ended) return;
                 const dt = Math.min(100, now - st.last); st.last = now;
@@ -6346,7 +6496,7 @@
                             st.time = st.maxTime || 90; st.acc = 0;
                             if (!st.maxTime && needExtra(st)) { matchBreak(st, 'et'); break; }
                             if (st.maxTime === 120 && needExtra(st)) { startShootout(st); break; }
-                            st.ended = true; updateClock(st, 0); comm(st, '🏁 경기 종료', 'info'); finishMatch(); return;
+                            st.ended = true; updateClock(st, 0); comm(st, '🏁 경기 종료', 'info'); if (st.online?.isHost) sendOnlineSnapshot(st); finishMatch(); return;
                         }
                         simulateTick(st);
                         if (st.isPaused || st.userPaused) { st.acc = 0; break; }
@@ -6355,6 +6505,7 @@
                 }
                 render(st, dt, st.alpha); updateClock(st, st.isPaused || st.userPaused ? 0 : st.alpha);
                 if (now - st.lastUi > 400) { st.lastUi = now; updateSide(st); updateShoutBtn(st); renderBoostBadge(st); }
+                if (st.online?.isHost && now - (st.online.lastSnapshot || 0) > 300) { st.online.lastSnapshot = now; sendOnlineSnapshot(st); }
                 requestAnimationFrame(loop);
             };
             requestAnimationFrame(loop);
@@ -6618,7 +6769,7 @@
         const CELEB = ['무릎 슬라이딩 세리머니!', '관중석으로 달려가 팬들과 하이파이브!', '유니폼을 가리키며 엠블럼에 입맞춤!', '동료들이 한데 엉켜 기뻐합니다!', '코너 플래그 앞에서 춤을 춥니다 🕺', '손가락을 입에 대고 원정석을 조용히 시킵니다 🤫', '하늘을 가리키는 세리머니', '벤치로 달려가 감독과 포옹!'];
         function triggerGoal(isHome, scorer, time, assist, how) {
             let st = currentMatchState; st.isPaused = true;
-            if (isHome && (how === 'volley' || how === 'header')) dailyOnGoal(how);
+            if (!st.online && isHome && (how === 'volley' || how === 'header')) dailyOnGoal(how);
             { const sp = allOf(st).find(p => p.name === scorer && p.isHome === isHome); if (sp && sp.ace) setTimeout(() => comm(st, `⭐ 에이스 ${scorer}, 해결사다운 한 방!`, 'goal'), 0); }
             SFX.goal();
             
@@ -6646,6 +6797,15 @@
             if (st.resultProcessed) return;
             st.resultProcessed = true;
             clearInterval(st.engineInterval);
+            if (st.online) {
+                playMatchSound('end'); finishMatchAudio(); document.getElementById('btn-tactics').style.display = 'none'; document.getElementById('btn-forfeit').style.display = 'none'; document.getElementById('online-match-emojis').style.display = 'none';
+                document.getElementById('match-half').innerText = '경기 종료'; document.getElementById('match-end-title').innerText = '온라인 친선 경기 종료';
+                document.getElementById('match-end-score').innerText = `${st.scoreHome} : ${st.scoreAway}`;
+                document.getElementById('end-home-name').textContent = teamName; document.getElementById('end-away-name').textContent = st.enemy.name;
+                document.getElementById('match-end-reward').innerText = '친선 경기 결과는 토큰이나 리그 기록에 반영되지 않습니다.';
+                document.getElementById('match-end-growth').textContent = ''; document.getElementById('end-home-ratings').replaceChildren(); document.getElementById('end-away-ratings').replaceChildren();
+                document.getElementById('match-end-overlay').classList.replace('hidden', 'flex'); return;
+            }
             playMatchSound('end'); finishMatchAudio(); document.getElementById('btn-tactics').style.display = 'none'; document.getElementById('btn-forfeit').style.display = 'none'; { const bs = document.getElementById('btn-shout'); if (bs) bs.style.display = 'none'; const mc = document.getElementById('moment-card'); if (mc) mc.classList.add('hidden'); closeMomentBanner(); } closeTactics(); dismissSubRec(); updateSide(st); document.getElementById('match-half').innerText = '경기 종료';
             const endOverlay = document.getElementById('match-end-overlay');
             document.getElementById('match-end-score').innerText = `${st.scoreHome} : ${st.scoreAway}` + (st.pens ? ` (PK ${st.pens.h.filter(Boolean).length}:${st.pens.a.filter(Boolean).length})` : st.maxTime === 120 ? ' (연장)' : '');
@@ -6746,7 +6906,8 @@
 
         function endMatchFlow() {
             document.getElementById('match-end-overlay').classList.replace('flex', 'hidden');
-            if(currentMatchState.mode === 'league') switchScreen('screen-league');
+            if(currentMatchState.mode === 'onlineFriendly') { document.getElementById('online-match-emojis').style.display = 'none'; switchScreen('screen-online-friendly'); }
+            else if(currentMatchState.mode === 'league') switchScreen('screen-league');
             else if(currentMatchState.mode === 'saudi') switchScreen('screen-saudi');
             else if(currentMatchState.mode === 'rogue') switchScreen('screen-rogue');
             else if(currentMatchState.mode === 'europa' || currentMatchState.mode === 'worldcup') { renderCup(); switchScreen('screen-cup'); }
@@ -7368,5 +7529,6 @@
         setInterval(dailyTick, 15000);
         document.addEventListener('visibilitychange', dailyTick);
     </script>
+    <script src="./cloudflare-worker/online-friendly-client.js?v=20260928-2"></script>
 </body>
 </html>
