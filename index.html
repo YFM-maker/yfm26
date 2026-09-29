@@ -779,7 +779,6 @@
                 <nav class="fm-nav">
                     <button class="fm-nav-item active" onclick="switchScreen('screen-lobby')"><span class="fm-ico">🏠</span><span>홈</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-mode-select')"><span class="fm-ico">⚽</span><span>경기 · 대회</span></button>
-                    <button class="fm-nav-item" onclick="switchScreen('screen-online-friendly')"><span class="fm-ico">🌐</span><span>온라인 친선</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-manager')"><span class="fm-ico">📋</span><span>팀 관리</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-recruit')"><span class="fm-ico">🔍</span><span>선수 영입</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-enhance')"><span class="fm-ico">⬆️</span><span>강화</span></button>
@@ -808,9 +807,6 @@
                         
                     </div>
                 </header>
-                <div id="fm-online-match-entry" style="flex:none;padding:10px 18px 0;display:flex;justify-content:flex-end">
-                    <button type="button" onclick="switchScreen('screen-online-friendly')" style="background:linear-gradient(110deg,#7c3aed,#4f46e5);color:#fff;border:1px solid #a78bfa;border-radius:12px;padding:10px 16px;font-weight:900;box-shadow:0 4px 16px #4c1d9580">🌐 온라인 친선 매치</button>
-                </div>
                 <div class="fm-grid" id="fm-grid"></div>
             </main>
         </div>
@@ -1138,7 +1134,6 @@
             <h2 class="text-xl font-black mb-2 text-white border-b border-gray-700 pb-2 flex justify-between items-center">교체 명단 <button onclick="autoBench()" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">자동 채우기</button></h2>
             <div id="bench-strip" class="flex flex-col gap-1 mb-4"></div>
             <p class="text-xs text-gray-400 mb-2">💡 필드 선수는 FW·MF·DF 사이에서 교체할 수 있어. <span class="text-pink-300">▼ 능력치 80% · ▼▼ 능력치 70%</span> 표시를 확인해. GK는 GK 자리에서만 뛸 수 있어.</p>
-            <button onclick="openItems()" class="mb-2 bg-sky-800 hover:bg-sky-700 text-sm font-black py-3 rounded-xl">🧃 회복 아이템 (<span id="drink-count">0</span>) · 드링크·선수단 회복제</button>
             <button onclick="bestEleven()" class="mb-2 bg-emerald-700 hover:bg-emerald-600 text-sm font-black py-3 rounded-xl">💪 베스트 11 (체력·부상 반영)</button>
             <button onclick="saveSquad()" class="mt-2 bg-green-600 hover:bg-green-500 font-black py-4 rounded-xl shadow-lg">스쿼드 저장</button>
         </div>
@@ -1257,13 +1252,6 @@
         <div id="fusion-overlay" onclick="skipCurrentEffect(event)" class="fixed inset-0 bg-black/90 z-50 hidden flex-col items-center justify-center"></div>
     </div>
 
-    <!-- 에너지 드링크 -->
-    <div id="item-modal" class="fixed inset-0 bg-black/80 z-[90] hidden items-center justify-center p-6" onclick="if(event.target===this)closeItems()">
-        <div class="bg-gray-900 rounded-2xl p-6 w-full max-w-xl border border-gray-600 max-h-[85vh] flex flex-col">
-            <div class="flex justify-between items-center mb-3"><h2 class="text-2xl font-black">🧃 회복 아이템</h2><button onclick="closeItems()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
-            <div id="item-list" class="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1"></div>
-        </div>
-    </div>
     <!-- 첫 팀 종건급 선택 -->
     <div id="star-modal" class="fixed inset-0 bg-black/90 z-[95] hidden flex-col items-center justify-center p-6 backdrop-blur-md">
         <div class="text-sm font-bold text-yellow-400 mb-1">창단 기념 영입</div>
@@ -2229,7 +2217,7 @@
             l.awards = { g: gk || null, a: ak || null };
             [[gk, '득점왕', 'g'], [ak, '도움왕', 'a']].forEach(([r, t, k]) => { if (r) S.awards.push({ s: l.season, l: L.n, t, n: r.n, c: leagueName(r.c), v: r[k], mine: r.c === 'user' }); });
             let reward = 0, evo = 0, text = '';
-            if (champ === 'user') { achAdd('leagueTitles'); if(l.li<5) achSet('asiaTitles',Object.keys(S.leagueTitles||{}).filter(n=>(S.leagueTitles[n]||0)>0).length>=5?1:0); if(l.li>=10)achAdd('europeTitles'); if(l.li===LG.length-1)achAdd('premierTitles'); achSet('differentTitles',Object.keys(S.leagueTitles||{}).filter(k=>(S.leagueTitles[k]||0)>0).length+1); if(l.li===LG.length-1)achSet('allLeagues',Object.keys(S.leagueTitles||{}).filter(k=>(S.leagueTitles[k]||0)>0).length+1>=LG.length?1:0); const starters=players.filter(p=>p.isStarting); if(starters.length&&starters.every(p=>p.originalStarter))achSet('originalTitle',1); if(Number(ach.stats.seasonStartTokens||tokens)<=1000)achSet('lowBudgetTitle',1); const userRow=table.find(r=>r.id==='user'),bestGA=Math.min(...table.map(r=>r.ga)); if(userRow&&userRow.ga===bestGA)achSet('bestDefense',1); reward = L.t; evo = L.e; items.drink = (items.drink || 0) + 3; S.leagueTitles[L.n] = (S.leagueTitles[L.n] || 0) + 1; const titleCount=Object.values(S.leagueTitles).reduce((a,b)=>a+b,0), uniqueLeagues=Object.keys(S.leagueTitles).filter(k=>S.leagueTitles[k]>0).length; achSet('leagueTitles',titleCount); achSet('differentTitles',uniqueLeagues); if(uniqueLeagues>=LG.length)achSet('allLeagues',1); if(l.li<5&&uniqueLeagues>=5)achSet('asiaTitles',1); text += ` · 🏆 ${L.n} 우승! +${L.t} T · 🧬 진화 토큰 +${L.e} · 🧃 +3`; }
+            if (champ === 'user') { achAdd('leagueTitles'); if(l.li<5) achSet('asiaTitles',Object.keys(S.leagueTitles||{}).filter(n=>(S.leagueTitles[n]||0)>0).length>=5?1:0); if(l.li>=10)achAdd('europeTitles'); if(l.li===LG.length-1)achAdd('premierTitles'); achSet('differentTitles',Object.keys(S.leagueTitles||{}).filter(k=>(S.leagueTitles[k]||0)>0).length+1); if(l.li===LG.length-1)achSet('allLeagues',Object.keys(S.leagueTitles||{}).filter(k=>(S.leagueTitles[k]||0)>0).length+1>=LG.length?1:0); const starters=players.filter(p=>p.isStarting); if(starters.length&&starters.every(p=>p.originalStarter))achSet('originalTitle',1); if(Number(ach.stats.seasonStartTokens||tokens)<=1000)achSet('lowBudgetTitle',1); const userRow=table.find(r=>r.id==='user'),bestGA=Math.min(...table.map(r=>r.ga)); if(userRow&&userRow.ga===bestGA)achSet('bestDefense',1); reward = L.t; evo = L.e; S.leagueTitles[L.n] = (S.leagueTitles[L.n] || 0) + 1; const titleCount=Object.values(S.leagueTitles).reduce((a,b)=>a+b,0), uniqueLeagues=Object.keys(S.leagueTitles).filter(k=>S.leagueTitles[k]>0).length; achSet('leagueTitles',titleCount); achSet('differentTitles',uniqueLeagues); if(uniqueLeagues>=LG.length)achSet('allLeagues',1); if(l.li<5&&uniqueLeagues>=5)achSet('asiaTitles',1); text += ` · 🏆 ${L.n} 우승! +${L.t} T · 🧬 진화 토큰 +${L.e}`; }
             l.nextLi = rank === 1 ? Math.min(LG.length - 1, l.li + 1) : l.li; if(l.nextLi>l.li){achAdd('promotions'); if(l.li===0&&l.nextLi===LG.length-1)achSet('promotionJourney',1);}
             text += l.nextLi > l.li ? ` · ⬆️ ${LG[l.nextLi].n} 승격!` : l.li === LG.length - 1 ? ` · ${rank}위로 시즌 종료` : ` · ${rank}위 · 잔류 (우승 시 승격)`;
             if (gk) text += ` · 득점왕 ${gk.n}(${gk.g})`;
@@ -2484,7 +2472,6 @@
             const side = [];
             const r = Math.random();
             if (r < 0.06) { tokens += 30; side.push(['💰', '스폰서 보너스 +30T', '구단 스폰서가 최근 활약에 대한 보너스를 보냈습니다.']); }
-            else if (r < 0.11) { items.drink = (items.drink || 0) + 1; side.push(['🧃', '팬이 보낸 에너지 드링크 +1', '서포터즈가 선수단에 음료 한 상자를 보내왔습니다.']); }
             else if (r < 0.15 && players.length) { const p = players[Math.floor(Math.random() * players.length)]; p.cond = Math.min(100, (p.cond ?? 100) + 20); side.push(['🎂', `${p.name} 생일 축하!`, '기분 좋은 하루 — 컨디션 +20']); }
             else if (r < 0.2 && S.ace) { const a = players.find(p => p.id === S.ace), bl = LG[Math.min(LG.length - 1, l.li + 2 + Math.floor(Math.random() * 4))]; if (a && bl) side.push(['📝', `이적설: ${bl.clubs[Math.floor(Math.random() * 4)].name}, ${a.name}에 관심`, '빅클럽 스카우트가 경기장을 찾았다는 소식입니다. (구단은 매각 계획이 없다고 밝혔습니다)']); }
             if (!side.length && l.myPlayed % 5 === 0 && l.status === 'playing') { const g = leagueTop('g', 1)[0], a = leagueTop('a', 1)[0]; side.push(['📊', rank === 1 ? `${L.n} ${l.myPlayed}라운드: ${teamName} 선두 질주` : `${L.n} ${l.myPlayed}라운드: ${leagueName(tb[0].id)} 선두, 우리는 ${rank}위`, rank === 1 ? (tb[1] ? `2위 ${leagueName(tb[1].id)}와 승점 ${tb[0].pts - tb[1].pts}점 차입니다.` : '') : `선두와 승점 ${tb[0].pts - tb[rank - 1].pts}점 차. ${rank <= 3 ? '승격권을 지키고 있습니다.' : `승격권(3위)까지 ${tb[2].pts - tb[rank - 1].pts}점.`}`, [g ? `👟 득점 1위 ${g.n}(${leagueName(g.c)}) ${g.g}골` : '', a ? `🅰️ 도움 1위 ${a.n} ${a.a}개` : ''].filter(Boolean).join('  |  ')]); }
@@ -2562,7 +2549,7 @@
         function blankRec() { return { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, cs: 0, yc: 0, rc: 0, mw: null, ml: null }; }
         let instr = JSON.parse(localStorage.getItem('fm_instr') || 'null') || { atk: 'bal', def: 'mid', tempo: 'normal', trap: 'off' };
         let S = JSON.parse(localStorage.getItem('fm_stats') || 'null') || { saudi: blankRec(), career: blankRec(), titles: 0, pl: {} };
-        let items = (() => { try { return JSON.parse(localStorage.getItem('fm_items') || '{}') || {}; } catch (e) { return {}; } })(); items.drink = items.drink || 0;
+        localStorage.removeItem('fm_items');
         let evoTokens = Math.max(0, parseInt(localStorage.getItem('fm_evo_tokens') || '0') || 0);
         let tokens = Number.isFinite(Number(localStorage.getItem('fm_tokens'))) && localStorage.getItem('fm_tokens') !== null ? Number(localStorage.getItem('fm_tokens')) : 1000;
         let currentManager = localStorage.getItem('fm_manager') || 'kim';
@@ -3120,14 +3107,14 @@
             const data = {};
             for (let i=0;i<localStorage.length;i++) {
                 const key=localStorage.key(i);
-                if (key?.startsWith('fm_')) data[key]=localStorage.getItem(key);
+                if (key?.startsWith('fm_') && key !== 'fm_items') data[key]=localStorage.getItem(key);
             }
             return {app:'YFM',v:22,at:new Date().toISOString(),data};
         }
         function restoreAccountSnapshot(snapshot) {
             if (snapshot?.app!=='YFM' || !snapshot.data || !Array.isArray(JSON.parse(snapshot.data.fm_players||'null'))) throw new Error('서버 저장 데이터가 올바르지 않아.');
             Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
-            Object.entries(snapshot.data).forEach(([k,v])=>{if(k.startsWith('fm_') && typeof v==='string') localStorage.setItem(k,v);});
+            Object.entries(snapshot.data).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && typeof v==='string') localStorage.setItem(k,v);});
         }
         async function uploadAccountSnapshot(force=false) {
             if (!accountUser || accountSaving || window.__wiping) return;
@@ -3226,7 +3213,7 @@
             finally {if(imageUrl)URL.revokeObjectURL(imageUrl);input.value='';}
         }
 
-        function saveData() { if (window.__wiping) return; if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.setItem('fm_items', JSON.stringify(items)); 
+        function saveData() { if (window.__wiping) return; if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.removeItem('fm_items'); 
             localStorage.setItem('fm_players', JSON.stringify(players)); 
             localStorage.setItem('fm_tokens', tokens); 
             localStorage.setItem('fm_formation', currentFormation); 
@@ -3354,7 +3341,6 @@
             const nextCard = n ? `<div class="fm-card fm-span-8"><div class="fm-card-h">다음 경기 · ${esc(n.label)}<b>${esc(n.detail)}</b></div><div class="fm-card-b"><div class="fm-next"><div class="fm-next-team">${userCrestMarkup(true)}<b>${esc(teamName)}</b><span>OVR ${avg}</span></div><div class="fm-vs">${esc(n.comp)}<div>VS</div></div><div class="fm-next-team">${n.kind === 'league' ? n.crest.replace(/<span[^>]*>[^<]*<\/span>/, '') : (clubLogoUrl(n.name) ? `<img src="${clubLogoUrl(n.name)}" alt="" onerror="this.style.display='none'">` : '<span style="font-size:40px">🛡️</span>')}<b>${esc(n.name)}</b><span>OVR ${n.ovr}</span></div></div><div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px"><button class="fm-btn" onclick="switchScreen('screen-manager')">📋 전술 · 라인업</button><button class="fm-btn pri" onclick="lobbyContinue()">경기 시작 ▶</button></div></div></div>`
                 : `<div class="fm-card fm-span-8"><div class="fm-card-h">다음 경기<b>일정 없음</b></div><div class="fm-card-b"><p class="fm-empty">진행 중인 리그 경기가 없어. 리그 시즌을 시작하거나 다음 시즌으로 넘어가 봐.</p><div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="fm-btn pri" onclick="switchScreen('screen-league')">🏟️ 리그 시작하기</button></div></div></div>`;
             const teamCard = `<div class="fm-card fm-span-4"><div class="fm-card-h">팀 현황<button class="fm-link" onclick="switchScreen('screen-manager')">팀 관리 ›</button></div><div class="fm-card-b"><div class="fm-stat"><div><small>평균 OVR</small><b>${avg}</b></div><div><small>체력</small><b>${cond}%</b>${meter(cond, cond >= 70 ? '#34d399' : cond >= 45 ? '#fbbf24' : '#fb7185')}</div><div><small>사기</small><b>${morale >= 85 ? '😊' : morale >= 70 ? '🙂' : morale >= 50 ? '😐' : '😕'}</b>${meter(morale, '#8b5cf6')}</div></div><div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:8px"><div><small style="color:var(--fm-mute);font-size:11px;font-weight:700">최근 5경기</small>${formHtml}</div><div style="text-align:right;font-size:13px;color:var(--fm-mute)">${ace ? `⭐ 에이스 <b style="color:#fff">${esc(ace.name)}</b><br>` : ''}${inj ? `🚑 부상 ${inj}명` : '부상자 없음'}</div></div></div></div>`;
-            const onlineCard = `<div class="fm-card fm-span-6"><div class="fm-card-h">🌐 온라인 친선 매치<b>친구와 실시간으로 대결</b></div><div class="fm-card-b"><p class="fm-empty">4자리 방 코드를 만들거나 친구 방에 참가해 경기를 시작해.</p><button class="fm-btn pri" style="margin-top:12px" onclick="switchScreen('screen-online-friendly')">온라인 친선 들어가기</button></div></div>`;
             const news = (S.news || []).slice(0, 5), newsCardH = `<div class="fm-card fm-span-6"><div class="fm-card-h">받은 소식<button class="fm-link" onclick="openNews()">전체 보기 ›</button></div><div class="fm-card-b"><div class="fm-news">${news.length ? news.map(x => `<div class="fm-news-item ${x.read ? '' : 'unread'}" onclick="openNews()"><span class="ic">${x.icon || '📰'}</span><div class="min-w-0"><b>${esc(x.title)}</b><small>${esc(x.tag || '')}</small></div></div>`).join('') : '<p class="fm-empty">아직 소식이 없어요. 경기를 치르면 경기 리포트와 이적설, 시상 소식이 여기에 쌓여요.</p>'}</div></div></div>`;
             const social = socialFeedItems().slice(0, 5), socialCardH = `<div class="fm-card fm-span-6"><div class="fm-card-h">소셜 피드<button class="fm-link" onclick="openSocialFeed()">전체 보기 ›</button></div><div class="fm-card-b"><div class="fm-news">${social.length ? social.map(x => `<div class="fm-news-item" onclick="openSocialFeed()"><span class="ic">${x.type==='media'?'📰':x.type==='journalist'?'✍️':x.type==='data'?'📊':'💬'}</span><div class="min-w-0"><div style="display:flex;gap:6px;align-items:baseline;min-width:0"><b style="white-space:nowrap">${x.type==='fan'?'@':''}${esc(x.name)}</b>${x.type==='fan'&&x.match?`<span style="font-size:10px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.match)}</span>`:''}</div><small style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.text)}</small></div></div>`).join('') : '<p class="fm-empty">아직 소셜 반응이 없어요. 경기를 치르거나 새 소식이 생기면 팬들의 반응이 올라와요.</p>'}</div></div></div>`;
             const saudiCard = `<div class="fm-card fm-span-6"><div class="fm-card-h">사우디 모드<b>친선경기</b></div><div class="fm-card-b"><p class="fm-empty">상대를 선택하고 사우디 친선경기에 도전해 봐.</p><div style="margin-top:12px"><button class="fm-btn pri" onclick="switchScreen('screen-saudi')">💰 사우디 모드 시작</button></div></div></div>`;
@@ -3372,7 +3358,7 @@
             } else {
                 rankingCard = `<div class="fm-card fm-span-6"><div class="fm-card-h">리그 순위<button class="fm-link" onclick="openLeagueDetails()">자세히 보기 ›</button></div><div class="fm-card-b"><p class="fm-empty">아직 리그 시즌을 시작하지 않았어. 시즌을 시작하면 이곳에 순위가 표시돼.</p><button class="fm-btn pri" style="margin-top:12px" onclick="switchScreen('screen-league')">🏟️ 리그 시작하기</button></div></div>`;
             }
-            grid.innerHTML = nextCard + teamCard + onlineCard + newsCardH + socialCardH + saudiCard + compCard + rankingCard;
+            grid.innerHTML = nextCard + teamCard + newsCardH + socialCardH + saudiCard + compCard + rankingCard;
             updateNewsBadge(); updateMissionIcon();
         }
         function openLeagueDetails() { switchScreen('screen-league-rankings'); }
@@ -3572,13 +3558,14 @@
 
         const globalSideNav = document.querySelector('#screen-lobby .fm-side');
         if (globalSideNav) { globalSideNav.id = 'fm-global-side'; document.body.appendChild(globalSideNav); }
-        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-online-friendly':2,'screen-manager':3,'screen-recruit':4,'screen-enhance':5,'screen-fusion':6,'screen-stats':7,'screen-owner-rank':8,'screen-social':9};
+        const navScreenIndex = {'screen-lobby':0,'screen-mode-select':1,'screen-career-select':1,'screen-league':1,'screen-league-rankings':1,'screen-saudi':1,'screen-career':1,'screen-cup':1,'screen-manager':2,'screen-recruit':3,'screen-enhance':4,'screen-fusion':5,'screen-stats':6,'screen-owner-rank':7,'screen-social':8};
         function updatePersistentNav(screenId) {
             const show = screenId !== 'screen-match'; document.body.classList.toggle('has-global-nav', show); document.body.classList.toggle('in-match', !show);
             document.querySelectorAll('#fm-global-side .fm-nav-item').forEach((button,index)=>button.classList.toggle('active', show && index===navScreenIndex[screenId]));
         }
 
         function switchScreen(screenId) {
+            if (screenId === 'screen-online-friendly') screenId = 'screen-lobby';
             updatePersistentNav(screenId);
             document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
             document.getElementById(screenId).classList.add('active'); 
@@ -3591,7 +3578,6 @@
             if (screenId === 'screen-league-rankings') renderLeagueRankings();
             if (screenId === 'screen-owner-rank') loadOwnerRank();
             if (screenId === 'screen-social') refreshSocial();
-            if (screenId === 'screen-online-friendly' && window.yfmOnlineUiLoad) window.yfmOnlineUiLoad();
             if (screenId === 'screen-saudi') initSaudiMode();
             if (screenId === 'screen-rogue') renderRogue();
             if (screenId === 'screen-stats') renderStats();
@@ -3977,7 +3963,7 @@
         }
         function autoBench() { benchIds = []; autoFillBench(); saveData(); renderBenchStrip(); }
         function renderBenchStrip() {
-            renderInstr(); { const dc = document.getElementById('drink-count'); if (dc) dc.textContent = (items.drink || 0) + (items.team5 || 0) + (items.team10 || 0); } const el = document.getElementById('bench-strip'); if (!el) return;
+            renderInstr(); const el = document.getElementById('bench-strip'); if (!el) return;
             if (!localStorage.getItem('fm_bench_init') && benchIds.length === 0) { autoFillBench(); localStorage.setItem('fm_bench_init', '1'); saveData(); } cleanBench();
             let h = '';
             for (let i = 0; i < BENCH_SIZE; i++) {
@@ -4179,14 +4165,7 @@
                 if (!pl && onBench && before >= 50 && p.morale < 50) sad.push(p.name);
               });
             }
-            if (!st.forfeit && !sandboxMode(st.mode)) {   // 경기 후 회복 아이템 드롭 (승리할수록 잘 나옴)
-                const win = gf > ga, r = Math.random(), drops = [];
-                if (r < (win ? 0.6 : 0.35)) { const k = win && Math.random() < 0.35 ? 2 : 1; items.drink = (items.drink || 0) + k; drops.push(`🧃 에너지 드링크 +${k}`); }
-                if (Math.random() < (win ? 0.25 : 0.12)) { items.team5 = (items.team5 || 0) + 1; drops.push('🧴 선수단 회복제 +1'); }
-                if (Math.random() < (win ? 0.08 : 0.04)) { items.team10 = (items.team10 || 0) + 1; drops.push('💊 선수단 특급 회복제 +1'); }
-                st.itemDrops = drops;
-            }
-            document.getElementById('match-end-growth').innerHTML = (st.itemDrops && st.itemDrops.length ? `<div class="text-emerald-300">🎁 경기 보상: ${st.itemDrops.join(' · ')}</div>` : '') + ups.map(u => `<div>⬆️ 경기력 호조로 성장! ${u}</div>`).join('') + (sad.length ? `<div class="text-red-300">😕 ${sad.slice(0, 3).join(', ')} 선수가 출전 기회 부족으로 불만을 느끼고 있습니다.</div>` : '');
+            document.getElementById('match-end-growth').innerHTML = ups.map(u => `<div>⬆️ 경기력 호조로 성장! ${u}</div>`).join('') + (sad.length ? `<div class="text-red-300">😕 ${sad.slice(0, 3).join(', ')} 선수가 출전 기회 부족으로 불만을 느끼고 있습니다.</div>` : '');
             if (!sandboxMode(st.mode)) {
                 computeUserAce();
                 const fm = applyFitness(st); if (st.evoGain) fm.unshift(`🧬 진화 토큰 +${st.evoGain} (보유 ${evoTokens}개)`); if (fm.length) document.getElementById('match-end-growth').innerHTML += fm.map(m => `<div class="text-orange-300">${m}</div>`).join('');
@@ -4688,17 +4667,6 @@
             document.getElementById('match-score-home').innerText = st.scoreHome; document.getElementById('match-score-away').innerText = st.scoreAway;
             st.ended = true; comm(st, '🏳️ 기권 — 0:3 패배 처리', 'card'); finishMatch();
         }
-        // ===== 에너지 드링크 =====
-        function openItems() {
-            recoverCond();
-            const L = [...players].sort((a, b) => (a.cond ?? 100) - (b.cond ?? 100));
-            const teamRow = Object.entries(TEAM_ITEMS).map(([k, it]) => { const n = items[k] || 0; return `<div class="flex items-center gap-3 bg-gray-900 border border-emerald-700/60 rounded-lg px-3 py-2"><span class="flex-1 font-bold">${it.n} <span class="text-xs text-gray-400">선수단 전체 컨디션 +${it.v}%</span></span><b class="text-emerald-300">${n}개</b><button ${n ? `onclick="useTeamItem('${k}')"` : 'disabled'} class="${n ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-gray-700 text-gray-500'} text-sm font-bold px-3 py-1 rounded">사용</button></div>`; }).join('');
-            document.getElementById('item-list').innerHTML = teamRow + `<p class="text-xs text-gray-500 mb-1">선수단 회복제는 일일 미션의 어려운 도전에서 얻을 수 있어요.</p><p class="text-sm text-gray-400 mb-2">보유 🧃 <b class="text-sky-300">${items.drink || 0}</b>개 · 한 개로 선수 1명의 컨디션 +50 · 획득: 일일 미션(발리골·헤딩골·무실점), 출석, 우승 보상, 이벤트</p>` +
-                L.map(p => { const c = Math.round(p.cond ?? 100), can = (items.drink || 0) > 0 && c < 100; return `<div class="flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2"><span class="text-[10px] font-bold px-1.5 rounded text-white" style="background:${posColors[p.position]}">${p.position}</span><span class="flex-1 font-bold truncate">${p.name}${p.isStarting ? ' <span class="text-xs text-blue-400">선발</span>' : ''}${p.inj > 0 ? ' 🚑' : ''}</span><span class="w-24 h-2 bg-gray-900 rounded overflow-hidden"><i style="display:block;height:100%;width:${c}%;background:${stamColor(c)}"></i></span><span class="w-10 text-right text-sm">${c}%</span><button ${can ? `onclick="useDrink('${p.id}')"` : 'disabled'} class="${can ? 'bg-sky-600 hover:bg-sky-500' : 'bg-gray-700 text-gray-500'} text-sm font-bold px-3 py-1 rounded">사용</button></div>`; }).join('');
-            document.getElementById('item-modal').classList.replace('hidden', 'flex');
-        }
-        function closeItems() { document.getElementById('item-modal').classList.replace('flex', 'hidden'); renderPitch(); }
-        function useDrink(id) { const p = players.find(x => x.id === id); if (!p || (items.drink || 0) < 1) return; items.drink--; p.cond = Math.min(100, (p.cond ?? 100) + 50); p.condAt = Date.now(); saveData(); openItems(); }
         // ===== 첫 팀 종건급 선택 =====
         function rollStars() {
             const pool = []; ['GK', 'DF', 'MF', 'FW'].forEach(pos => tierData[3][pos].forEach(n => pool.push({ n, pos, ovr: fixedOvr(n) || 85 })));
@@ -5701,14 +5669,6 @@
                 <details class="rg-panel mt-4"><summary class="cursor-pointer font-bold">📜 규칙</summary>${rules}</details>
                 <button onclick="rogueAbandon()" class="mt-2 text-sm text-gray-500 hover:text-rose-300">🏳️ 원정 포기</button>`;
         }
-        // ===== 선수단 전체 회복 아이템 =====
-        const TEAM_ITEMS = { team5: { n: '🧴 선수단 회복제', v: 5 }, team10: { n: '💊 선수단 특급 회복제', v: 10 } };
-        function useTeamItem(k) {
-            const it = TEAM_ITEMS[k]; if (!it || (items[k] || 0) < 1) return;
-            recoverCond(); items[k]--; players.forEach(p => { p.cond = Math.min(100, (p.cond ?? 100) + it.v); p.condAt = Date.now(); });
-            saveData(); openItems();
-        }
-        function itemLabel(k) { return k === 'drink' ? '🧃 에너지 드링크' : TEAM_ITEMS[k] ? TEAM_ITEMS[k].n : k; }
         function halfTime() {
             const st = currentMatchState; st.isPaused = true; st.breakKind = null; playMatchSound('end'); pauseMatchCrowd(); comm(st, '⏸ 전반 종료', 'info');
             document.getElementById('ht-title').innerText = '전반 종료'; document.getElementById('ht-sub').innerText = ''; document.getElementById('ht-go').innerText = '▶ 후반 시작';
@@ -6307,6 +6267,7 @@
         }
         function formQ(st, home) { const F = st.formF; return F ? (home ? F.h.own * F.a.opp : F.a.own * F.h.opp) : 1; }
         function prepareMatch(mode, enemyData, matchSetup = null, onlineContext = null) {
+            if (mode === 'onlineFriendly') return;
             let userStarters = players.filter(p => p.isStarting);
             if (userStarters.length < 11 || userStarters.some(p => p.slotIndex === -1)) { autoAssignStarters(sandboxMode(mode)); saveData(); userStarters = players.filter(p => p.isStarting); }
             if(userStarters.length < 11) { alert("선발 라인업을 구성할 수 없습니다. 선수가 부족합니다."); return; }
@@ -6466,6 +6427,7 @@
             el.textContent = emoji; el.style.display = 'block'; clearTimeout(window._onlineEmojiTimer); window._onlineEmojiTimer = setTimeout(() => { el.style.display = 'none'; }, 2500);
         };
         window.startOnlineMatchFromServer = message => {
+            return; // 온라인 친선전 임시 중단
             if (!message?.teams?.length || (currentMatchState?.online && !currentMatchState.resultProcessed)) return;
             const isHost = window.yfmOnline?.role === 'home';
             const myId = typeof accountUser !== 'undefined' ? accountUser?.id : null;
@@ -6865,10 +6827,10 @@
                 matchReport(st, '챔피언스리그');
                 careerState.aggUser += st.scoreHome; careerState.aggEnemy += st.scoreAway;
                 if (careerState.round === 2) {
-                    if(userWon) { rewardText = "🏆 챔피언스리그 우승! +2000 토큰 · 🧬 진화 토큰 +10 · 🧃 3 🏆"; tokens += 2000; evoTokens += 10; achAdd('evoEarned',10); st.evoGain = 10; items.drink = (items.drink || 0) + 3; careerState.status = 'finished'; }
+                    if(userWon) { rewardText = "🏆 챔피언스리그 우승! +2000 토큰 · 🧬 진화 토큰 +10 🏆"; tokens += 2000; evoTokens += 10; achAdd('evoEarned',10); st.evoGain = 10; careerState.status = 'finished'; }
                     else if(draw) {
                         let avgMyOvr = getTeamOvr() || 80; let pkChance = avgMyOvr / (avgMyOvr + st.enemy.ovr);
-                        if(st.penWinner ? st.penWinner === 'home' : Math.random() < pkChance) { rewardText = "🏆 승부차기 승리! 우승! +2000 토큰 · 🧬 진화 토큰 +10 · 🧃 3 🏆"; tokens += 2000; evoTokens += 10; achAdd('evoEarned',10); st.evoGain = 10; items.drink = (items.drink || 0) + 3; }
+                        if(st.penWinner ? st.penWinner === 'home' : Math.random() < pkChance) { rewardText = "🏆 승부차기 승리! 우승! +2000 토큰 · 🧬 진화 토큰 +10 🏆"; tokens += 2000; evoTokens += 10; achAdd('evoEarned',10); st.evoGain = 10; }
                         else { rewardText = "승부차기 패배... 준우승"; }
                         careerState.status = 'finished';
                     }
@@ -7352,7 +7314,7 @@
         function collectSave() {
             saveData(); if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_stats', JSON.stringify(S));
             const o = { app: 'YFM', v: 22, at: new Date().toISOString(), data: {} };
-            for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('fm_')) o.data[k] = localStorage.getItem(k); }
+            for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('fm_') && k !== 'fm_items') o.data[k] = localStorage.getItem(k); }
             return o;
         }
         function exportSave() {
@@ -7392,7 +7354,7 @@
             const n = JSON.parse(o.data.fm_players).length;
             if (!confirm(`저장 데이터를 불러올까요? (선수 ${n}명, ${o.at ? o.at.slice(0, 10) : ''})\n지금 기기의 진행상황은 덮어씌워집니다.`)) return;
             Object.keys(localStorage).filter(k => k.startsWith('fm_')).forEach(k => localStorage.removeItem(k));
-            Object.entries(o.data).forEach(([k, v]) => { if (k.startsWith('fm_')) localStorage.setItem(k, v); });
+            Object.entries(o.data).forEach(([k, v]) => { if (k.startsWith('fm_') && k !== 'fm_items') localStorage.setItem(k, v); });
             localStorage.setItem('fm_has_reset_tokens_v29', 'true');
             localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
             accountDirty=true;
@@ -7417,15 +7379,15 @@
 
         // ================= 일일 미션 =================
         const DAILY_MISSIONS = [
-            { id: 'play3', name: '경기 3회 플레이하기', reward: 50, item: ['drink', 2], goal: 3, get: d => d.play },
-            { id: 'play', name: '경기 5회 플레이하기', reward: 100, item: ['team5', 1], goal: 5, get: d => d.play },
+            { id: 'play3', name: '경기 3회 플레이하기', reward: 50, goal: 3, get: d => d.play },
+            { id: 'play', name: '경기 5회 플레이하기', reward: 100, goal: 5, get: d => d.play },
             { id: 'big', name: '5점 차 이상 승리하기', reward: 50, goal: 1, get: d => d.big },
             { id: 'streak', name: '3연승하기', reward: 80, goal: 3, get: d => d.best },
-            { id: 'volley', name: '발리골 1골 넣기', reward: 30, item: ['drink', 2], goal: 1, get: d => d.volley || 0 },
-            { id: 'header', name: '헤딩골 1골 넣기', reward: 30, item: ['drink', 1], goal: 1, get: d => d.header || 0 },
-            { id: 'cs', name: '무실점 경기 1회 하기', reward: 40, item: ['drink', 1], goal: 1, get: d => d.cs || 0 },
-            { id: 'cleanwin2', name: '사우디 모드 제외 무실점 승리 2회 하기', reward: 30, item: ['team5', 1], goal: 2, get: d => d.cleanWin || 0 },
-            { id: 'hat', name: '사우디 모드 제외 해트트릭 기록하기', reward: 40, item: ['team10', 1], goal: 1, get: d => d.hat || 0 },
+            { id: 'volley', name: '발리골 1골 넣기', reward: 30, goal: 1, get: d => d.volley || 0 },
+            { id: 'header', name: '헤딩골 1골 넣기', reward: 30, goal: 1, get: d => d.header || 0 },
+            { id: 'cs', name: '무실점 경기 1회 하기', reward: 40, goal: 1, get: d => d.cs || 0 },
+            { id: 'cleanwin2', name: '사우디 모드 제외 무실점 승리 2회 하기', reward: 30, goal: 2, get: d => d.cleanWin || 0 },
+            { id: 'hat', name: '사우디 모드 제외 해트트릭 기록하기', reward: 40, goal: 1, get: d => d.hat || 0 },
             { id: 'all', name: '일일미션 올클리어', reward: 100, goal: 9, get: d => DAILY_MISSIONS.slice(0, 9).filter(m => m.get(d) >= m.goal).length }
         ];
         const MISSION_IMG = {
@@ -7438,7 +7400,7 @@
         try { daily = JSON.parse(localStorage.getItem('fm_daily') || 'null'); } catch (e) { daily = null; }
         if (!daily || typeof daily !== 'object') daily = newDaily();
         function saveDaily() { localStorage.setItem('fm_daily', JSON.stringify(daily)); }
-        function ensureDaily() { if (daily.date !== dailyToday()) { daily = newDaily(); saveDaily(); tokens += 30; items.drink = (items.drink || 0) + 1; saveData(); if (typeof addNews === 'function') addNews('🎁', '출석 보상 +30T · 🧃 에너지 드링크 1', '오늘도 구단을 찾아주셔서 감사합니다!', '이벤트'); } }
+        function ensureDaily() { if (daily.date !== dailyToday()) { daily = newDaily(); saveDaily(); tokens += 30; saveData(); if (typeof addNews === 'function') addNews('🎁', '출석 보상 +30T', '오늘도 구단을 찾아주셔서 감사합니다!', '이벤트'); } }
         function dailyOnGoal(k) { ensureDaily(); daily[k] = (daily[k] || 0) + 1; saveDaily(); updateMissionIcon(); }
         function missionDone(m) { return m.get(daily) >= m.goal; }
         function missionClaimable(m) { return missionDone(m) && !daily.claimed[m.id]; }
@@ -7471,10 +7433,10 @@
         }
         let missionTab = 'daily', achievementTier = 'general';
         const ACHIEVEMENTS = [
-          ['새로운 시작','새로운 선수를 영입한다.',50,0,0,'recruits',1],['첫 번째 투자','처음으로 선수 강화를 시도한다.',50,0,0,'enhanceAttempts',1],['한계를 넘어서','선수를 처음으로 진화시킨다.',200,1,0,'evolved',1],['강한 남자','한 선수를 5강까지 강화한다.',200,0,0,'maxLevel5',1],['폭풍 영입','선수 10명을 영입한다.',200,0,0,'recruits',10],['연승의 시작','3연승을 기록한다.',100,0,1,'winStreak',3],['역전의 명수','선제골을 허용한 경기에서 승리한다.',150,0,0,'comebackWins',1],['극적인 승부','경기 종료 직전 결승골로 승리한다.',150,0,1,'lateWinner',1],['압도적인 승리','5점 차 이상으로 승리한다.',200,0,0,'fiveGoalWins',1],['골 잔치','누적 100골을 기록한다.',300,0,0,'goals',100],['골문 봉쇄','누적 10경기에서 무실점으로 승리한다.',100,0,1,'cleanWins',10],['끝까지 간다','경기 종료 직전에 동점골을 기록한다.',150,0,0,'lateEqualizer',1],['처음 맛본 정상','첫 번째 리그 우승을 달성한다.',1000,1,0,'leagueTitles',1],['유럽 진출','유럽 리그에 처음 진출한다.',250,0,0,'europeEntry',1],['진화의 시작','진화 토큰을 처음 획득한다.',150,0,0,'evoEarned',1],['실패도 경험이다','강화에 처음 실패한다.',50,0,1,'enhanceFailures',1],['불굴의 의지','강화 실패 후 바로 다음 강화에 성공한다.',300,0,1,'failThenSuccess',1],
-          ['완성형','한 선수를 최대 강화 단계까지 강화한다.',550,1,0,'maxLevel',1],['황금 스쿼드','선발 선수 전원을 노말급 이상으로 구성한다.',450,0,0,'goldSquad',1],['큰손 구단주','선수 영입에 누적 10,000토큰을 사용한다.',500,0,2,'recruitSpend',10000],['구단의 보물','최고 등급 선수를 처음으로 영입한다.',400,0,0,'topRecruit',1],['막을 수 없는 팀','10연승을 기록한다.',550,0,2,'winStreak',10],['자비는 없다','한 경기에서 7골 이상 득점한다.',400,0,0,'sevenGoals',1],['득점 기계','누적 500골을 기록한다.',500,0,0,'goals',500],['철의 장벽','5경기 연속 무실점을 기록한다.',450,0,2,'cleanStreak',5],['우승이 익숙해질 때','리그 우승을 5회 달성한다.',600,1,0,'leagueTitles',5],['아시아 정복','아시아 지역 리그를 모두 우승한다.',550,0,0,'asiaTitles',1],['새로운 도약','유럽 리그에서 처음 우승한다.',1000,0,1,'europeTitles',1],['세계로 향하다','5개 이상의 서로 다른 리그에서 우승한다.',600,1,0,'differentTitles',5],['프리미어의 문','프리미어리그에 진출한다.',2000,0,0,'premierEntry',1],['영국 정복자','프리미어리그에서 우승한다.',1000,1,0,'premierTitles',1],['승격 전문가','리그 승격을 5회 달성한다.',450,0,0,'promotions',5],['부자의 품격','보유 토큰이 20,000개를 돌파한다.',500,0,2,'richTokens',1],['진화 수집가','진화 토큰을 누적 30개 획득한다.',550,1,0,'evoEarned',30],['확률을 뚫다','성공 확률 20% 이하의 강화에 성공한다.',450,0,0,'lowChanceSuccess',1],['행운의 손','10% 이하 확률의 강화에 성공한다.',550,1,0,'tenChanceSuccess',1],['명장의 증명','누적 100승을 달성한다.',700,1,2,'wins',100],
-          ['꿈의 팀','선발 선수 전원을 최고 등급 선수로 구성한다.',3000,1,0,'dreamSquad',1],['무패의 군단','20경기 연속 무패를 기록한다.',2000,0,3,'unbeatenStreak',20],['천 골의 역사','누적 1,000골을 기록한다.',2000,0,0,'goals',1000],['트로피 수집가','리그 우승을 10회 달성한다.',1400,1,0,'leagueTitles',10],['세계 정복','모든 리그에서 한 번 이상 우승한다.',2000,2,5,'allLeagues',1],['정상의 정상','프리미어리그를 3회 우승한다.',2000,1,0,'premierTitles',3],['끝없는 상승','최하위 리그에서 프리미어리그까지 승격한다.',1350,1,3,'promotionJourney',1],['진화의 끝','진화 토큰을 누적 60개 획득한다.',2000,0,4,'evoEarned',60],['전설의 탄생','최고 단계 진화 선수를 처음 만든다.',1650,2,4,'maxEvolution',1],['살아있는 전설','누적 500승을 달성한다.',2500,2,5,'wins',500]
-        ].map((x,i)=>({id:i<37?i+1:[38,39,40,42,43,44,45,48,49,50][i-37],name:x[0],condition:x[1],tokens:x[2],evo:x[3],drinks:x[4],key:x[5],goal:x[6],tier:i<17?'general':i<37?'hero':'legend'}));
+          ['새로운 시작','새로운 선수를 영입한다.',50,0,'recruits',1],['첫 번째 투자','처음으로 선수 강화를 시도한다.',50,0,'enhanceAttempts',1],['한계를 넘어서','선수를 처음으로 진화시킨다.',200,1,'evolved',1],['강한 남자','한 선수를 5강까지 강화한다.',200,0,'maxLevel5',1],['폭풍 영입','선수 10명을 영입한다.',200,0,'recruits',10],['연승의 시작','3연승을 기록한다.',100,0,'winStreak',3],['역전의 명수','선제골을 허용한 경기에서 승리한다.',150,0,'comebackWins',1],['극적인 승부','경기 종료 직전 결승골로 승리한다.',150,0,'lateWinner',1],['압도적인 승리','5점 차 이상으로 승리한다.',200,0,'fiveGoalWins',1],['골 잔치','누적 100골을 기록한다.',300,0,'goals',100],['골문 봉쇄','누적 10경기에서 무실점으로 승리한다.',100,0,'cleanWins',10],['끝까지 간다','경기 종료 직전에 동점골을 기록한다.',150,0,'lateEqualizer',1],['처음 맛본 정상','첫 번째 리그 우승을 달성한다.',1000,1,'leagueTitles',1],['유럽 진출','유럽 리그에 처음 진출한다.',250,0,'europeEntry',1],['진화의 시작','진화 토큰을 처음 획득한다.',150,0,'evoEarned',1],['실패도 경험이다','강화에 처음 실패한다.',50,0,'enhanceFailures',1],['불굴의 의지','강화 실패 후 바로 다음 강화에 성공한다.',300,0,'failThenSuccess',1],
+          ['완성형','한 선수를 최대 강화 단계까지 강화한다.',550,1,'maxLevel',1],['황금 스쿼드','선발 선수 전원을 노말급 이상으로 구성한다.',450,0,'goldSquad',1],['큰손 구단주','선수 영입에 누적 10,000토큰을 사용한다.',500,0,'recruitSpend',10000],['구단의 보물','최고 등급 선수를 처음으로 영입한다.',400,0,'topRecruit',1],['막을 수 없는 팀','10연승을 기록한다.',550,0,'winStreak',10],['자비는 없다','한 경기에서 7골 이상 득점한다.',400,0,'sevenGoals',1],['득점 기계','누적 500골을 기록한다.',500,0,'goals',500],['철의 장벽','5경기 연속 무실점을 기록한다.',450,0,'cleanStreak',5],['우승이 익숙해질 때','리그 우승을 5회 달성한다.',600,1,'leagueTitles',5],['아시아 정복','아시아 지역 리그를 모두 우승한다.',550,0,'asiaTitles',1],['새로운 도약','유럽 리그에서 처음 우승한다.',1000,0,'europeTitles',1],['세계로 향하다','5개 이상의 서로 다른 리그에서 우승한다.',600,1,'differentTitles',5],['프리미어의 문','프리미어리그에 진출한다.',2000,0,'premierEntry',1],['영국 정복자','프리미어리그에서 우승한다.',1000,1,'premierTitles',1],['승격 전문가','리그 승격을 5회 달성한다.',450,0,'promotions',5],['부자의 품격','보유 토큰이 20,000개를 돌파한다.',500,0,'richTokens',1],['진화 수집가','진화 토큰을 누적 30개 획득한다.',550,1,'evoEarned',30],['확률을 뚫다','성공 확률 20% 이하의 강화에 성공한다.',450,0,'lowChanceSuccess',1],['행운의 손','10% 이하 확률의 강화에 성공한다.',550,1,'tenChanceSuccess',1],['명장의 증명','누적 100승을 달성한다.',700,1,'wins',100],
+          ['꿈의 팀','선발 선수 전원을 최고 등급 선수로 구성한다.',3000,1,'dreamSquad',1],['무패의 군단','20경기 연속 무패를 기록한다.',2000,0,'unbeatenStreak',20],['천 골의 역사','누적 1,000골을 기록한다.',2000,0,'goals',1000],['트로피 수집가','리그 우승을 10회 달성한다.',1400,1,'leagueTitles',10],['세계 정복','모든 리그에서 한 번 이상 우승한다.',2000,2,'allLeagues',1],['정상의 정상','프리미어리그를 3회 우승한다.',2000,1,'premierTitles',3],['끝없는 상승','최하위 리그에서 프리미어리그까지 승격한다.',1350,1,'promotionJourney',1],['진화의 끝','진화 토큰을 누적 60개 획득한다.',2000,0,'evoEarned',60],['전설의 탄생','최고 단계 진화 선수를 처음 만든다.',1650,2,'maxEvolution',1],['살아있는 전설','누적 500승을 달성한다.',2500,2,'wins',500]
+        ].map((x,i)=>({id:i<37?i+1:[38,39,40,42,43,44,45,48,49,50][i-37],name:x[0],condition:x[1],tokens:x[2],evo:x[3],key:x[4],goal:x[5],tier:i<17?'general':i<37?'hero':'legend'}));
         let ach = (()=>{try{return JSON.parse(localStorage.getItem('fm_achievements')||'null')||{claimed:{},unlocked:{},p:{},stats:{}}}catch(e){return{claimed:{},unlocked:{},p:{},stats:{}}}})();
         ach.claimed ||= {}; ach.unlocked ||= {}; ach.p ||= {}; ach.stats ||= {};
         const saveAch=()=>localStorage.setItem('fm_achievements',JSON.stringify(ach));
@@ -7484,24 +7446,24 @@
         function achCheckSquads(){const starters=players.filter(p=>p.isStarting);if(starters.length<11)return;const tiers=starters.map(orbTierForPlayer);if(tiers.every(t=>t>=2))achSet('goldSquad',1);if(tiers.every(t=>t>=3))achSet('dreamSquad',1)}
         function achCheckBalance(){if(tokens>=20000)achSet('richTokens',1)}
         function achievementClaimable(a){return !!ach.unlocked[a.id]&&!ach.claimed[a.id]}
-        function showRewardNotice(title,reward){const parts=[];if(reward.tokens)parts.push(`🪙 토큰 ${reward.tokens.toLocaleString()}개`);if(reward.evo)parts.push(`🧬 진화 토큰 ${reward.evo}개`);if(reward.drinks)parts.push(`🧃 회복 아이템 ${reward.drinks}개`);(reward.extra||[]).forEach(([k,n])=>parts.push(`${itemLabel(k)} ${n}개`));alert(`${title} 보상 수령!\n${parts.join(' · ')||'보상 없음'}`)}
-        function grantRewards(reward){tokens+=reward.tokens||0;evoTokens+=reward.evo||0;if(reward.evo)achAdd('evoEarned',reward.evo);items.drink=(items.drink||0)+(reward.drinks||0);saveData();achCheckBalance();}
+        function showRewardNotice(title,reward){const parts=[];if(reward.tokens)parts.push(`🪙 토큰 ${reward.tokens.toLocaleString()}개`);if(reward.evo)parts.push(`🧬 진화 토큰 ${reward.evo}개`);alert(`${title} 보상 수령!\n${parts.join(' · ')||'보상 없음'}`)}
+        function grantRewards(reward){tokens+=reward.tokens||0;evoTokens+=reward.evo||0;if(reward.evo)achAdd('evoEarned',reward.evo);saveData();achCheckBalance();}
         function setMissionTab(tab){missionTab=tab;renderMissions()}
         function setAchievementTier(tier){achievementTier=tier;renderMissions()}
         function renderMissions(){ensureDaily();const list=document.getElementById('mission-list'), subtitle=document.getElementById('mission-subtitle'), dailyMode=missionTab==='daily', couponMode=missionTab==='coupon';
           document.getElementById('mission-tab-daily').className=`rounded-lg py-2 font-bold text-sm ${dailyMode?'bg-sky-600 text-white':'bg-gray-800 text-gray-400'}`;document.getElementById('mission-tab-ach').className=`rounded-lg py-2 font-bold text-sm ${missionTab==='ach'?'bg-purple-600 text-white':'bg-gray-800 text-gray-400'}`;document.getElementById('mission-tab-coupon').className=`rounded-lg py-2 font-bold text-sm ${couponMode?'bg-emerald-600 text-white':'bg-gray-800 text-gray-400'}`;
           document.getElementById('achievement-tier-tabs').classList.toggle('hidden',dailyMode||couponMode);document.getElementById('mission-remain-wrap').classList.toggle('hidden',!dailyMode);document.getElementById('mission-footer').classList.toggle('hidden',couponMode);
           if(couponMode){subtitle.textContent='쿠폰 코드를 입력하고 보상을 받아요';list.innerHTML=`<form id="coupon-form" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 sm:p-6" onsubmit="redeemMissionCoupon(event)"><label for="mission-coupon-code" class="block font-bold mb-2">쿠폰 코드</label><div class="flex gap-2"><input id="mission-coupon-code" autocomplete="off" autocapitalize="characters" maxlength="40" class="min-w-0 flex-1 rounded-lg bg-gray-950 border border-gray-600 px-3 py-3 text-white uppercase" placeholder="쿠폰 코드를 입력하세요" aria-label="쿠폰 코드"><button id="mission-coupon-submit" type="submit" class="shrink-0 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 font-black">사용</button></div><p id="mission-coupon-status" role="status" aria-live="polite" class="mt-3 min-h-5 text-sm text-gray-300">쿠폰은 계정당 코드별로 한 번만 사용할 수 있습니다.</p></form>`;loadMissionCouponStatus();return;}
-          if(dailyMode){subtitle.textContent='매일 도전하고 오늘의 보상을 받아요';list.innerHTML='';[...DAILY_MISSIONS].sort((a,b)=>Number(!!daily.claimed[a.id])-Number(!!daily.claimed[b.id])).forEach(m=>{const cur=Math.min(m.get(daily),m.goal),done=missionDone(m),claimed=!!daily.claimed[m.id],btn=claimed?'<button disabled class="bg-gray-700 text-gray-400 font-bold py-2 px-3 rounded-full text-xs">수령 완료</button>':done?`<button onclick="claimMission('${m.id}')" class="bg-amber-500 text-black font-black py-2 px-3 rounded-full text-xs">받기</button>`:'<button disabled class="bg-gray-800 text-gray-500 font-bold py-2 px-3 rounded-full text-xs">진행 중</button>';list.innerHTML+=`<div class="flex items-center gap-3 bg-gray-800 p-3 rounded-xl border ${done&&!claimed?'border-yellow-400':'border-gray-700'}"><div class="flex-1 min-w-0"><div class="font-black text-sm">${m.name}</div><div class="text-xs text-gray-400 mt-1">${cur}/${m.goal} · 보상 <b class="text-yellow-400">${[m.reward?`🪙 ${m.reward}T`:null,m.item?`${itemLabel(m.item[0])} x${m.item[1]}`:null].filter(Boolean).join(' · ')}</b></div><div class="h-1.5 bg-gray-700 rounded mt-2"><div class="h-full ${done?'bg-green-500':'bg-sky-500'} rounded" style="width:${cur/m.goal*100}%"></div></div></div>${btn}</div>`});document.getElementById('mission-remain').textContent=missionRemainText();
-          }else{const tier=achievementTier;const labels={general:'일반 업적',hero:'영웅 업적',legend:'전설 업적'};subtitle.textContent=`${labels[tier]} · 달성한 업적은 보상을 받을 수 있어요`;['general','hero','legend'].forEach(t=>{const el=document.querySelector(`#achievement-tier-tabs button[onclick="setAchievementTier('${t}')"]`);if(el)el.className=`rounded-lg py-2 text-xs sm:text-sm font-bold ${t===tier?'bg-amber-500 text-black':'bg-gray-800 text-gray-400'}`});list.innerHTML='';ACHIEVEMENTS.filter(a=>a.tier===tier).sort((a,b)=>Number(!!ach.claimed[a.id])-Number(!!ach.claimed[b.id])).forEach(a=>{const cur=Math.min(Number(ach.p[a.key]||0),a.goal),done=!!ach.unlocked[a.id],claimed=!!ach.claimed[a.id],reward=[a.tokens?`🪙 ${a.tokens}T`:null,a.evo?`🧬 ${a.evo}`:null,a.drinks?`🧃 ${a.drinks}`:null].filter(Boolean).join(' · ');const button=claimed?'<button disabled class="bg-gray-700 text-gray-400 font-bold py-2 px-3 rounded-full text-xs shrink-0">수령 완료</button>':done?`<button onclick="claimAchievement(${a.id})" class="bg-amber-500 text-black font-black py-2 px-3 rounded-full text-xs shrink-0">받기</button>`:'<span class="text-xs text-gray-500 shrink-0">미달성</span>';list.innerHTML+=`<div class="flex items-center gap-3 bg-gray-800 p-3 rounded-xl border ${done&&!claimed?'border-amber-400':'border-gray-700'}"><div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-black text-amber-300 shrink-0">${a.id}</div><div class="flex-1 min-w-0"><div class="font-black text-sm">${a.name}</div><div class="text-xs text-gray-400 mt-0.5">${a.condition}</div><div class="text-xs text-amber-300 mt-1">보상 ${reward}</div><div class="text-[11px] text-gray-500 mt-1">진행 ${cur}/${a.goal}</div></div>${button}</div>`})}
+          if(dailyMode){subtitle.textContent='매일 도전하고 오늘의 보상을 받아요';list.innerHTML='';[...DAILY_MISSIONS].sort((a,b)=>Number(!!daily.claimed[a.id])-Number(!!daily.claimed[b.id])).forEach(m=>{const cur=Math.min(m.get(daily),m.goal),done=missionDone(m),claimed=!!daily.claimed[m.id],btn=claimed?'<button disabled class="bg-gray-700 text-gray-400 font-bold py-2 px-3 rounded-full text-xs">수령 완료</button>':done?`<button onclick="claimMission('${m.id}')" class="bg-amber-500 text-black font-black py-2 px-3 rounded-full text-xs">받기</button>`:'<button disabled class="bg-gray-800 text-gray-500 font-bold py-2 px-3 rounded-full text-xs">진행 중</button>';list.innerHTML+=`<div class="flex items-center gap-3 bg-gray-800 p-3 rounded-xl border ${done&&!claimed?'border-yellow-400':'border-gray-700'}"><div class="flex-1 min-w-0"><div class="font-black text-sm">${m.name}</div><div class="text-xs text-gray-400 mt-1">${cur}/${m.goal} · 보상 <b class="text-yellow-400">${[m.reward?`🪙 ${m.reward}T`:null,null].filter(Boolean).join(' · ')}</b></div><div class="h-1.5 bg-gray-700 rounded mt-2"><div class="h-full ${done?'bg-green-500':'bg-sky-500'} rounded" style="width:${cur/m.goal*100}%"></div></div></div>${btn}</div>`});document.getElementById('mission-remain').textContent=missionRemainText();
+          }else{const tier=achievementTier;const labels={general:'일반 업적',hero:'영웅 업적',legend:'전설 업적'};subtitle.textContent=`${labels[tier]} · 달성한 업적은 보상을 받을 수 있어요`;['general','hero','legend'].forEach(t=>{const el=document.querySelector(`#achievement-tier-tabs button[onclick="setAchievementTier('${t}')"]`);if(el)el.className=`rounded-lg py-2 text-xs sm:text-sm font-bold ${t===tier?'bg-amber-500 text-black':'bg-gray-800 text-gray-400'}`});list.innerHTML='';ACHIEVEMENTS.filter(a=>a.tier===tier).sort((a,b)=>Number(!!ach.claimed[a.id])-Number(!!ach.claimed[b.id])).forEach(a=>{const cur=Math.min(Number(ach.p[a.key]||0),a.goal),done=!!ach.unlocked[a.id],claimed=!!ach.claimed[a.id],reward=[a.tokens?`🪙 ${a.tokens}T`:null,a.evo?`🧬 ${a.evo}`:null,null].filter(Boolean).join(' · ');const button=claimed?'<button disabled class="bg-gray-700 text-gray-400 font-bold py-2 px-3 rounded-full text-xs shrink-0">수령 완료</button>':done?`<button onclick="claimAchievement(${a.id})" class="bg-amber-500 text-black font-black py-2 px-3 rounded-full text-xs shrink-0">받기</button>`:'<span class="text-xs text-gray-500 shrink-0">미달성</span>';list.innerHTML+=`<div class="flex items-center gap-3 bg-gray-800 p-3 rounded-xl border ${done&&!claimed?'border-amber-400':'border-gray-700'}"><div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-black text-amber-300 shrink-0">${a.id}</div><div class="flex-1 min-w-0"><div class="font-black text-sm">${a.name}</div><div class="text-xs text-gray-400 mt-0.5">${a.condition}</div><div class="text-xs text-amber-300 mt-1">보상 ${reward}</div><div class="text-[11px] text-gray-500 mt-1">진행 ${cur}/${a.goal}</div></div>${button}</div>`})}
           const anyDaily=DAILY_MISSIONS.some(missionClaimable),anyAch=ACHIEVEMENTS.some(achievementClaimable);const all=document.getElementById('mission-claim-all');all.disabled=dailyMode?!anyDaily:!anyAch;all.classList.toggle('opacity-40',all.disabled);all.classList.toggle('cursor-not-allowed',all.disabled);updateMissionIcon();}
         const MISSION_COUPONS={THANKYOUFORYOURSERVICE:3000,EUGENE:10000};
         function setMissionCouponStatus(message,isError=false){const el=document.getElementById('mission-coupon-status');if(el){el.textContent=message;el.className=`mt-3 min-h-5 text-sm ${isError?'text-red-300':'text-gray-300'}`}}
         async function loadMissionCouponStatus(){if(!accountUser?.id||!window.yfmAccountReady){setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);return;}try{const {data,error}=await getOwnerRankClient().from('coupon_redemptions').select('code').eq('user_id',accountUser.id);if(error)throw error;const codes=(data||[]).map(r=>r.code);if(codes.length)setMissionCouponStatus(`이미 사용한 쿠폰: ${codes.join(', ')}`);}catch(e){console.warn('쿠폰 사용 기록을 불러오지 못했습니다.',e);setMissionCouponStatus('쿠폰 사용 기록을 불러오지 못했습니다. Supabase 쿠폰 SQL을 먼저 적용해 주세요.',true)}}
         async function redeemMissionCoupon(event){event.preventDefault();const input=document.getElementById('mission-coupon-code'),button=document.getElementById('mission-coupon-submit'),code=String(input?.value||'').trim().toUpperCase(),reward=MISSION_COUPONS[code];if(!code)return setMissionCouponStatus('쿠폰 코드를 입력해 주세요.',true);if(!reward)return setMissionCouponStatus('사용할 수 없는 쿠폰 코드입니다.',true);if(!accountUser?.id||!window.yfmAccountReady)return setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);button.disabled=true;button.classList.add('opacity-50');try{const {error}=await getOwnerRankClient().from('coupon_redemptions').insert({user_id:accountUser.id,code});if(error){if(error.code==='23505')return setMissionCouponStatus('이미 사용한 쿠폰입니다.',true);throw error;}tokens+=reward;updateTokensUI();saveData();input.value='';setMissionCouponStatus(`쿠폰이 적용되었습니다! 토큰 ${reward.toLocaleString()}개를 받았습니다.`); }catch(e){console.error('쿠폰 적용 실패',e);setMissionCouponStatus('쿠폰을 적용하지 못했습니다. Supabase 쿠폰 SQL이 적용되었는지 확인해 주세요.',true)}finally{if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50')}}}
-        function claimMission(id){ensureDaily();const m=DAILY_MISSIONS.find(x=>x.id===id);if(!m||!missionClaimable(m))return renderMissions();daily.claimed[id]=true;const rw={tokens:m.reward,drinks:m.item?.[0]==='drink'?m.item[1]:0,extra:m.item&&m.item[0]!=='drink'?[[m.item[0],m.item[1]]]:[]};if(m.item&&m.item[0]!=='drink')items[m.item[0]]=(items[m.item[0]]||0)+m.item[1];grantRewards(rw);saveDaily();renderMissions();showRewardNotice(m.name,rw)}
-        function claimAchievement(id){const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a||!achievementClaimable(a))return renderMissions();ach.claimed[id]=true;const rw={tokens:a.tokens,evo:a.evo,drinks:a.drinks};grantRewards(rw);saveAch();renderMissions();showRewardNotice(a.name,rw)}
-        function claimAllMissions(){ensureDaily();const rw={tokens:0,evo:0,drinks:0},names=[];if(missionTab==='daily'){DAILY_MISSIONS.forEach(m=>{if(!missionClaimable(m))return;daily.claimed[m.id]=true;rw.tokens+=m.reward;if(m.item){if(m.item[0]==='drink')rw.drinks+=m.item[1];else{items[m.item[0]]=(items[m.item[0]]||0)+m.item[1];(rw.extra||=[]).push([m.item[0],m.item[1]])}}names.push(m.name)});saveDaily()}else{ACHIEVEMENTS.forEach(a=>{if(!achievementClaimable(a))return;ach.claimed[a.id]=true;rw.tokens+=a.tokens;rw.evo+=a.evo;rw.drinks+=a.drinks;names.push(a.name)});saveAch()}if(!names.length)return;grantRewards(rw);renderMissions();showRewardNotice(`${names.length}개 미션 모두 받기`,rw)}
+        function claimMission(id){ensureDaily();const m=DAILY_MISSIONS.find(x=>x.id===id);if(!m||!missionClaimable(m))return renderMissions();daily.claimed[id]=true;const rw={tokens:m.reward};grantRewards(rw);saveDaily();renderMissions();showRewardNotice(m.name,rw)}
+        function claimAchievement(id){const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a||!achievementClaimable(a))return renderMissions();ach.claimed[id]=true;const rw={tokens:a.tokens,evo:a.evo};grantRewards(rw);saveAch();renderMissions();showRewardNotice(a.name,rw)}
+        function claimAllMissions(){ensureDaily();const rw={tokens:0,evo:0},names=[];if(missionTab==='daily'){DAILY_MISSIONS.forEach(m=>{if(!missionClaimable(m))return;daily.claimed[m.id]=true;rw.tokens+=m.reward;names.push(m.name)});saveDaily()}else{ACHIEVEMENTS.forEach(a=>{if(!achievementClaimable(a))return;ach.claimed[a.id]=true;rw.tokens+=a.tokens;rw.evo+=a.evo;names.push(a.name)});saveAch()}if(!names.length)return;grantRewards(rw);renderMissions();showRewardNotice(`${names.length}개 미션 모두 받기`,rw)}
         function openMissions(){missionTab='daily';renderMissions();document.getElementById('mission-modal').classList.replace('hidden','flex')}
         function closeMissions(){document.getElementById('mission-modal').classList.replace('flex','hidden')}
         function dailyTick() {
@@ -7529,6 +7491,5 @@
         setInterval(dailyTick, 15000);
         document.addEventListener('visibilitychange', dailyTick);
     </script>
-    <script src="./cloudflare-worker/online-friendly-client.js?v=20260928-2"></script>
 </body>
 </html>
