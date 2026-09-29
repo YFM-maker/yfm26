@@ -1066,7 +1066,7 @@
 
         <div id="tactics-panel" class="absolute inset-0 bg-black/90 z-[65] hidden flex-col p-6 gap-4">
             <div class="flex justify-between items-center">
-                <h2 class="text-3xl font-black">전술 변경 <span id="tac-subs" class="text-base text-yellow-400 ml-3"></span></h2>
+                <h2 class="text-3xl font-black">전술 변경 <span id="online-pause-status" class="block text-sm text-amber-300 mt-1"></span><span id="tac-subs" class="text-base text-yellow-400 ml-3"></span></h2>
                 <button onclick="closeTactics()" class="bg-green-600 hover:bg-green-500 font-black px-8 py-3 rounded-full">▶ 경기 재개</button>
             </div>
             <div id="tac-buttons" class="flex gap-3"></div>
@@ -3898,7 +3898,7 @@
             def: { label: '수비적', icon: '🛡️', desc: '라인 하강 · 실점 위험↓ · 슈팅↓', color: 'bg-emerald-600', line: -7, own: 0.85, opp: 0.8, freq: 0.8 }
         };
         let tacSel = null;
-        function openTactics() { const st = currentMatchState; if (!st) return; pauseMatchCrowd(); st.userPaused = true; if (st.online) { try { window.yfmOnline.pause(); } catch (_) {} } st.tacSnap = JSON.stringify([st.tactic, st.instr]); st.tacSessionEntered = new Set(); st.tacSessionAvailable = new Set(); tacSel = null; renderTactics(); document.getElementById('tactics-panel').classList.replace('hidden', 'flex'); }
+        function openTactics(fromNetwork = false) { const st = currentMatchState; if (!st || st.ended) return; pauseMatchCrowd(); st.userPaused = true; if (st.online && !fromNetwork) { try { window.yfmOnline.pause(); } catch (_) {} } st.tacSnap = JSON.stringify([st.tactic, st.instr]); st.tacSessionEntered = new Set(); st.tacSessionAvailable = new Set(); tacSel = null; renderTactics(); document.getElementById('tactics-panel').classList.replace('hidden', 'flex'); if (st.online) { const b = document.querySelector('#tactics-panel button[onclick="closeTactics()"]'); if (b) b.textContent = '▶ 재개 요청'; } }
         function closeTactics() {
             document.getElementById('tactics-panel').classList.replace('flex', 'hidden'); const st = currentMatchState; if (!st) return;
             st.userPaused = false; if (st.online) { try { window.yfmOnline.resume(); } catch (_) {} } if (!st.isPaused && !st.ended) resumeMatchCrowd(); st.last = performance.now(); st.tacSessionEntered = null; st.tacSessionAvailable = null;
@@ -4048,7 +4048,7 @@
             (st.sp ? [] : [true, false]).forEach(side => {
                 if (owner && side === owner.isHome) return;
                 if (ball.fl && side === st.lastPoss) return;
-                const pw = p => p.pi === 'press' ? 0.62 : 1, L = outfield.filter(p => p.isHome === side).sort((a, b) => dist(a, tgt) * pw(a) - dist(b, tgt) * pw(b)), n = side ? Math.min(3, st.M.pressN + (st.samun && st.time >= st.samun ? 1 : 0)) : aiV(st, 'press'), pd = side ? st.M.pressDist * (st.samun && st.time >= st.samun ? 1.08 : 1) : 40;
+                const pw = p => p.pi === 'press' ? 0.62 : 1, L = outfield.filter(p => p.isHome === side).sort((a, b) => dist(a, tgt) * pw(a) - dist(b, tgt) * pw(b)), n = side ? Math.min(3, st.M.pressN + (st.samun && st.time >= st.samun ? 1 : 0)) : Math.max(1, Math.min(4, awayDef(st).pressN ?? aiV(st, 'press'))), pd = side ? st.M.pressDist * (st.samun && st.time >= st.samun ? 1.08 : 1) : (awayDef(st).pressDist ?? 40);
                 const ownX = side ? 3 : 97, danger = Math.abs(tgt.x - ownX);                     // 우리 골문까지 거리 (우리 진영이면 거리 무관하게 붙음)
                 if (L[0] && (dist(L[0], tgt) < pd || danger < 55)) duty[L[0].id] = 'press';
                 if (owner && danger < 36 && L[1] && dist(L[1], tgt) < 18) duty[L[1].id] = 'press2';   // 박스 근처에선 두 명이 협력 수비
@@ -4070,7 +4070,7 @@
                     if (owner && owner.isHome !== p.isHome && ub < 22) u = Math.max(u, Math.min(ub - 5, 8)); // 각도 좁히며 전진
                     tx = X(u); ty = Math.max(40, Math.min(60, 50 + bias * (ub < 25 ? 0.35 : 0.15)));
                 } else if (poss === p.isHome) { // 공격: 팀 전체가 공을 따라 올라가며 앞쪽에 패스 선택지를 만든다
-                    const cl = (v, a, b) => Math.max(a, Math.min(b, v)), push = p.isHome ? st.M.line * 0.5 : (aiV(st, 'line') + awayStyleAdd(st, 'line')) * 0.5, fw = p.rl ? p.rl.fw : 0;
+                    const cl = (v, a, b) => Math.max(a, Math.min(b, v)), push = p.isHome ? st.M.line * 0.5 : (aiV(st, 'line') + awayStyleAdd(st, 'line') + (awayDef(st).line || 0)) * 0.5, fw = p.rl ? p.rl.fw : 0;
                     let u;
                     if (p.role === 'DF') u = det === 'CB' ? cl(ub - 28 + push, 10, 52) : cl(ub - 16 + push + fw, 14, 72); // 풀백 오버래핑
                     else if (det === 'CDM') u = cl(ub - 12 + push, 16, 60);                                              // 수미: 공 뒤에서 받쳐줌
@@ -4127,7 +4127,7 @@
                         else if (fb && fb.fbRunK === 'underlap') ty = 50 + sideY * 41;
                     }
                 } else { // 수비: 하나의 라인을 유지하며 좌우로 슬라이드, 수미는 라인 앞 스크린
-                    let uL = Math.max(13, Math.min(46, ub - 13 + (p.isHome ? st.M.line * 0.6 + (st.M.trap ? 4 : 0) : (aiV(st, 'line') + awayStyleAdd(st, 'line')) * 0.6)));
+                    let uL = Math.max(13, Math.min(46, ub - 13 + (p.isHome ? st.M.line * 0.6 + (st.M.trap ? 4 : 0) : (aiV(st, 'line') + awayStyleAdd(st, 'line') + (awayDef(st).line || 0)) * 0.6)));
                     if (ub < 26) uL = Math.max(4.5, Math.min(uL, ub - 3));
                     if (p.role === 'DF') {
                         let u = uL; if (det !== 'CB' && Math.sign(bias) === side && Math.abs(bias) > 18) u += 3;
@@ -4418,7 +4418,7 @@
         const TEMPO = { slow: { n: '느림', d: '체력 절약', speed: 0.9, passF: 0.85, fat: 0.7 }, normal: { n: '보통', d: '기본' }, fast: { n: '빠름', d: '속도↑ · 체력 소모↑', speed: 1.12, passF: 1.2, fat: 1.4, acc: -0.03 } };
         // ===== 공격 스타일 (양 팀 공통) =====
         const STYLE_NAME = { bal: '균형', poss: '점유율', counter: '빠른 역습', long: '롱볼', wing: '측면 공격' };
-        function styleOf(st, isHome) { return isHome ? ((st.instr && st.instr.atk) || 'bal') : (st.awayStyle || 'bal'); }
+        function styleOf(st, isHome) { return isHome ? ((st.instr && st.instr.atk) || 'bal') : ((st.awayInstr && st.awayInstr.atk) || st.awayStyle || 'bal'); }
         function cpuStyle(e) { const r = rnd(hash('style' + (e.id || e.name || '')), 7); return r < 0.4 ? 'bal' : r < 0.6 ? 'poss' : r < 0.75 ? 'wing' : r < 0.9 ? 'counter' : 'long'; }
         // 상성: 점유율 > 롱볼 > 측면 공격 > 빠른 역습 > 점유율 (균형은 상성 없음)
         const BEATS = { poss: 'long', long: 'wing', wing: 'counter', counter: 'poss' };
@@ -4507,8 +4507,9 @@
         }
         // CPU가 쓸 때 과하거나 약하게 나오던 전술 보정 (홈·원정 모두 비슷한 효율이 되도록 시뮬레이션으로 맞춤)
         let AWAY_OWN = { counter: 0.92, wing: 1.0 };
-        function awayStyleMod(st, k) { return (ATK[st.awayStyle] || {})[k] ?? 1; }
-        function awayStyleAdd(st, k) { return (ATK[st.awayStyle] || {})[k] ?? 0; }
+        function awayStyleMod(st, k) { const i = st.awayInstr || {}; return [TACTICS[st.awayTactic || 'bal'] || {}, ATK[styleOf(st, false)] || {}, DEFI[i.def] || {}, TEMPO[i.tempo] || {}, WIDTH[i.width] || {}, PASSLEN[i.pass] || {}].reduce((v, o) => v * (o[k] ?? 1), 1); }
+        function awayStyleAdd(st, k) { const i = st.awayInstr || {}; return [TACTICS[st.awayTactic || 'bal'] || {}, ATK[styleOf(st, false)] || {}, TEMPO[i.tempo] || {}, WIDTH[i.width] || {}, PASSLEN[i.pass] || {}].reduce((v, o) => v + (o[k] ?? 0), 0); }
+        function awayDef(st) { return DEFI[st.awayInstr?.def] || {}; }
         // 상대 AI: 경기 상황에 따라 전술을 바꿈
         function aiUpdate(st) {
             const d = st.scoreAway - st.scoreHome, t = st.time; let mode = 'normal';
@@ -4652,7 +4653,7 @@
         }
         function resumeFromBreak() {
             const st = currentMatchState; if (!st) return;
-            if (!st.breakKind) return startSecondHalf();
+            if (!st.breakKind) { if (st.online) { try { window.yfmOnline.setHalftimeReady(); } catch (_) {} const b = document.getElementById('ht-go'); if (b) { b.textContent = '준비 완료 · 상대 대기 중'; b.disabled = true; } return; } return startSecondHalf(); }
             const kind = st.breakKind; st.breakKind = null;
             document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
             if (kind === 'et') { st.maxTime = 120; st.subsLeft += 1; updateShoutBtn(st); }
@@ -4816,7 +4817,8 @@
                 const el = matchElements[p.id]; if (!el) return;
                 if (p.isRedCarded) { el.style.display = 'none'; return; }
                 const tx = p.px + (p.x - p.px) * a, ty = p.py + (p.y - p.py) * a;
-                if (p.rx === undefined) { p.rx = tx; p.ry = ty; } else { p.rx += (tx - p.rx) * k; p.ry += (ty - p.ry) * k; }
+                if (onlineMirror) { p.rx = tx; p.ry = ty; }
+                else if (p.rx === undefined) { p.rx = tx; p.ry = ty; } else { p.rx += (tx - p.rx) * k; p.ry += (ty - p.ry) * k; }
                 if (onlineMirror) {
                     el.style.left = '0'; el.style.top = '0';
                     el.style.transform = `translate3d(${engineWidth * p.rx / 100}px,${engineHeight * p.ry / 100}px,0)`;
@@ -4832,7 +4834,8 @@
             let bx, by;
             if (own && own.rx !== undefined) { bx = own.rx + (own.isHome ? 0.9 : -0.9); by = own.ry + 0.9; }
             else { bx = b.px + (b.x - b.px) * a; by = b.py + (b.y - b.py) * a; }
-            if (b.snap || b.rx === undefined) { b.rx = bx; b.ry = by; b.snap = false; } else { const kb = Math.min(1, k * 1.8); b.rx += (bx - b.rx) * kb; b.ry += (by - b.ry) * kb; }
+            if (onlineMirror) { b.rx = bx; b.ry = by; b.snap = false; }
+            else if (b.snap || b.rx === undefined) { b.rx = bx; b.ry = by; b.snap = false; } else { const kb = Math.min(1, k * 1.8); b.rx += (bx - b.rx) * kb; b.ry += (by - b.ry) * kb; }
             const h = b.fl && b.fl.lob ? Math.sin(Math.PI * Math.min(1, (b.fl.t + a) / b.fl.n)) : 0;
             const be = matchElements.ball, sh = matchElements.shadow;
             if (b.lx !== undefined) b.rot = ((b.rot || 0) + Math.hypot(b.rx - b.lx, b.ry - b.ly) * 38 * ((b.rx - b.lx) >= 0 ? 1 : -1)) % 360; b.lx = b.rx; b.ly = b.ry;   // 굴러가는 회전
@@ -4848,7 +4851,7 @@
                 const base = (p.role === 'GK' ? 0.008 : 0.23 + (100 - rawA(p, 'sta')) / 100 * 0.32) * (p.trait === 'engine' ? 0.8 : p.trait === 'ironman' ? 0.92 : 1) * (p.piFat || 1) / actF(p) / actF(p);
                 const run = Math.min(1.3, 0.85 + Math.hypot(p.vx || 0, p.vy || 0) / 1.6);   // 많이 뛰어도 소모 증가폭은 완만하게
                 const passionFatigue=p.isHome&&p.psychEffects?.some(e=>e.until>st.time)?1+Math.max(0,psychValue(p,'motivation',st)-p.psych.motivation)*.003:1;
-                p.stam = Math.max(0, p.stam - base * run * (p.isHome ? (st.M.fat || 1) : 1) * passionFatigue * MIN_PER_TICK);
+                p.stam = Math.max(0, p.stam - base * run * (p.isHome ? (st.M.fat || 1) : awayStyleMod(st, 'fat')) * passionFatigue * MIN_PER_TICK);
                 if (p.role !== 'GK' && p.stam < 25 && Math.random() < 0.00006 * (tr(p, 'glass') ? 2.5 : 1)) injure(st, p);
                 if (p.isHome && !p.tiredWarned && p.stam < 35) { p.tiredWarned = true; comm(st, `⚠️ ${p.name} 선수가 많이 지쳐 보입니다 (체력 ${Math.round(p.stam)}%)`, 'warn'); }
             });
@@ -5758,16 +5761,18 @@
             document.getElementById('ht-score').innerText = `${st.scoreHome} : ${st.scoreAway}`;
             document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st);
             document.getElementById('match-ht-overlay').classList.replace('hidden', 'flex');
+            if (st.online) { try { window.yfmOnline.beginHalftime(); } catch (_) {} }
         }
-        function startSecondHalf() {
+        function startSecondHalf(fromServer = false) {
             const st = currentMatchState; if (!st) return;
+            if (st.online && !fromServer) { try { window.yfmOnline.setHalftimeReady(); } catch (_) {} return; }
             if (st.online && !st.online.isHost) return;
             st.secondHalfStarted = true;
             document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
             allOf(st).forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; p.stam = Math.min(100, (p.stam ?? 100) + 10); if (p.stam >= 35) p.tiredWarned = false; });
             kickoff(st, false); snapAll(st); playMatchSound('start'); resumeMatchCrowd(); comm(st, '▶ 후반 시작', 'info'); cpuHalftimeAdapt(st); updateShoutBtn(st);
             st.isPaused = false; st.last = performance.now(); st.acc = 0;
-            if (st.online) { try { window.yfmOnline.setHalf(2); } catch (_) {} }
+
         }
 
         const TRAITS = {
@@ -6398,6 +6403,7 @@
                 });
                 const bg = st0.homePlayers.filter(p => p.tF > 1).map(p => p.name); if (bg.length) setTimeout(() => comm(st0, `🏟️ 빅매치 체질 ${bg.join(', ')}의 눈빛이 달라졌습니다!`, 'info'), 0); } { const sb = document.getElementById('samun-badge'); if (sb) sb.classList.add('hidden'); }
             if (mode === 'league') { currentMatchState.leagueRound = leagueState.round; currentMatchState.leagueSeason = leagueState.season; currentMatchState.leaguePlayoff = !!enemyData.playoff; }
+            currentMatchState.awayTactic = 'bal'; currentMatchState.awayInstr = { atk: enemyData.style || 'bal', def: 'mid', tempo: 'normal', width: 'normal', pass: 'normal', trap: 'off' };
             currentMatchState.forms = forms; currentMatchState.venue = venue; currentMatchState.formBase = matchFormation; currentMatchState.formF = { h: formationFactor(homeLayout, matchFormation), a: formationFactor(awayLayout, enemyFormation) }; setupMiracle(currentMatchState);
 
             document.getElementById('match-mode-text').innerText = mode === 'onlineFriendly' ? '온라인 친선 경기' : mode === 'league' ? leagueMatchLabel(enemyData) : mode === 'saudi' ? '사우디 모드' : mode === 'rogue' ? prematchLabel('rogue', enemyData) : mode === 'europa' ? `유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}` : mode === 'worldcup' ? `월드컵 ${worldCupState.round}` : (careerState.round === 2 ? '결승전' : `${careerState.round}강 ${careerState.leg}차전`);
@@ -6442,7 +6448,7 @@
         function onlineSnapshot(st) {
             const side = (list) => list.map(p => ({ name: p.name, role: p.role, det: p.det, x: p.x, y: p.y, px: p.px ?? p.x, py: p.py ?? p.y, stam: p.stam ?? 100, isRedCarded: !!p.isRedCarded, cards: p.cards || 0, injured: !!p.injured }));
             const ballOwner = st.ball.ownerId ? allOf(st).find(p => p.id === st.ball.ownerId) : null;
-            return { time: st.time, scoreHome: st.scoreHome, scoreAway: st.scoreAway, htDone: !!st.htDone, paused: !!(st.isPaused || st.userPaused), ended: !!st.ended, home: side(st.homePlayers), away: side(st.awayPlayers), ball: { x: st.ball.x, y: st.ball.y, px: st.ball.px ?? st.ball.x, py: st.ball.py ?? st.ball.y, ownerSide: ballOwner ? (ballOwner.isHome ? 'home' : 'away') : null, ownerIndex: ballOwner ? (ballOwner.isHome ? st.homePlayers : st.awayPlayers).indexOf(ballOwner) : -1 }, stats: st.stats, tactic: st.tactic, awayStyle: st.awayStyle, half: st.secondHalfStarted ? 2 : 1 };
+            return { time: st.time, scoreHome: st.scoreHome, scoreAway: st.scoreAway, htDone: !!st.htDone, paused: !!(st.isPaused || st.userPaused), ended: !!st.ended, home: side(st.homePlayers), away: side(st.awayPlayers), ball: { x: st.ball.x, y: st.ball.y, px: st.ball.px ?? st.ball.x, py: st.ball.py ?? st.ball.y, ownerSide: ballOwner ? (ballOwner.isHome ? 'home' : 'away') : null, ownerIndex: ballOwner ? (ballOwner.isHome ? st.homePlayers : st.awayPlayers).indexOf(ballOwner) : -1 }, stats: st.stats, tactic: st.tactic, awayTactic: st.awayTactic, awayStyle: st.awayStyle, instr: st.instr, awayInstr: st.awayInstr, half: st.secondHalfStarted ? 2 : 1 };
         }
         function sendOnlineSnapshot(st) {
             if (!st?.online?.isHost || !window.yfmOnline) return;
@@ -6472,6 +6478,11 @@
         }
         // 30Hz compact position updates; render 200ms behind to absorb ordinary jitter.
         const ONLINE_INTERPOLATION_DELAY = 200;
+        function onlinePacketTime(st, serverAt, receivedAt) {
+            const t = Number(serverAt); if (!Number.isFinite(t) || t <= 0) return receivedAt;
+            if (!Number.isFinite(st.online.serverTimeOffset)) st.online.serverTimeOffset = receivedAt - t;
+            return t + st.online.serverTimeOffset;
+        }
         function applyOnlineSnapshotFrame(st, now) {
             const buffer = st?.online?.snapshotBuffer;
             if (!buffer?.length) return;
@@ -6509,29 +6520,30 @@
             st.ball.ownerId = list?.[Number(owner.ownerIndex)]?.id || null;
             st.ball.snap = false;
         }
-        window.applyOnlineMatchSnapshot = snap => {
+        window.applyOnlineMatchSnapshot = (snap, serverAt) => {
             const st = currentMatchState; if (!st?.online || st.online.isHost || !snap) return;
-            const receivedAt = performance.now();
+            const receivedAt = performance.now(), sampleAt = onlinePacketTime(st, serverAt, receivedAt);
             const buffer = st.online.snapshotBuffer || (st.online.snapshotBuffer = []);
-            buffer.push({ at: receivedAt, state: snap });
+            buffer.push({ at: sampleAt, state: snap });
             while (buffer.length > 12 || (buffer.length > 2 && receivedAt - buffer[0].at > 1500)) buffer.shift();
             onlineCopySide(st.homePlayers, snap.away, false); onlineCopySide(st.awayPlayers, snap.home, false);
             st.time = Number(snap.time) || 0; st.scoreHome = Number(snap.scoreAway) || 0; st.scoreAway = Number(snap.scoreHome) || 0;
             st.htDone = !!snap.htDone; st.isPaused = !!snap.paused; st.ended = !!snap.ended;
             if (snap.stats) st.stats = { ...snap.stats, homePos: snap.stats.awayPos || 0, awayPos: snap.stats.homePos || 0, homeShots: snap.stats.awayShots || 0, awayShots: snap.stats.homeShots || 0, homeXG: snap.stats.awayXG || 0, awayXG: snap.stats.homeXG || 0, home_corners: snap.stats.away_corners || 0, away_corners: snap.stats.home_corners || 0 };
-            st.tactic = snap.awayStyle || st.tactic; st.awayStyle = snap.tactic || st.awayStyle;
+            st.tactic = snap.awayTactic || st.tactic; st.awayTactic = snap.tactic || st.awayTactic; st.awayStyle = snap.instr?.atk || st.awayStyle;
+            if (snap.awayInstr) st.instr = { ...st.instr, ...snap.awayInstr }; if (snap.instr) st.awayInstr = { ...st.awayInstr, ...snap.instr };
             const scoreHomeEl = document.getElementById('match-score-home'), scoreAwayEl = document.getElementById('match-score-away');
             if (scoreHomeEl.textContent !== String(st.scoreHome)) scoreHomeEl.textContent = st.scoreHome;
             if (scoreAwayEl.textContent !== String(st.scoreAway)) scoreAwayEl.textContent = st.scoreAway;
             if (receivedAt - (st.online.lastSideUi || 0) >= 500) { st.online.lastSideUi = receivedAt; updateSide(st); }
             const halftime = document.getElementById('match-ht-overlay');
-            if (st.time >= 45 && st.htDone && !st.online.halfShown && snap.half === 1) { st.online.halfShown = true; document.getElementById('ht-title').textContent = '전반 종료'; document.getElementById('ht-sub').textContent = '방장이 후반 시작을 준비하고 있습니다.'; document.getElementById('ht-go').style.display = 'none'; document.getElementById('ht-score').textContent = `${st.scoreHome} : ${st.scoreAway}`; halftime.classList.replace('hidden', 'flex'); }
-            if (st.htDone && snap.half === 2) { st.online.halfShown = false; document.getElementById('ht-go').style.display = ''; halftime.classList.replace('flex', 'hidden'); }
+            if (st.time >= 45 && st.htDone && !st.online.halfShown && snap.half === 1) { st.online.halfShown = true; document.getElementById('ht-title').textContent = '전반 종료'; document.getElementById('ht-sub').textContent = '두 분 모두 준비 완료를 누르면 후반이 시작됩니다. 30초 후 자동 시작됩니다.'; const hb = document.getElementById('ht-go'); hb.style.display = ''; hb.textContent = '▶ 준비 완료'; hb.disabled = false; document.getElementById('ht-score').textContent = `${st.scoreHome} : ${st.scoreAway}`; halftime.classList.replace('hidden', 'flex'); }
+            if (st.htDone && snap.half === 2) { st.online.halfShown = false; const hb = document.getElementById('ht-go'); hb.style.display = ''; hb.disabled = false; hb.textContent = '▶ 후반 시작'; halftime.classList.replace('flex', 'hidden'); }
             if (snap.ended && !st.resultProcessed) finishMatch();
         };
-        window.applyOnlineMatchPositions = positions => {
+        window.applyOnlineMatchPositions = (positions, serverAt) => {
             const st = currentMatchState; if (!st?.online || st.online.isHost || !positions) return;
-            const receivedAt = performance.now(), buffer = st.online.snapshotBuffer || (st.online.snapshotBuffer = []);
+            const receivedAt = performance.now(), sampleAt = onlinePacketTime(st, serverAt, receivedAt), buffer = st.online.snapshotBuffer || (st.online.snapshotBuffer = []);
             const previous = buffer.length ? buffer[buffer.length - 1].state : {};
             const mergeSide = (base, latest) => (latest || []).map((point, i) => ({ ...(base?.[i] || {}), ...point }));
             const snapshot = {
@@ -6540,7 +6552,7 @@
                 away: mergeSide(previous.away, positions.away),
                 ball: { ...(previous.ball || {}), ...(positions.ball || {}) }
             };
-            buffer.push({ at: receivedAt, state: snapshot });
+            buffer.push({ at: sampleAt, state: snapshot });
             while (buffer.length > 12 || (buffer.length > 2 && receivedAt - buffer[0].at > 1500)) buffer.shift();
         };
         window.receiveOnlineGoal = message => {
@@ -6567,26 +6579,78 @@
                 comm(st, `⚽ ${data.how && HOW[data.how] ? HOW[data.how] + '! ' : '골! '}${data.scorer}${data.assist ? ' · 도움 ' + data.assist : ''} — ${st.scoreHome} : ${st.scoreAway}`, 'goal');
             }, ONLINE_INTERPOLATION_DELAY);
         };
+        let onlineBreakTimer = null;
+        function refreshOnlineBreakText() {
+            const st = currentMatchState; if (!st?.online) return;
+            if (st.online.pauseDeadline) {
+                const seconds = Math.max(0, Math.ceil((st.online.pauseDeadline - performance.now()) / 1000));
+                const ready = st.online.resumeUsers?.length || 0;
+                const el = document.getElementById('online-pause-status');
+                if (el) el.textContent = `전술 조정 중 · ${ready}/2명 재개 요청 · ${seconds}초 후 자동 재개`;
+            }
+            if (st.online.halfDeadline) {
+                const seconds = Math.max(0, Math.ceil((st.online.halfDeadline - performance.now()) / 1000));
+                const ready = st.online.halftimeReady?.length || 0;
+                const sub = document.getElementById('ht-sub');
+                if (sub && document.getElementById('match-ht-overlay').classList.contains('flex')) sub.textContent = `후반 준비 ${ready}/2명 · ${seconds}초 후 자동 시작`;
+            }
+        }
+        function ensureOnlineBreakTimer() {
+            if (!onlineBreakTimer) onlineBreakTimer = setInterval(refreshOnlineBreakText, 250);
+        }
         window.setOnlinePause = (paused, info = {}) => {
             const st = currentMatchState; if (!st?.online) return;
-            st.isPaused = !!paused; st.online.pausedBy = paused ? (info.pausedBy || info.userId || st.online.pausedBy) : null;
-            if (paused && Array.isArray(info.pauseUsers)) st.online.pauseUsers = info.pauseUsers.slice();
-            if (!paused) st.online.pauseUsers = [];
-            if (!paused && !st.userPaused && !st.ended) { st.last = performance.now(); st.acc = 0; }
+            if (paused) {
+                st.isPaused = true; st.online.pauseUsers = info.pauseUsers || st.online.pauseUsers || [];
+                st.online.resumeUsers = info.resumeUsers || st.online.resumeUsers || [];
+                if (info.remainingMs != null) st.online.pauseDeadline = performance.now() + Number(info.remainingMs);
+                ensureOnlineBreakTimer();
+                if (info.type === 'resume_ready' || info.resumeUsers) {
+                    const me = typeof accountUser !== 'undefined' ? accountUser?.id : null;
+                    if (me && st.online.resumeUsers.includes(me)) {
+                        const b = document.querySelector('#tactics-panel button[onclick="closeTactics()"]');
+                        if (b && document.getElementById('tactics-panel').classList.contains('flex')) b.textContent = '재개 요청 완료 · 대기 중';
+                    }
+                }
+                if (info.type !== 'resume_ready' && document.getElementById('tactics-panel').classList.contains('hidden')) openTactics(true);
+                refreshOnlineBreakText();
+            } else {
+                st.isPaused = false; st.userPaused = false; st.online.pauseDeadline = 0; st.online.resumeUsers = [];
+                document.getElementById('tactics-panel').classList.replace('flex', 'hidden');
+                const label = document.getElementById('online-pause-status'); if (label) label.textContent = '';
+                if (!st.ended) resumeMatchCrowd(); st.last = performance.now(); st.acc = 0;
+            }
         };
         window.rejectOnlinePause = () => {
             const st = currentMatchState; if (!st?.online) return;
             st.userPaused = false; document.getElementById('tactics-panel').classList.replace('flex', 'hidden');
             if (!st.isPaused && !st.ended) { st.last = performance.now(); st.acc = 0; }
         };
-        window.setOnlineHalf = half => {
-            const st = currentMatchState; if (!st?.online || Number(half) !== 2) return;
-            st.htDone = true; st.isPaused = false; st.online.halfShown = false;
-            document.getElementById('ht-go').style.display = ''; document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
+        window.setOnlineHalftime = message => {
+            const st = currentMatchState; if (!st?.online) return;
+            st.isPaused = true; st.htDone = true; st.online.halfShown = true;
+            st.online.halftimeReady = message.halftimeReady || st.online.halftimeReady || [];
+            if (message.remainingMs != null) st.online.halfDeadline = performance.now() + Number(message.remainingMs);
+            document.getElementById('ht-title').textContent = '전반 종료';
+            document.getElementById('ht-score').textContent = `${st.scoreHome} : ${st.scoreAway}`;
+            const button = document.getElementById('ht-go'); button.style.display = ''; button.disabled = false; button.textContent = '▶ 준비 완료';
+            const me = typeof accountUser !== 'undefined' ? accountUser?.id : null;
+            if (me && st.online.halftimeReady.includes(me)) { button.disabled = true; button.textContent = '준비 완료 · 상대 대기 중'; }
+            document.getElementById('match-ht-overlay').classList.replace('hidden', 'flex');
+            ensureOnlineBreakTimer(); refreshOnlineBreakText();
+        };
+        window.startOnlineSecondHalf = message => {
+            const st = currentMatchState; if (!st?.online) return;
+            st.online.halfDeadline = 0; st.online.halftimeReady = []; st.htDone = true;
+            document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
+            const button = document.getElementById('ht-go'); button.disabled = false; button.textContent = '▶ 후반 시작';
+            if (st.online.isHost) startSecondHalf(true);
+            else { st.isPaused = false; st.last = performance.now(); st.acc = 0; }
         };
         window.applyOnlineOpponentAction = message => {
             const st = currentMatchState; if (!st?.online || !st.online.isHost || !message?.data) return;
-            if (message.type === 'tactic' && TACTICS[message.data.tactic]) { st.awayStyle = message.data.tactic; st.fitC = null; }
+            if (message.type === 'tactic' && TACTICS[message.data.tactic]) { st.awayTactic = message.data.tactic; st.fitC = null; }
+            if (message.type === 'tactic' && message.data.instr && typeof message.data.instr === 'object') { const i = message.data.instr, next = { ...(st.awayInstr || {}) }; if (ATK[i.atk]) next.atk = i.atk; if (DEFI[i.def]) next.def = i.def; if (TEMPO[i.tempo]) next.tempo = i.tempo; if (WIDTH[i.width]) next.width = i.width; if (PASSLEN[i.pass]) next.pass = i.pass; if (TRAP[i.trap]) next.trap = i.trap; st.awayInstr = next; if (next.atk) st.awayStyle = next.atk; st.fitC = null; }
             if (message.type === 'tactic' && Array.isArray(message.data.positions)) { message.data.positions.forEach((q, i) => { const p = st.awayPlayers[i]; if (!p || !Number.isFinite(Number(q.x)) || !Number.isFinite(Number(q.y))) return; p.baseX = p.targetX = 100 - Number(q.x); p.baseY = p.targetY = 100 - Number(q.y); if (q.det) { p.det = q.det; p.role = grpOf(q.det); } }); st.formF.a = formationFactor(st.awayPlayers.filter(p => !p.isRedCarded).map(p => ({ pos: p.role, det: p.det })), st.enemy.formation || '4-3-3'); }
             if (message.type === 'sub') {
                 const i = Number(message.data.outIndex), incoming = message.data.incoming, p = st.awayPlayers[i];
@@ -6730,7 +6794,7 @@
                 if (Math.random() < pBreak) { if (Math.random() < 0.025 * (closestEnemy.name === '이주진' ? 3 : 1) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * psychFoulRisk(closestEnemy,st)) { commitFoul(st, closestEnemy, owner, allPlayers); return; } owner.dash = 6; closestEnemy.stun = 4; lastAssistId = null; if (tr(owner, 'trickster') && Math.random() < 0.25 && st.time - (st.nutSaid ?? -99) > 8) { st.nutSaid = st.time; comm(st, `🪄 ${owner.name}의 알까기! ${closestEnemy.name}를 가랑이 사이로 제칩니다`); } } // 뚫리면 전술적 파울 가능
                 else {
                     { const lx = (owner.x - closestEnemy.x) * 0.2, ly = (owner.y - closestEnemy.y) * 0.2, lm = Math.hypot(lx, ly) || 1, c = Math.min(1, 0.9 / lm); closestEnemy.x += lx * c; closestEnemy.y += ly * c; }
-                    const ta = (closestEnemy.isHome ? st.M.tackAtt : 0.25) + (tr(closestEnemy, 'tackler') ? 0.1 : tr(closestEnemy, 'hothead') ? 0.12 : 0), dv2 = (A(owner, 'dri') + A(owner, 'phy')) / 2 - A(closestEnemy, 'def');
+                    const ta = (closestEnemy.isHome ? st.M.tackAtt : (awayDef(st).tackAtt ?? 0.25)) + (tr(closestEnemy, 'tackler') ? 0.1 : tr(closestEnemy, 'hothead') ? 0.12 : 0), dv2 = (A(owner, 'dri') + A(owner, 'phy')) / 2 - A(closestEnemy, 'def');
                     if (Math.random() < ta) {
                         addStat(st, closestEnemy, 'tackle');
                         if (Math.random() < Math.min(closestEnemy.name === '이주진' ? 0.4 : 0.11, FOUL_BASE * Math.exp(dv2 / 70) * (closestEnemy.name === '이주진' ? 3 : 1)) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * (inBoxOf(owner.isHome, owner.x, owner.y) ? 4 : 1) * psychFoulRisk(closestEnemy,st) * (tr(closestEnemy, 'hothead') ? 1.8 : tr(closestEnemy, 'tackler') ? 0.8 : 1)) { commitFoul(st, closestEnemy, owner, allPlayers); return; }
@@ -7678,6 +7742,6 @@
         setInterval(dailyTick, 15000);
         document.addEventListener('visibilitychange', dailyTick);
     </script>
-    <script src="./cloudflare-worker/online-friendly-client.js?v=20260929-position33hz"></script>
+    <script src="./cloudflare-worker/online-friendly-client.js?v=20260929-pause15-half30-interp33"></script>
 </body>
 </html>
