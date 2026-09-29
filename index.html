@@ -13,6 +13,12 @@
         body { font-family: 'Noto Sans KR', sans-serif; margin: 0; padding: 0; overflow: hidden; background-color: #1a202c; color: white; user-select: none; }
         .screen { display: none; width: 100vw; height: 100vh; }
         .screen.active { display: flex; }
+        .social-chat-layout { display:grid; grid-template-columns:minmax(190px,.72fr) minmax(0,1.5fr); gap:12px; }
+        .social-chat-friend { width:100%; display:flex; align-items:center; gap:10px; padding:10px; text-align:left; color:white; background:#151020; border:1px solid #38294f; border-radius:10px; cursor:pointer; }
+        .social-chat-friend:hover,.social-chat-friend.active { background:#302044; border-color:#9b70d2; }
+        .social-chat-avatar { flex:none; width:38px; height:38px; display:grid; place-items:center; border-radius:50%; background:linear-gradient(135deg,#7c3aed,#31204d); font-weight:900; }
+        .social-chat-unread { flex:none; min-width:20px; height:20px; display:grid; place-items:center; padding:0 6px; border-radius:999px; background:#ef4444; color:white; font-size:11px; font-weight:900; }
+        @media(max-width:640px) { .social-chat-layout { grid-template-columns:minmax(0,1fr); } #social-chat-friends { display:flex !important; gap:8px; overflow-x:auto; padding-bottom:4px; } .social-chat-friend { width:160px; flex:none; } }
         #account-profile { display:none; flex:none; align-items:center; gap:8px; padding:10px 8px; border-top:1px solid #634c81; background:#140e25; }
         #account-profile-photo { width:36px; height:36px; border-radius:50%; object-fit:cover; background:#443060; cursor:pointer; border:2px solid #9b7ccc; }
         #account-profile-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:800; }
@@ -902,12 +908,21 @@
           </section>
         </div>
         <section style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:15px;margin-top:14px">
-          <h2 id="social-chat-title" style="font-weight:900;font-size:18px;margin-bottom:12px">친구를 선택하면 대화할 수 있어</h2>
-          <div id="social-chat-messages" style="height:300px;overflow-y:auto;background:#0d0a19;border-radius:10px;padding:12px">친구 목록에서 대화할 친구를 골라줘.</div>
-          <form id="social-chat-form" onsubmit="sendSocialMessage(event)" style="display:flex;gap:8px;margin-top:10px">
-            <input id="social-chat-input" maxlength="500" placeholder="메시지 입력 (최대 500자)" aria-label="메시지" disabled style="flex:1;min-width:0;background:#100c20;border:1px solid #69538c;border-radius:9px;color:white;padding:10px">
-            <button id="social-chat-send" type="submit" disabled style="background:#7c3aed;border-radius:9px;padding:10px 16px;font-weight:800">보내기</button>
-          </form>
+          <h2 style="font-weight:900;font-size:18px;margin-bottom:12px">💬 대화</h2>
+          <div class="social-chat-layout">
+            <aside style="min-width:0;background:#0d0a19;border:1px solid #342744;border-radius:10px;padding:10px">
+              <h3 style="font-size:12px;font-weight:900;color:#c4b5fd;margin:0 0 8px">친구 목록</h3>
+              <div id="social-chat-friends" style="display:grid;gap:7px;max-height:360px;overflow:auto"><p style="color:#9ca3af;font-size:12px">친구 목록을 불러오는 중...</p></div>
+            </aside>
+            <div style="min-width:0">
+              <h3 id="social-chat-title" style="font-weight:900;font-size:16px;margin:0 0 10px">친구 목록에서 대화할 친구를 선택해줘</h3>
+              <div id="social-chat-messages" style="height:300px;overflow-y:auto;background:#0d0a19;border-radius:10px;padding:12px">왼쪽 친구 목록에서 대화할 친구를 골라줘.</div>
+              <form id="social-chat-form" onsubmit="sendSocialMessage(event)" style="display:flex;gap:8px;margin-top:10px">
+                <input id="social-chat-input" maxlength="500" placeholder="메시지 입력 (최대 500자)" aria-label="메시지" disabled style="flex:1;min-width:0;background:#100c20;border:1px solid #69538c;border-radius:9px;color:white;padding:10px">
+                <button id="social-chat-send" type="submit" disabled style="background:#7c3aed;border-radius:9px;padding:10px 16px;font-weight:800">보내기</button>
+              </form>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -2891,25 +2906,38 @@
                     .or(`requester_id.eq.${me},addressee_id.eq.${me}`).order('created_at',{ascending:false});
                 if(error)throw error;
                 const ids=[...new Set((links||[]).map(x=>x.requester_id===me?x.addressee_id:x.requester_id))];
-                let profiles=[],rankings=[];
+                let profiles=[],rankings=[],unreadCounts=new Map();
                 if(ids.length){
-                    const [p,r]=await Promise.all([
+                    const [p,r,u]=await Promise.all([
                         socialClient().from('social_profiles').select('user_id,username,owner_name').in('user_id',ids),
-                        socialClient().from('owner_rankings_v2').select('user_id,published_club_name,published_ovr').in('user_id',ids)
+                        socialClient().from('owner_rankings_v2').select('user_id,published_club_name,published_ovr').in('user_id',ids),
+                        socialClient().from('social_messages').select('sender_id').eq('receiver_id',me).is('read_at',null)
                     ]);
-                    if(p.error)throw p.error;if(r.error)throw r.error;
+                    if(p.error)throw p.error;if(r.error)throw r.error;if(u.error)throw u.error;
                     profiles=p.data||[];rankings=r.data||[];
+                    (u.data||[]).forEach(message=>unreadCounts.set(message.sender_id,(unreadCounts.get(message.sender_id)||0)+1));
                 }
                 const profileById=new Map(profiles.map(p=>[p.user_id,p])),rankById=new Map(rankings.map(r=>[r.user_id,r]));
-                const list=document.getElementById('social-friends-list'),rankList=document.getElementById('social-friends-rank');
-                list.replaceChildren();rankList.replaceChildren();
+                const list=document.getElementById('social-friends-list'),rankList=document.getElementById('social-friends-rank'),chatList=document.getElementById('social-chat-friends');
+                list.replaceChildren();rankList.replaceChildren();chatList.replaceChildren();
                 socialFriends=(links||[]).filter(l=>l.status==='accepted').map(l=>l.requester_id===me?l.addressee_id:l.requester_id);
                 if(!links?.length)list.textContent='아직 친구나 요청이 없어.';
+                if(!socialFriends.length)chatList.textContent='친구가 생기면 여기에서 바로 대화를 시작할 수 있어.';
                 for(const link of links||[]){
                     const otherId=link.requester_id===me?link.addressee_id:link.requester_id;
                     const profile=profileById.get(otherId),name=profile?.owner_name||profile?.username||'구단주';
                     const display=`${name} · @${profile?.username||'알 수 없음'}`;
-                    if(link.status==='accepted')list.append(socialRow(display,'친구',[['대화',()=>openSocialChat(otherId,name)]]));
+                    if(link.status==='accepted'){
+                        list.append(socialRow(display,'친구'));
+                        const button=document.createElement('button');button.type='button';button.className='social-chat-friend'+(socialFriendId===otherId?' active':'');button.dataset.socialFriendId=otherId;
+                        const avatar=document.createElement('span');avatar.className='social-chat-avatar';avatar.textContent=Array.from(name)[0]||'친';
+                        const info=document.createElement('span');info.style.cssText='flex:1;min-width:0';
+                        const title=document.createElement('strong');title.style.cssText='display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px';title.textContent=name;
+                        const username=document.createElement('small');username.style.cssText='display:block;color:#aaa1bc;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';username.textContent='@'+(profile?.username||'친구');
+                        info.append(title,username);button.append(avatar,info);
+                        const unread=unreadCounts.get(otherId)||0;if(unread){const badge=document.createElement('span');badge.className='social-chat-unread';badge.textContent=unread>99?'99+':String(unread);badge.setAttribute('aria-label',`읽지 않은 메시지 ${unread}개`);button.append(badge);}
+                        button.addEventListener('click',()=>openSocialChat(otherId,name));chatList.append(button);
+                    }
                     else if(link.addressee_id===me)list.append(socialRow(display,'받은 친구 요청',[['수락',()=>answerSocialRequest(link.id,true)],['거절',()=>answerSocialRequest(link.id,false)]]));
                     else list.append(socialRow(display,'친구 수락 대기 중',[['취소',()=>answerSocialRequest(link.id,false)]]));
                 }
@@ -2919,8 +2947,8 @@
                 ranked.forEach((entry,i)=>rankList.append(socialRow(`${i+1}위 · ${entry.profile?.owner_name||entry.profile?.username||'구단주'}`,
                     `${entry.rank.published_club_name} · OVR ${entry.rank.published_ovr}`)));
                 if(socialFriendId && !socialFriends.includes(socialFriendId)){
-                    socialFriendId=null;document.getElementById('social-chat-title').textContent='친구를 선택하면 대화할 수 있어';
-                    document.getElementById('social-chat-messages').textContent='친구 목록에서 대화할 친구를 골라줘.';
+                    socialFriendId=null;document.getElementById('social-chat-title').textContent='친구 목록에서 대화할 친구를 선택해줘';
+                    document.getElementById('social-chat-messages').textContent='왼쪽 친구 목록에서 대화할 친구를 골라줘.';
                     document.getElementById('social-chat-input').disabled=true;document.getElementById('social-chat-send').disabled=true;
                 }
                 updateSocialNotifications();
@@ -2966,6 +2994,8 @@
         async function openSocialChat(id,name){
             if(!socialFriends.includes(id))return;
             socialFriendId=id;socialFriendName=name;
+            document.querySelectorAll('.social-chat-friend').forEach(button=>button.classList.toggle('active',button.dataset.socialFriendId===id));
+            document.querySelector(`.social-chat-friend[data-social-friend-id="${id}"] .social-chat-unread`)?.remove();
             document.getElementById('social-chat-title').textContent=`${name}님과 대화`;
             document.getElementById('social-chat-input').disabled=false;document.getElementById('social-chat-send').disabled=false;
             await markSocialMessagesRead(id);
@@ -2993,13 +3023,17 @@
                 const lastId=box.dataset.lastId,nearBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;
                 box.replaceChildren();
                 if(!data?.length)box.textContent='아직 메시지가 없어. 먼저 말을 걸어봐.';
+                const latestOutgoing=(data||[]).find(msg=>msg.sender_id===me)?.id;
                 (data||[]).reverse().forEach(msg=>{
                     const row=document.createElement('div');row.style.cssText=`display:flex;justify-content:${msg.sender_id===me?'flex-end':'flex-start'};margin:5px 0`;
                     const bubble=document.createElement('div');bubble.style.cssText=`max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere;background:${msg.sender_id===me?'#6d36b3':'#302447'};padding:8px 11px;border-radius:11px;font-size:13px`;
                     const message=document.createElement('div');message.textContent=msg.body;
-                    const time=document.createElement('small');time.style.cssText='display:block;margin-top:5px;color:#e2d5f5;font-size:10px;text-align:right';
+                    const meta=document.createElement('div');meta.style.cssText='display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-top:5px';
+                    const time=document.createElement('small');time.style.cssText='color:#e2d5f5;font-size:10px';
                     time.textContent=socialTimeFormat.format(new Date(msg.created_at));
-                    bubble.append(message,time);row.append(bubble);box.append(row);
+                    meta.append(time);
+                    if(msg.sender_id===me && msg.id===latestOutgoing && msg.read_at){const receipt=document.createElement('small');receipt.textContent='읽음';receipt.style.cssText='color:#ddd6fe;font-size:10px;font-weight:900';meta.append(receipt);}
+                    bubble.append(message,meta);row.append(bubble);box.append(row);
                 });
                 box.dataset.lastId=String(data?.[0]?.id||'');
                 if(nearBottom || lastId!==box.dataset.lastId)box.scrollTop=box.scrollHeight;
@@ -4775,15 +4809,24 @@
               if (m) { if (sp) { m.style.display = 'block'; m.style.left = sp.x + '%'; m.style.top = sp.y + '%'; m.textContent = sp.kind === 'off' || sp.kind === 'corner' ? '🚩' : sp.kind === 'pen' ? '🎯' : '⚠️'; } else m.style.display = 'none'; }
               if (ol) { if (sp && sp.kind === 'off' && sp.t < 4) { ol.style.display = 'block'; ol.style.left = sp.lineX + '%'; } else ol.style.display = 'none'; } }
             const k = 1 - Math.exp(-dt / 55);
+            const onlineMirror = st.online && !st.online.isHost;
+            const engine = onlineMirror ? document.getElementById('match-engine') : null;
+            const engineWidth = engine?.clientWidth || 1, engineHeight = engine?.clientHeight || 1;
             allOf(st).forEach(p => {
                 const el = matchElements[p.id]; if (!el) return;
                 if (p.isRedCarded) { el.style.display = 'none'; return; }
                 const tx = p.px + (p.x - p.px) * a, ty = p.py + (p.y - p.py) * a;
                 if (p.rx === undefined) { p.rx = tx; p.ry = ty; } else { p.rx += (tx - p.rx) * k; p.ry += (ty - p.ry) * k; }
-                el.style.left = p.rx + '%'; el.style.top = p.ry + '%';
-                el.classList.toggle('has-ball', st.ball.ownerId === p.id);
-                const condBar = el.querySelector('.orb-condition i');
-                if (condBar) { const v = p.stam ?? 100; condBar.style.width = v + '%'; condBar.style.background = stamColor(v); const label = el.querySelector('.orb-condition-value'); if (label) label.textContent = Math.round(v) + '%'; }
+                if (onlineMirror) {
+                    el.style.left = '0'; el.style.top = '0';
+                    el.style.transform = `translate3d(${engineWidth * p.rx / 100}px,${engineHeight * p.ry / 100}px,0)`;
+                } else { el.style.transform = ''; el.style.left = p.rx + '%'; el.style.top = p.ry + '%'; }
+                const hasBall = st.ball.ownerId === p.id;
+                if (el.classList.contains('has-ball') !== hasBall) el.classList.toggle('has-ball', hasBall);
+                if (!onlineMirror) {
+                    const condBar = el.querySelector('.orb-condition i');
+                    if (condBar) { const v = p.stam ?? 100; condBar.style.width = v + '%'; condBar.style.background = stamColor(v); const label = el.querySelector('.orb-condition-value'); if (label) label.textContent = Math.round(v) + '%'; }
+                }
             });
             const b = st.ball, own = b.ownerId && !b.fl ? allOf(st).find(p => p.id === b.ownerId) : null;
             let bx, by;
@@ -6405,37 +6448,130 @@
             if (!st?.online?.isHost || !window.yfmOnline) return;
             try { window.yfmOnline.sendHostState(onlineSnapshot(st)); } catch (_) {}
         }
-        function onlineCopySide(target, source) {
+        function onlinePositionSnapshot(st) {
+            const side = list => list.map(p => ({ x: p.x, y: p.y }));
+            const owner = st.ball.ownerId ? allOf(st).find(p => p.id === st.ball.ownerId) : null;
+            return { home: side(st.homePlayers), away: side(st.awayPlayers), ball: { x: st.ball.x, y: st.ball.y, ownerSide: owner ? (owner.isHome ? 'home' : 'away') : null, ownerIndex: owner ? (owner.isHome ? st.homePlayers : st.awayPlayers).indexOf(owner) : -1 } };
+        }
+        function sendOnlinePositions(st) {
+            if (!st?.online?.isHost || !window.yfmOnline) return;
+            try { window.yfmOnline.sendHostPositions(onlinePositionSnapshot(st)); } catch (_) {}
+        }
+        function onlineCopySide(target, source, copyPosition = true) {
             (source || []).forEach((s, i) => {
                 const p = target[i]; if (!p) return;
                 p.name = String(s.name || p.name); p.role = s.role || p.role; p.det = s.det || p.det;
-                p.x = 100 - Number(s.x ?? p.x); p.y = 100 - Number(s.y ?? p.y);
-                p.px = 100 - Number(s.px ?? s.x ?? p.x); p.py = 100 - Number(s.py ?? s.y ?? p.y);
+                if (copyPosition) {
+                    p.x = 100 - Number(s.x ?? p.x); p.y = 100 - Number(s.y ?? p.y);
+                    p.px = 100 - Number(s.px ?? s.x ?? p.x); p.py = 100 - Number(s.py ?? s.y ?? p.y);
+                }
                 p.stam = Number(s.stam ?? p.stam ?? 100); p.isRedCarded = !!s.isRedCarded; p.cards = Number(s.cards || 0); p.injured = !!s.injured;
-                p.rx = p.x; p.ry = p.y;
+                // Position is supplied by the delayed snapshot buffer in each render frame.
                 const el = matchElements[p.id]; if (el) { const name = el.querySelector('.md-name'), body = el.querySelector('.md-body'); if (name) name.textContent = p.name; if (body) body.textContent = p.det; el.style.display = p.isRedCarded ? 'none' : ''; }
             });
         }
+        // 30Hz compact position updates; render 200ms behind to absorb ordinary jitter.
+        const ONLINE_INTERPOLATION_DELAY = 200;
+        function applyOnlineSnapshotFrame(st, now) {
+            const buffer = st?.online?.snapshotBuffer;
+            if (!buffer?.length) return;
+            const playAt = now - ONLINE_INTERPOLATION_DELAY;
+            let before = buffer[0], after = buffer[buffer.length - 1];
+            if (playAt <= before.at) after = before;
+            else if (playAt < after.at) {
+                for (let i = 1; i < buffer.length; i++) {
+                    if (buffer[i].at >= playAt) { before = buffer[i - 1]; after = buffer[i]; break; }
+                }
+            } else before = after;
+            const span = after.at - before.at;
+            const t = span > 0 ? Math.max(0, Math.min(1, (playAt - before.at) / span)) : 1;
+            const a = before.state, b = after.state;
+            const applySide = (target, listA, listB) => {
+                target.forEach((p, i) => {
+                    const x0 = listA?.[i], x1 = listB?.[i] || x0; if (!x0) return;
+                    const lerp = (key, fallback = 50) => Number(x0[key] ?? fallback) + (Number(x1?.[key] ?? x0[key] ?? fallback) - Number(x0[key] ?? fallback)) * t;
+                    p.x = 100 - lerp('x', p.x); p.y = 100 - lerp('y', p.y);
+                    p.px = p.x; p.py = p.y; p.rx = p.x; p.ry = p.y;
+                    const meta = t < 0.5 ? x0 : x1;
+                    p.stam = Number(meta?.stam ?? p.stam ?? 100);
+                    p.isRedCarded = !!meta?.isRedCarded;
+                });
+            };
+            // The local player sees the host's two teams from the opposite side.
+            applySide(st.homePlayers, a.away, b.away);
+            applySide(st.awayPlayers, a.home, b.home);
+            const ball0 = a.ball || {}, ball1 = b.ball || ball0;
+            const ballValue = key => Number(ball0[key] ?? 50) + (Number(ball1[key] ?? ball0[key] ?? 50) - Number(ball0[key] ?? 50)) * t;
+            st.ball.x = st.ball.px = st.ball.rx = 100 - ballValue('x');
+            st.ball.y = st.ball.py = st.ball.ry = 100 - ballValue('y');
+            const owner = t < 0.5 ? ball0 : ball1;
+            const list = owner.ownerSide === 'home' ? st.awayPlayers : owner.ownerSide === 'away' ? st.homePlayers : null;
+            st.ball.ownerId = list?.[Number(owner.ownerIndex)]?.id || null;
+            st.ball.snap = false;
+        }
         window.applyOnlineMatchSnapshot = snap => {
             const st = currentMatchState; if (!st?.online || st.online.isHost || !snap) return;
-            onlineCopySide(st.homePlayers, snap.away); onlineCopySide(st.awayPlayers, snap.home);
+            const receivedAt = performance.now();
+            const buffer = st.online.snapshotBuffer || (st.online.snapshotBuffer = []);
+            buffer.push({ at: receivedAt, state: snap });
+            while (buffer.length > 12 || (buffer.length > 2 && receivedAt - buffer[0].at > 1500)) buffer.shift();
+            onlineCopySide(st.homePlayers, snap.away, false); onlineCopySide(st.awayPlayers, snap.home, false);
             st.time = Number(snap.time) || 0; st.scoreHome = Number(snap.scoreAway) || 0; st.scoreAway = Number(snap.scoreHome) || 0;
             st.htDone = !!snap.htDone; st.isPaused = !!snap.paused; st.ended = !!snap.ended;
             if (snap.stats) st.stats = { ...snap.stats, homePos: snap.stats.awayPos || 0, awayPos: snap.stats.homePos || 0, homeShots: snap.stats.awayShots || 0, awayShots: snap.stats.homeShots || 0, homeXG: snap.stats.awayXG || 0, awayXG: snap.stats.homeXG || 0, home_corners: snap.stats.away_corners || 0, away_corners: snap.stats.home_corners || 0 };
             st.tactic = snap.awayStyle || st.tactic; st.awayStyle = snap.tactic || st.awayStyle;
-            const b = snap.ball || {}; st.ball.x = 100 - Number(b.x ?? 50); st.ball.y = 100 - Number(b.y ?? 50); st.ball.px = 100 - Number(b.px ?? b.x ?? 50); st.ball.py = 100 - Number(b.py ?? b.y ?? 50); st.ball.rx = st.ball.x; st.ball.ry = st.ball.y; st.ball.snap = true;
-            const list = b.ownerSide === 'home' ? st.awayPlayers : b.ownerSide === 'away' ? st.homePlayers : null;
-            st.ball.ownerId = list?.[Number(b.ownerIndex)]?.id || null;
-            document.getElementById('match-score-home').textContent = st.scoreHome; document.getElementById('match-score-away').textContent = st.scoreAway;
-            render(st, 16, 1); updateClock(st, 0); updateSide(st);
+            const scoreHomeEl = document.getElementById('match-score-home'), scoreAwayEl = document.getElementById('match-score-away');
+            if (scoreHomeEl.textContent !== String(st.scoreHome)) scoreHomeEl.textContent = st.scoreHome;
+            if (scoreAwayEl.textContent !== String(st.scoreAway)) scoreAwayEl.textContent = st.scoreAway;
+            if (receivedAt - (st.online.lastSideUi || 0) >= 500) { st.online.lastSideUi = receivedAt; updateSide(st); }
             const halftime = document.getElementById('match-ht-overlay');
             if (st.time >= 45 && st.htDone && !st.online.halfShown && snap.half === 1) { st.online.halfShown = true; document.getElementById('ht-title').textContent = '전반 종료'; document.getElementById('ht-sub').textContent = '방장이 후반 시작을 준비하고 있습니다.'; document.getElementById('ht-go').style.display = 'none'; document.getElementById('ht-score').textContent = `${st.scoreHome} : ${st.scoreAway}`; halftime.classList.replace('hidden', 'flex'); }
             if (st.htDone && snap.half === 2) { st.online.halfShown = false; document.getElementById('ht-go').style.display = ''; halftime.classList.replace('flex', 'hidden'); }
             if (snap.ended && !st.resultProcessed) finishMatch();
         };
+        window.applyOnlineMatchPositions = positions => {
+            const st = currentMatchState; if (!st?.online || st.online.isHost || !positions) return;
+            const receivedAt = performance.now(), buffer = st.online.snapshotBuffer || (st.online.snapshotBuffer = []);
+            const previous = buffer.length ? buffer[buffer.length - 1].state : {};
+            const mergeSide = (base, latest) => (latest || []).map((point, i) => ({ ...(base?.[i] || {}), ...point }));
+            const snapshot = {
+                ...previous,
+                home: mergeSide(previous.home, positions.home),
+                away: mergeSide(previous.away, positions.away),
+                ball: { ...(previous.ball || {}), ...(positions.ball || {}) }
+            };
+            buffer.push({ at: receivedAt, state: snapshot });
+            while (buffer.length > 12 || (buffer.length > 2 && receivedAt - buffer[0].at > 1500)) buffer.shift();
+        };
+        window.receiveOnlineGoal = message => {
+            const st = currentMatchState, data = message?.data;
+            if (!st?.online || st.online.isHost || !data) return;
+            const token = (st.online.goalPresentationToken || 0) + 1;
+            st.online.goalPresentationToken = token;
+            setTimeout(() => {
+                if (currentMatchState !== st || st.online.goalPresentationToken !== token) return;
+                // The receiver sees the opposite end and score orientation from the host.
+                st.scoreHome = Number(data.scoreAway) || 0; st.scoreAway = Number(data.scoreHome) || 0;
+                document.getElementById('match-score-home').textContent = st.scoreHome;
+                document.getElementById('match-score-away').textContent = st.scoreAway;
+                const info = document.getElementById('match-goal-info');
+                info.innerHTML = `${data.how && HOW[data.how] ? '<span class="text-yellow-300">' + HOW[data.how] + '!</span><br>' : ''}⚽ ${leagueEsc(data.scorer || '선수')} (${Number(data.time) || 0}') <br> <span class="text-lg text-gray-400">${data.assist ? '도움: ' + leagueEsc(data.assist) : ''}</span>`;
+                const overlay = document.getElementById('match-goal-overlay');
+                overlay.style.display = 'flex';
+                SFX.goal();
+                netBulge(!data.isHome);
+                clearTimeout(st.online.goalOverlayTimer);
+                st.online.goalOverlayTimer = setTimeout(() => {
+                    if (currentMatchState === st && st.online.goalPresentationToken === token) overlay.style.display = 'none';
+                }, 2000);
+                comm(st, `⚽ ${data.how && HOW[data.how] ? HOW[data.how] + '! ' : '골! '}${data.scorer}${data.assist ? ' · 도움 ' + data.assist : ''} — ${st.scoreHome} : ${st.scoreAway}`, 'goal');
+            }, ONLINE_INTERPOLATION_DELAY);
+        };
         window.setOnlinePause = (paused, info = {}) => {
             const st = currentMatchState; if (!st?.online) return;
-            st.isPaused = !!paused; st.online.pausedBy = paused ? info.userId : null;
+            st.isPaused = !!paused; st.online.pausedBy = paused ? (info.pausedBy || info.userId || st.online.pausedBy) : null;
+            if (paused && Array.isArray(info.pauseUsers)) st.online.pauseUsers = info.pauseUsers.slice();
+            if (!paused) st.online.pauseUsers = [];
             if (!paused && !st.userPaused && !st.ended) { st.last = performance.now(); st.acc = 0; }
         };
         window.rejectOnlinePause = () => {
@@ -6479,7 +6615,16 @@
         function startMatchEngine() {
             const st = currentMatchState; st.isPaused = false; st.acc = 0; st.last = performance.now(); st.lastUi = 0; st.alpha = 1;
             if (st.online && !st.online.isHost) {
-                const mirror = now => { if (currentMatchState !== st || st.ended) return; render(st, 80, 1); updateClock(st, 0); if (now - st.lastUi > 500) { st.lastUi = now; updateSide(st); } requestAnimationFrame(mirror); };
+                let mirrorLast = performance.now(), mirrorClock = 0;
+                const mirror = now => {
+                    if (currentMatchState !== st || st.ended) return;
+                    const frameDt = Math.min(50, Math.max(0, now - mirrorLast)); mirrorLast = now;
+                    applyOnlineSnapshotFrame(st, now);
+                    render(st, frameDt, 1);
+                    if (now - mirrorClock >= 100) { mirrorClock = now; updateClock(st, 0); }
+                    if (now - (st.online.lastSideUi || 0) >= 500) { st.online.lastSideUi = now; updateSide(st); }
+                    requestAnimationFrame(mirror);
+                };
                 requestAnimationFrame(mirror); return;
             }
             const loop = now => {
@@ -6505,7 +6650,8 @@
                 }
                 render(st, dt, st.alpha); updateClock(st, st.isPaused || st.userPaused ? 0 : st.alpha);
                 if (now - st.lastUi > 400) { st.lastUi = now; updateSide(st); updateShoutBtn(st); renderBoostBadge(st); }
-                if (st.online?.isHost && now - (st.online.lastSnapshot || 0) > 300) { st.online.lastSnapshot = now; sendOnlineSnapshot(st); }
+                if (st.online?.isHost && now - (st.online.lastPositionPacket || 0) >= 33) { st.online.lastPositionPacket = now; sendOnlinePositions(st); }
+                if (st.online?.isHost && now - (st.online.lastSnapshot || 0) >= 100) { st.online.lastSnapshot = now; sendOnlineSnapshot(st); }
                 requestAnimationFrame(loop);
             };
             requestAnimationFrame(loop);
@@ -6776,6 +6922,9 @@
             st.goalLog ||= []; st.goalLog.push({home:isHome,time:Number(time)||0,homeBefore:st.scoreHome,awayBefore:st.scoreAway,scorer,how});
             if(isHome) { st.scoreHome++; document.getElementById('match-score-home').innerText = st.scoreHome; }
             else { st.scoreAway++; document.getElementById('match-score-away').innerText = st.scoreAway; }
+            if (st.online?.isHost && window.yfmOnline) {
+                try { window.yfmOnline.goal({ isHome, scorer, time, assist, how, scoreHome: st.scoreHome, scoreAway: st.scoreAway }); } catch (_) {}
+            }
             allOf(st).filter(p=>!p.isRedCarded).forEach(p=>{
                 const scored=p.isHome===isHome;
                 psychAdjust(p,scored?{morale:4,confidence:p.name===scorer?9:4,motivation:3,nervousness:-2}:{morale:-4,confidence:-3,nervousness:5,frustration:3});
@@ -7529,6 +7678,6 @@
         setInterval(dailyTick, 15000);
         document.addEventListener('visibilitychange', dailyTick);
     </script>
-    <script src="./cloudflare-worker/online-friendly-client.js?v=20260928-2"></script>
+    <script src="./cloudflare-worker/online-friendly-client.js?v=20260929-position33hz"></script>
 </body>
 </html>
