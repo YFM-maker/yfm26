@@ -176,6 +176,7 @@ export default {
     }
   },
 };
+
 export class MatchRoom extends DurableObject {
   constructor(ctx, env) { super(ctx, env); this.ctx = ctx; this.env = env; this.roomCache = undefined; }
   async load() {
@@ -234,7 +235,7 @@ export class MatchRoom extends DurableObject {
       delete room.tickets[ticket]; await this.save(room);
       const pair = new WebSocketPair(); const client = pair[0], server = pair[1];
       this.ctx.acceptWebSocket(server); server.serializeAttachment({ userId: grant.userId });
-      server.send(JSON.stringify({ type: 'hello', room: this.publicRoom(room), role: room.players[0].id === grant.userId ? 'home' : 'away' });
+      server.send(JSON.stringify({ type: 'hello', room: this.publicRoom(room), role: room.players[0].id === grant.userId ? 'home' : 'away' }));
       return new Response(null, { status: 101, webSocket: client });
     }
     return this.reply({ error: 'unknown route' }, 404);
@@ -281,6 +282,17 @@ export class MatchRoom extends DurableObject {
       await this.ctx.storage.put(key, now);
       return this.broadcast({ type: 'emoji', userId: member.userId, emoji: event.emoji, at: now });
     }
+    if (event.type === 'ready' && (room.phase === 'waiting' || room.phase === 'ready')) {
+      player.ready = !!event.ready;
+      if (event.team && JSON.stringify(event.team).length <= 12_000) player.team = event.team;
+      room.phase = room.players.length === 2 && room.players.every(p => p.ready) ? 'ready' : 'waiting';
+      await this.save(room);
+      return this.broadcast({ type: 'room_update', room: this.publicRoom(room), teams: room.players.map(p => ({ id: p.id, team: p.team || null })) });
+    }
+    if (event.type === 'start' && room.phase === 'ready' && player.id === room.players[0]?.id && room.players.length === 2 && room.players.every(p => p.ready && p.team)) {
+      room.phase = 'playing'; await this.save(room);
+      return this.broadcast({ type: 'match_start', room: this.publicRoom(room), teams: room.players.map(p => ({ id: p.id, team: p.team })) });
+    }
     if (event.type === 'pause') {
       if (room.phase !== 'playing') return;
       const now = Date.now();
@@ -288,7 +300,7 @@ export class MatchRoom extends DurableObject {
       let pause = room.pauseState;
       if (!pause || pause.deadlineAt <= now) {
         const used = Number(counts[member.userId] || 0);
-        if (used >= 3) return ws.send(JSON.stringify({ type: 'error', error: `이번 ${room.half === 1 ? '전반' : '후반'} 전술 정지 횟수를 다 썼어.` }));
+        if (used >= 3) return ws.send(JSON.stringify({ type: 'pause_limit', error: '전술/교체 수정 기회 3회를 모두 소진하셨습니다. (하프타임에 기회 초기화)' }));
         counts[member.userId] = used + 1;
         pause = room.pauseState = { startedAt: now, deadlineAt: now + 15_000, pauseUsers: [member.userId], resumeUsers: [] };
       } else {
@@ -296,7 +308,7 @@ export class MatchRoom extends DurableObject {
         pause.resumeUsers = pause.resumeUsers.filter(id => id !== member.userId);
       }
       await this.save(room); await this.ctx.storage.setAlarm(pause.deadlineAt);
-      return this.broadcast({ type: 'paused', pauseUsers: pause.pauseUsers, resumeUsers: pause.resumeUsers, deadlineAt: pause.deadlineAt, remainingMs: Math.max(0, pause.deadlineAt - now), half: room.half });
+      return this.broadcast({ type: 'paused', userId: member.userId, used: Number(counts[member.userId] || 0), pauseUsers: pause.pauseUsers, resumeUsers: pause.resumeUsers, deadlineAt: pause.deadlineAt, remainingMs: Math.max(0, pause.deadlineAt - now), half: room.half });
     }
     if (event.type === 'resume') {
       const pause = room.pauseState; if (!pause || room.phase !== 'playing') return;
