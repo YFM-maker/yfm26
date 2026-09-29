@@ -13,6 +13,7 @@
       this.roomCode = null;
       this.role = null;
       this.handlers = new Set();
+      this.pauseCounts = {};
     }
     async token() {
       if (typeof getOwnerRankClient !== 'function') throw new Error('게임 Supabase 클라이언트를 찾지 못했어.');
@@ -50,7 +51,11 @@
       ws.addEventListener('error', () => onStatus('error'));
       ws.addEventListener('message', event => {
         let data; try { data = JSON.parse(event.data); } catch { return; }
-        if (data.type === 'hello') this.role = data.role;
+        if (data.type === 'hello') { this.role = data.role; this.pauseCounts = data.room?.pauseCounts || {}; }
+        if (data.type === 'paused' && data.userId && Number.isFinite(Number(data.used))) {
+          const counts = this.pauseCounts[data.half] || (this.pauseCounts[data.half] = {});
+          counts[data.userId] = Number(data.used);
+        }
         onMessage(data); this.handlers.forEach(fn => fn(data));
       });
       return new Promise((resolve, reject) => {
@@ -60,6 +65,7 @@
       });
     }
     onMessage(fn) { this.handlers.add(fn); return () => this.handlers.delete(fn); }
+    remainingPauses(half, userId) { return Math.max(0, 3 - Number(this.pauseCounts[half]?.[userId] || 0)); }
     send(type, fields = {}) {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error('매치 서버와 연결되어 있지 않아.');
       this.ws.send(JSON.stringify({ type, ...fields }));
@@ -78,7 +84,7 @@
     sendHostPositions(positions) { this.send('positions', { positions }); }
     forfeit() { this.send('forfeit'); }
     async disconnect() {
-      const ws = this.ws; this.ws = null; this.roomCode = null; this.role = null;
+      const ws = this.ws; this.ws = null; this.roomCode = null; this.role = null; this.pauseCounts = {};
       if (ws && ws.readyState < WebSocket.CLOSING) ws.close(1000, '화면 종료');
     }
   }
@@ -113,9 +119,9 @@
     const fullAndReady = (data.players || []).length === 2 && (data.players || []).every(p => p.ready);
     const start = $('yfm-online-start');
     start.style.display = 'inline-block';
-    start.disabled = !(host && fullAndReady && data.phase !== 'playing');
-    start.textContent = data.phase === 'playing' ? '경기 진행 중' : host ? '친선전 시작' : '방장이 시작';
-    $('yfm-online-room-status').textContent = data.phase === 'playing'
+    start.disabled = !(host && fullAndReady && data.phase === 'ready');
+    start.textContent = ['playing', 'halftime'].includes(data.phase) ? '경기 진행 중' : host ? '친선전 시작' : '방장이 시작';
+    $('yfm-online-room-status').textContent = ['playing', 'halftime'].includes(data.phase)
       ? '경기가 이미 시작됐어.'
       : (data.players || []).length < 2 ? '상대가 방에 참가해야 해. 참가 후 두 명 모두 준비 버튼을 눌러줘.' : !host ? '두 명이 준비하면 방장이 경기 시작 버튼을 누를 거야.' : (fullAndReady ? '두 명 다 준비 완료야. 아래 친선전 시작 버튼을 눌러줘.' : '양쪽 모두 준비 버튼을 눌러야 시작할 수 있어.');
   }
@@ -135,6 +141,8 @@
       if (typeof window.setOnlinePause === 'function') window.setOnlinePause(true, message);
     } else if (message.type === 'resumed') {
       if (typeof window.setOnlinePause === 'function') window.setOnlinePause(false, message);
+    } else if (message.type === 'pause_limit') {
+      if (typeof window.showOnlineTacticsLimit === 'function') window.showOnlineTacticsLimit();
     } else if (message.type === 'halftime' || message.type === 'halftime_ready') {
       if (typeof window.setOnlineHalftime === 'function') window.setOnlineHalftime(message);
     } else if (message.type === 'half_started') {
@@ -149,7 +157,8 @@
       if (typeof window.applyOnlineForfeit === 'function') window.applyOnlineForfeit(message);
     } else if (message.type === 'emoji') {
       const feed = $('yfm-online-emoji-feed'); if (feed) { feed.textContent = `${message.emoji} 상대가 감정표현을 보냈어`; setTimeout(() => { if (feed.textContent.startsWith(message.emoji)) feed.textContent = ''; }, 3000); }
-      if (typeof window.showOnlineEmoji === 'function') window.showOnlineEmoji(message.emoji);
+      const localId = myId || (typeof accountUser !== 'undefined' ? accountUser?.id : null);
+      if (typeof window.showOnlineEmoji === 'function') window.showOnlineEmoji(message.emoji, message.userId === localId ? 'mine' : 'opponent');
     } else if (message.type === 'player_disconnected') status('상대 연결이 끊어졌어. 상대가 다시 접속할 때까지 기다려줘.', true);
     else if (message.type === 'error') { status(message.error || '매치 서버 오류', true); if (typeof window.rejectOnlinePause === 'function') window.rejectOnlinePause(message); }
   }
