@@ -212,6 +212,49 @@
         .gal-cmts { padding:4px 8px 8px 14px; font-size:12px; color:#cbd5e1; display:flex; flex-direction:column; gap:3px; border-left:2px solid #334155; margin:0 0 6px 6px; }
         .gal-cmts span { color:#64748b; margin-right:8px; font-size:11px; }
         .gal-foot { font-size:10.5px; color:#475569; text-align:right; padding-top:4px; }
+        /* ===== beta47: 득점 기록표 · 경기 흐름 · 커뮤니티 탭 · 해외 반응 ===== */
+        .gs-box { background:#0f172a; border:1px solid #334155; border-radius:14px; padding:10px 12px; }
+        .gs-cols { display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:start; }
+        .gs-mid { display:flex; flex-direction:column; align-items:center; font-size:16px; color:#64748b; padding-top:2px; } .gs-mid small { font-size:10px; font-weight:800; white-space:nowrap; }
+        .gs-col { display:flex; flex-direction:column; gap:4px; min-width:0; } .gs-col.a { align-items:flex-end; text-align:right; }
+        .gs-row { display:flex; flex-wrap:wrap; align-items:baseline; gap:5px; font-size:13.5px; line-height:1.3; max-width:100%; }
+        .gs-col.a .gs-row { flex-direction:row-reverse; justify-content:flex-start; }
+        .gs-row small { flex-basis:100%; font-size:10.5px; color:#94a3b8; } .gs-col.a .gs-row small { text-align:right; }
+        .gs-min { color:#fbbf24; font-weight:900; font-variant-numeric:tabular-nums; } .gs-n { font-weight:800; color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; }
+        .gs-n em { font-style:normal; color:#94a3b8; font-weight:700; font-size:11px; } .gs-n em.gs-th { color:#fbbf24; }
+        .gs-ic { font-size:12px; } .gs-row.no { opacity:.55; } .gs-row.no .gs-n { text-decoration:line-through; } .gs-row.no small { color:#fca5a5; }
+        .gs-row.red .gs-min { color:#f87171; } .gs-row.late .gs-n { color:#fde68a; }
+        .gs-none { font-size:12px; color:#475569; }
+        .gs-tl { position:relative; height:22px; margin:10px 4px 2px; border-top:2px solid #334155; }
+        .gs-tl > span { position:absolute; top:-6px; width:1px; height:10px; background:#64748b; }
+        .gs-tl i { position:absolute; font-style:normal; font-size:11px; transform:translateX(-50%); line-height:1; }
+        .gs-tl i.h { top:-15px; } .gs-tl i.a { top:3px; }
+        .gs-pens { text-align:center; font-size:12.5px; color:#cbd5e1; margin-top:6px; } .gs-pens b { color:#fff; } .gs-pens span { color:#94a3b8; letter-spacing:.08em; margin-left:6px; }
+        .gs-box.compact { padding:8px 10px; } .gs-box.compact .gs-row { font-size:12.5px; }
+        .mom-wrap { margin-top:10px; } .mom-h { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:900; color:#cbd5e1; margin-bottom:3px; }
+        .mom-h small { font-weight:700; color:#94a3b8; font-size:10.5px; display:flex; align-items:center; gap:4px; } .mom-h i { display:inline-block; width:9px; height:9px; border-radius:2px; margin-left:6px; } .mom-h i.h { background:#3b82f6; } .mom-h i.a { background:#ef4444; }
+        .mom-svg { width:100%; display:block; background:#0b1220; border-radius:8px; }
+        .mom-x { display:flex; justify-content:space-between; font-size:10px; color:#64748b; margin-top:2px; }
+        .gs-box.compact .mom-wrap { margin-top:6px; }
+        .gal-tabs { display:flex; gap:4px; margin:6px 0 2px; flex-wrap:wrap; }
+        .gal-tab { background:#1e293b; border:1px solid #334155; color:#cbd5e1; font-size:12px; font-weight:800; padding:4px 10px; border-radius:999px; cursor:pointer; max-width:46vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .gal-tab.on { background:#3b4890; border-color:#6366f1; color:#fff; } .gal-tab[data-k=err] { border-color:#ef4444; color:#fca5a5; } .gal-tab[data-k=err].on { background:#7f1d1d; color:#fff; }
+        .gal-pane.hidden { display:none; }
+        .intl-note { font-size:10.5px; color:#64748b; padding:4px 2px; }
+        .intl-row { border-bottom:1px solid #1e293b; } .intl-row summary { list-style:none; cursor:pointer; display:flex; align-items:flex-start; gap:8px; padding:7px 2px; flex-wrap:wrap; }
+        .intl-row summary::-webkit-details-marker { display:none; } .intl-row summary:hover { background:#111b30; }
+        .intl-flag { font-size:18px; line-height:1.1; } .intl-body { flex:1; min-width:180px; display:flex; flex-direction:column; gap:1px; }
+        .intl-ko { font-size:13px; color:#e2e8f0; } .intl-row.best .intl-ko { font-weight:800; color:#fff; }
+        .intl-o { font-size:11px; color:#64748b; font-style:italic; }
+        .intl-meta { display:flex; flex-direction:column; align-items:flex-end; font-size:10.5px; color:#64748b; gap:1px; } .intl-meta span:last-child { color:#fb923c; font-weight:800; }
+        .intl-re { padding:2px 8px 8px 30px; font-size:12px; display:flex; flex-direction:column; gap:4px; border-left:2px solid #334155; margin:0 0 6px 10px; }
+        .intl-re i { display:block; color:#64748b; font-size:11px; } .intl-re span { color:#cbd5e1; }
+        #btn-speed.slow { color:#7dd3fc; }
+        @media (max-width:640px) { .gs-row { font-size:12.5px; } .gs-mid small { display:none; } .intl-meta { flex-direction:row; gap:8px; width:100%; justify-content:flex-end; } }
+        .mom-plot { position:relative; } .mom-plot > i { position:absolute; font-style:normal; font-size:10px; line-height:1; transform:translate(-50%, 0); pointer-events:auto; cursor:default; filter:drop-shadow(0 1px 1px #000); }
+        .mom-plot > i.h { top:-4px; } .mom-plot > i.a { bottom:-4px; }
+        .mom-plot > b.mom-ht { position:absolute; top:2px; margin-left:3px; font-size:9px; font-weight:800; color:#94a3b8; }
+        @media (max-width:640px) { .end-main { flex-direction:column; padding:14px !important; } .end-main > div { width:100% !important; border:none !important; padding:0 !important; } .end-main #end-home-ratings, .end-main #end-away-ratings { height:auto; max-height:40vh; } }
         .fan-box { background:#0f172a; border:1px solid #334155; border-radius:14px; padding:10px 12px; }
         .fan-head { font-weight:900; color:#e2e8f0; margin-bottom:6px; } .fan-head small { color:#64748b; font-weight:600; margin-left:6px; font-size:11px; }
         .fan-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid #1e293b; font-size:13px; } .fan-nick { flex:none; width:118px; color:#93c5fd; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1126,7 +1169,7 @@
         </div>
         <div id="match-ht-overlay" class="absolute inset-0 z-[55] hidden flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-6 overflow-y-auto">
             <div id="ht-title" class="text-lg font-bold text-sky-300 mb-1">전반 종료</div><div id="ht-sub" class="text-sm text-gray-300 mb-2"></div>
-            <div id="ht-score" class="text-6xl font-black mb-6">0 : 0</div>
+            <div id="ht-score" class="text-6xl font-black mb-3">0 : 0</div><div id="ht-goals" class="w-full max-w-md mb-3"></div>
             <div id="ht-stats" class="w-full max-w-md mb-4 bg-gray-900/80 rounded-xl p-4 border border-gray-700 max-h-[42vh] overflow-y-auto custom-scrollbar"></div>
             <div id="ht-coach" class="w-full max-w-md mb-3"></div><div id="ht-moment" class="w-full max-w-xl mb-4"></div><div id="ht-talk" class="w-full max-w-md mb-5 text-center"></div>
             <div class="flex gap-3"><button onclick="openTactics()" class="mt-btn text-lg px-6 py-3">⚙️ 전술 / 교체</button><button id="ht-go" onclick="resumeFromBreak()" class="mt-btn primary text-lg px-8 py-3">▶ 후반 시작</button></div>
@@ -1157,12 +1200,13 @@
         <div id="match-end-overlay" class="absolute inset-0 bg-black/95 z-[60] hidden flex-col items-center justify-start overflow-y-auto p-8">
             <h1 class="text-5xl font-black text-white mb-2" id="match-end-title">경기 종료</h1>
             <h2 class="text-4xl font-bold text-gray-400 mb-4" id="match-end-score">2 : 1</h2>
-            <div id="match-end-teams" class="flex w-full max-w-6xl items-center justify-between gap-3 px-3 mb-5">
+            <div id="match-end-teams" class="flex w-full max-w-6xl items-center justify-between gap-3 px-3 mb-3">
                 <div class="flex min-w-0 flex-1 items-center gap-3"><div id="end-home-logo" class="flex h-14 w-14 flex-none items-center justify-center"></div><strong id="end-home-name" class="truncate text-lg sm:text-2xl font-black text-blue-200"></strong></div>
                 <span class="flex-none text-base sm:text-xl font-black text-gray-500">VS</span>
                 <div class="flex min-w-0 flex-1 items-center justify-end gap-3 text-right"><strong id="end-away-name" class="truncate text-lg sm:text-2xl font-black text-red-200"></strong><div id="end-away-logo" class="flex h-14 w-14 flex-none items-center justify-center"></div></div>
             </div>
-            <div class="flex w-full max-w-6xl bg-gray-900 rounded-2xl border border-gray-700 p-6 mb-6 gap-6 shadow-2xl">
+            <div id="end-goals" class="w-full max-w-6xl mb-4"></div>
+            <div class="end-main flex w-full max-w-6xl bg-gray-900 rounded-2xl border border-gray-700 p-6 mb-6 gap-6 shadow-2xl">
                 <!-- Home Ratings -->
                 <div class="w-1/3 border-r border-gray-700 pr-4">
                     <h3 class="text-xl font-bold text-blue-400 mb-4 text-center">내 팀 평점</h3>
@@ -4269,6 +4313,7 @@
             { let best = null; [[st.homePlayers.concat(st.homeOut), st.ratings, true], [st.awayPlayers, st.ratingsAway, false]].forEach(([L, R, h]) => L.forEach(p => { const r = parseFloat((R || {})[p.id]); if (r && (!best || r > best.r)) best = { p, r, h }; }));
               document.getElementById('end-potm').innerHTML = best ? `<div class="bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/60 rounded-xl px-4 py-3 mb-3 flex items-center gap-3"><span class="text-3xl">⭐</span><div><div class="text-xs text-yellow-300 font-bold">오늘의 선수</div><div class="text-lg font-black">${best.p.name} <span class="text-sm ${best.h ? 'text-blue-400' : 'text-red-400'}">${best.h ? teamName : st.enemy.name}</span></div></div><span class="ml-auto text-3xl font-black text-yellow-400">${best.r.toFixed(1)}</span></div>` : ''; }
             try { renderFanReactions(st); } catch (e) { console.error(e); }
+            try { renderGoalSheet(st); } catch (e) { console.error(e); }
             try { buildMatchSocial(st); renderMomVote(st); } catch (e) { console.error(e); }
             try { if (!sandboxMode(st.mode) && !st.forfeit) postMatchMilestones(st, msBefore); } catch (e) { console.error(e); }
             localStorage.setItem('fm_stats', JSON.stringify(S)); saveData();
@@ -4610,7 +4655,7 @@
         function allOf(st) { return [...st.homePlayers, ...st.awayPlayers]; }
 
         function comm(st, text, type) {
-            st.log = st.log || []; st.log.unshift({ m: Math.min(st.maxTime || (90 + (st.added || 0)), Math.floor(st.time)), text, type: type || '' });
+            st.log = st.log || []; st.log.unshift({ m: Math.min((st.maxTime || (90 + (st.added || 0))) + 4, Math.floor(shownT(st, st.time))), text, type: type || '' });
             if (st.log.length > 40) st.log.pop();
             const el = document.getElementById('match-comm');
             if (el) el.innerHTML = st.log.map((e, i) => `<div class="comm-line ${e.type} ${i === 0 ? 'new' : ''}"><span class="cm">${e.m}'</span><span>${e.text}</span></div>`).join('');
@@ -4690,7 +4735,7 @@
             document.getElementById('ht-go').innerText = kind === 'et' ? '▶ 연장 시작' : '▶ 연장 후반';
             comm(st, kind === 'et' ? '⏱ 정규시간 종료! 연장전에 들어갑니다' : '⏸ 연장 전반 종료', 'info');
             document.getElementById('ht-score').innerText = `${st.scoreHome} : ${st.scoreAway}`;
-            document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st); renderClMoment(st); renderCoach(st); { const ab = document.getElementById('match-added'); if (ab) ab.classList.add('hidden'); }
+            document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st); renderClMoment(st); renderCoach(st); try { renderGoalSheet(st, 'ht-goals', true); } catch (e) { console.error(e); } { const ab = document.getElementById('match-added'); if (ab) ab.classList.add('hidden'); }
             document.getElementById('match-ht-overlay').classList.replace('hidden', 'flex');
         }
         function resumeFromBreak() {
@@ -4698,7 +4743,7 @@
             if (!st.breakKind) return startSecondHalf();
             const kind = st.breakKind; st.breakKind = null;
             document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
-            if (kind === 'et') { st.maxTime = 120; st.time = 90; st.subsLeft += 1; updateShoutBtn(st); }
+            if (kind === 'et') { st.maxTime = 120; st.time = 90; resetExt(st); st.subsLeft += 1; updateShoutBtn(st); }
             allOf(st).forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; p.stam = Math.min(100, (p.stam ?? 100) + (kind === 'et' ? 6 : 3)); });
             kickoff(st, kind === 'et'); snapAll(st); playMatchSound('start'); resumeMatchCrowd(); comm(st, kind === 'et' ? '▶ 연장 전반 시작 (교체 1명 추가)' : '▶ 연장 후반 시작', 'info');
             st.isPaused = false; st.last = performance.now(); st.acc = 0;
@@ -4789,11 +4834,11 @@
             maybeStartTutorial();
         }
         function pickSub(id) { openTactics(); tacSel = id; renderTactics(); }
-        function toggleSpeed() { matchSpeed = matchSpeed === 1 ? 2 : 1; document.getElementById('btn-speed').innerText = `배속 x${matchSpeed}`; }
+        function toggleSpeed() { matchSpeed = matchSpeed === 1 ? 2 : matchSpeed === 2 ? 0.5 : 1; const b = document.getElementById('btn-speed'); b.innerText = `배속 x${matchSpeed}`; b.classList.toggle('slow', matchSpeed < 1); b.title = '배속: x1 → x2 → x0.5 순서로 바뀝니다'; }
         function updateClock(st, a) {
-            const tt = Math.min((st.maxTime || (st.htDone ? 90 + (st.added || 0) : 45 + (st.added1 || 0))) + 2, st.time + (a || 0) * MIN_PER_TICK), sec = Math.floor(tt * 60);
+            const tt = Math.min((st.maxTime || (st.htDone ? 90 + (st.added || 0) : 45 + (st.added1 || 0))) + 4.5, shownT(st, st.time + (a || 0) * MIN_PER_TICK)), sec = Math.floor(tt * 60);
             document.getElementById('match-time').innerText = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-            document.getElementById('match-half').innerText = st.ended ? '경기 종료' : st.pens ? '승부차기' : st.etHT ? '연장 후반' : st.maxTime ? '연장 전반' : st.htDone ? (!st.secondHalfStarted && st.isPaused && !st.online ? '하프타임' : st.added && st.time >= 90 ? `후반 +${st.added}'` : '후반') : (st.added1 && st.time >= 45 ? `전반 +${st.added1}'` : '전반');
+            document.getElementById('match-half').innerText = st.ended ? '경기 종료' : st.pens ? '승부차기' : st.etHT ? '연장 후반' : st.maxTime ? '연장 전반' : st.htDone ? (!st.secondHalfStarted && st.isPaused && !st.online ? '하프타임' : st.added && st.time >= 90 ? `후반 +${st.added + (st.extShown || 0)}'` : '후반') : (st.added1 && st.time >= 45 ? `전반 +${st.added1 + (st.extShown || 0)}'` : '전반');
         }
 
         function saveSnap(st) { allOf(st).forEach(p => { p.px = p.x; p.py = p.y; }); st.ball.px = st.ball.x; st.ball.py = st.ball.y; }
@@ -4920,11 +4965,14 @@
         }
         function commitFoul(st, fouler, victim, all) {
             const dir = victim.isHome ? 1 : -1, gx = victim.isHome ? 97 : 3, inBox = inBoxOf(victim.isHome, victim.x, victim.y);
-            if (inBox && !st.forcePen && Math.random() < 0.25) { addStat(st, fouler, 'tackleWon'); st.ball.ownerId = fouler.id; st.lastPoss = fouler.isHome; if (canVar(st) && Math.random() < 0.22) { comm(st, `🙋 ${victim.name}, 박스 안에서 넘어진 뒤 손을 들어 PK를 외칩니다`, 'warn'); varIncident(st, { kind: 'nopen', fouler, victim }); } return; } // 박스 안은 명백한 접촉만 PK
+            if (inBox && !st.forcePen && Math.random() < 0.25) { addStat(st, fouler, 'tackleWon'); st.ball.ownerId = fouler.id; st.lastPoss = fouler.isHome; if (!st.online && st.mode !== 'onlineFriendly' && !st.varOn && Math.random() < 0.22 * refV(st)) { comm(st, `🙋 ${victim.name}, 박스 안에서 넘어진 뒤 손을 들어 PK를 외칩니다`, 'warn'); const E = refErr(st), o = { kind: 'nopen', fouler, victim, on: false, final: E.wrong && E.fix };
+                if ((E.wrong && E.fix) || (!E.wrong && canVar(st) && Math.random() < 0.55)) varIncident(st, o);
+                else if (E.wrong) { keepRefErr(st, { kind: 'pen-no', hurtHome: victim.isHome, who: victim.name, reason: 'PK 미선언', txt: `${fouler.name}가 ${victim.name}의 발목을 먼저 걷어찼습니다 — 명백한 PK인데 그냥 진행` }); setTimeout(() => { if (currentMatchState === st && !st.ended) protest(st, victim.isHome, 'PK'); }, 0); }
+                else comm(st, '🧑‍⚖️ 주심은 손을 저으며 경기를 진행시킵니다 — 정당한 태클', 'info'); } return; } // 박스 안은 명백한 접촉만 PK
             addStat(st, fouler, 'foul'); lastAssistId = null;
             // 명백한 득점 기회 저지(DOGSO): 파울한 선수 말고는 골문 쪽에 수비가 없음
             const cover = all.filter(e => e.isHome === fouler.isHome && e.role !== 'GK' && e !== fouler && !e.isRedCarded && (e.x - victim.x) * dir > 0 && Math.abs(e.y - victim.y) < 20);
-            const dogso = cover.length === 0 && Math.abs(gx - victim.x) < 30;
+            const dogso = cover.length === 0 && Math.abs(gx - victim.x) < 30; st.lastDogso = dogso && !inBox;
             const r = Math.random() / ((st.ref && st.ref.s) || 1); let card = null;
             if (dogso && !inBox) card = r < 0.4 ? 'red' : 'yellow';
             else card = fouler.name === '이주진' ? (r < 0.025 ? 'red' : r < 0.48 ? 'yellow' : null) : (tr(fouler, 'hothead') ? (r < 0.02 ? 'red' : r < 0.32 ? 'yellow' : null) : (r < 0.008 ? 'red' : r < 0.2 ? 'yellow' : null));
@@ -5230,7 +5278,15 @@
         }
 
         function launchShot(st, sh, res, gk, assist, how) {
-            if (res === 'block' && !st.noHand && canVar(st) && Math.random() < 0.09) { const bl0 = allOf(st).filter(p => p.isHome !== sh.isHome && p.role !== 'GK' && !p.isRedCarded).reduce((b, p) => !b || getDistance(p, sh) < getDistance(b, sh) ? p : b, null); if (bl0 && inBoxOf(sh.isHome, bl0.x, bl0.y)) { comm(st, `✋ ${sh.name}의 슈팅이 ${bl0.name}의 팔에 맞은 것 같습니다! 선수들이 핸드볼을 외칩니다`, 'warn'); varIncident(st, { kind: 'hand', fouler: bl0, victim: sh, gk }); return; } }
+            if (res === 'block' && !st.noHand && !st.online && st.mode !== 'onlineFriendly' && !st.varOn && !st.ended && Math.random() < 0.09 * refV(st)) { const bl0 = allOf(st).filter(p => p.isHome !== sh.isHome && p.role !== 'GK' && !p.isRedCarded).reduce((b, p) => !b || getDistance(p, sh) < getDistance(b, sh) ? p : b, null);
+                if (bl0 && inBoxOf(sh.isHome, bl0.x, bl0.y)) {
+                    const truth = Math.random() < 0.4, E = refErr(st), on = E.wrong ? !truth : truth, o = { kind: 'hand', fouler: bl0, victim: sh, gk, on, final: E.wrong && !E.fix ? on : truth };
+                    comm(st, `✋ ${sh.name}의 슈팅이 ${bl0.name}의 팔에 맞은 것 같습니다! 선수들이 핸드볼을 외칩니다`, 'warn');
+                    comm(st, on ? '🧑‍⚖️ 주심이 페널티 스팟을 가리킵니다 — 핸드볼!' : '🧑‍⚖️ 주심은 고개를 저으며 경기를 진행시킵니다', on ? 'card' : 'info');
+                    if ((E.wrong && E.fix) || (!E.wrong && canVar(st) && Math.random() < 0.6 * refV(st))) { varIncident(st, o); return; }
+                    if (E.wrong) keepRefErr(st, on ? { kind: 'hand-yes', hurtHome: bl0.isHome, who: bl0.name, reason: '핸드볼 PK 오심', txt: `공은 ${bl0.name}의 어깨에 맞았습니다 — 핸드볼이 아닌데 PK` } : { kind: 'hand-no', hurtHome: sh.isHome, who: bl0.name, reason: '핸드볼 미선언', txt: `${bl0.name}의 팔이 완전히 벌어져 있었습니다 — 명백한 핸드볼인데 그냥 진행` });
+                    varApply(st, o, on); return;
+                } }
             if (res === 'save' && gk) addStat(st, gk, 'saves');
             const foes = allOf(st).filter(p => p.isHome !== sh.isHome && p.role !== 'GK' && !p.isRedCarded);
             const bl = res === 'block' ? foes.reduce((b, p) => !b || getDistance(p, sh) < getDistance(b, sh) ? p : b, null) : null;
@@ -5777,7 +5833,7 @@
             const st = currentMatchState; st.isPaused = true; st.breakKind = null; playMatchSound('end'); pauseMatchCrowd(); comm(st, '⏸ 전반 종료', 'info');
             document.getElementById('ht-title').innerText = '전반 종료'; document.getElementById('ht-sub').innerText = ''; document.getElementById('ht-go').innerText = '▶ 후반 시작';
             document.getElementById('ht-score').innerText = `${st.scoreHome} : ${st.scoreAway}`;
-            document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st); renderClMoment(st); renderCoach(st); { const ab = document.getElementById('match-added'); if (ab) ab.classList.add('hidden'); }
+            document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st); renderClMoment(st); renderCoach(st); try { renderGoalSheet(st, 'ht-goals', true); } catch (e) { console.error(e); } { const ab = document.getElementById('match-added'); if (ab) ab.classList.add('hidden'); }
             document.getElementById('match-ht-overlay').classList.replace('hidden', 'flex');
         }
         function startSecondHalf() {
@@ -6556,8 +6612,8 @@
                     st.acc += dt;
                     while (st.acc >= step) {
                         st.acc -= step; saveSnap(st); st.time += MIN_PER_TICK * (st.mode === 'saudi' ? SAUDI_TIME : 1) * (st.slowUntil && st.time < st.slowUntil ? 0.35 : 1);
-                        if (!st.htDone && st.time >= 45 + (st.added1 || 0) && !holdWhistle(st, 45 + (st.added1 || 0))) { st.time = 45; st.htDone = true; st.acc = 0; halfTime(); break; }
-                        if (st.maxTime === 120 && !st.etHT && st.time >= 105 && !holdWhistle(st, 105)) { st.time = 105; st.etHT = true; st.acc = 0; matchBreak(st, 'ethalf'); break; }
+                        if (!st.htDone && st.time >= 45 + (st.added1 || 0) && !holdWhistle(st, 45 + (st.added1 || 0))) { st.time = 45; st.htDone = true; st.acc = 0; resetExt(st); halfTime(); break; }
+                        if (st.maxTime === 120 && !st.etHT && st.time >= 105 && !holdWhistle(st, 105)) { st.time = 105; st.etHT = true; st.acc = 0; resetExt(st); matchBreak(st, 'ethalf'); break; }
                         const endT = st.maxTime || (90 + (st.added || 0));
                         if (st.time >= endT && !holdWhistle(st, endT)) {
                             st.acc = 0;
@@ -6649,13 +6705,13 @@
             if (closestEnemy && minEnmD < 5) {
                 const dv = A(owner, 'dri') * (owner.trait === 'dribbler' ? 1.08 : 1) + (owner.pi === 'dribble' ? 5 : 0) + (tr(owner, 'trickster') ? 6 : 0) - A(closestEnemy, 'def') - (tr(closestEnemy, 'wall') ? 7 : 0);
                 const pBreak = Math.min(0.45, 0.07 * Math.exp(dv / 26)) * (owner.trait === 'dribbler' ? 1.3 : 1) * (owner.pi === 'dribble' ? 1.2 : 1) * (tr(owner, 'trickster') ? 1.15 : 1) * (owner.isHome ? 1 : st.M.breakOpp);
-                if (Math.random() < pBreak) { if (Math.random() < 0.025 * (closestEnemy.name === '이주진' ? 3 : 1) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * psychFoulRisk(closestEnemy,st)) { commitFoul(st, closestEnemy, owner, allPlayers); return; } owner.dash = 6; closestEnemy.stun = 4; lastAssistId = null; if (tr(owner, 'trickster') && Math.random() < 0.25 && st.time - (st.nutSaid ?? -99) > 8) { st.nutSaid = st.time; comm(st, `🪄 ${owner.name}의 알까기! ${closestEnemy.name}를 가랑이 사이로 제칩니다`); } } // 뚫리면 전술적 파울 가능
+                if (Math.random() < pBreak) { if (Math.random() < 0.025 * (closestEnemy.name === '이주진' ? 3 : 1) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * psychFoulRisk(closestEnemy,st) * refF(st)) { commitFoul(st, closestEnemy, owner, allPlayers); return; } owner.dash = 6; closestEnemy.stun = 4; lastAssistId = null; if (tr(owner, 'trickster') && Math.random() < 0.25 && st.time - (st.nutSaid ?? -99) > 8) { st.nutSaid = st.time; comm(st, `🪄 ${owner.name}의 알까기! ${closestEnemy.name}를 가랑이 사이로 제칩니다`); } } // 뚫리면 전술적 파울 가능
                 else {
                     { const lx = (owner.x - closestEnemy.x) * 0.2, ly = (owner.y - closestEnemy.y) * 0.2, lm = Math.hypot(lx, ly) || 1, c = Math.min(1, 0.9 / lm); closestEnemy.x += lx * c; closestEnemy.y += ly * c; }
                     const ta = (closestEnemy.isHome ? st.M.tackAtt : 0.25) + (tr(closestEnemy, 'tackler') ? 0.1 : tr(closestEnemy, 'hothead') ? 0.12 : 0), dv2 = (A(owner, 'dri') + A(owner, 'phy')) / 2 - A(closestEnemy, 'def');
                     if (Math.random() < ta) {
                         addStat(st, closestEnemy, 'tackle');
-                        if (Math.random() < Math.min(closestEnemy.name === '이주진' ? 0.4 : 0.11, FOUL_BASE * Math.exp(dv2 / 70) * (closestEnemy.name === '이주진' ? 3 : 1)) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * (inBoxOf(owner.isHome, owner.x, owner.y) ? 4 : 1) * psychFoulRisk(closestEnemy,st) * (tr(closestEnemy, 'hothead') ? 1.8 : tr(closestEnemy, 'tackler') ? 0.8 : 1)) { commitFoul(st, closestEnemy, owner, allPlayers); return; }
+                        if (Math.random() < Math.min(closestEnemy.name === '이주진' ? 0.4 : 0.11, FOUL_BASE * Math.exp(dv2 / 70) * (closestEnemy.name === '이주진' ? 3 : 1)) * (closestEnemy.isHome && st.instr.def === 'press' ? 1.25 : 1) * (inBoxOf(owner.isHome, owner.x, owner.y) ? 4 : 1) * psychFoulRisk(closestEnemy,st) * refF(st) * (tr(closestEnemy, 'hothead') ? 1.8 : tr(closestEnemy, 'tackler') ? 0.8 : 1)) { commitFoul(st, closestEnemy, owner, allPlayers); return; }
                         if (Math.random() < Math.min(0.9, 0.28 * Math.exp(-dv2 / 26) * (tr(closestEnemy, 'tackler') ? 1.25 : 1))) { addStat(st, closestEnemy, 'tackleWon'); st.ball.ownerId = closestEnemy.id; st.lastPoss = closestEnemy.isHome; return; }
                     }
                 }
@@ -6782,6 +6838,7 @@
             if (type === 'yellow') { player.cards += 1; if (player.cards >= 2) isRedOut = true; } 
             else { player.cards += 2; isRedOut = true; }
             if (isRedOut) { player.isRedCarded = true; if (player.role === 'GK') replaceExpelledKeeper(st, player); queueMoment(st, player.isHome ? 'redUs' : 'redThem'); }
+            (st.cardLog ||= []).push({ home: player.isHome, n: player.name, red: isRedOut, two: isRedOut && type === 'yellow', lab: minuteLabel(st) });
             psychAdjust(player,{nervousness:isRedOut?12:7,frustration:isRedOut?13:7,focus:-3});
             comm(st, isRedOut ? `🟥 ${player.name} 퇴장!` : `🟨 ${player.name} 경고`, 'card');
             if (isRedOut && !st.online) protest(st, player.isHome, '퇴장');
@@ -6846,8 +6903,9 @@
             if (st.clHtRes && !st.clHtRes.bad && win) add('하프타임에 뭔 얘기했길래 후반에 저렇게 달라지냐 ㄷㄷ', 3);
             if (st.leaguePlayoff) add(win ? '승격이다아아아아 ⬆️ 다음 시즌 기대된다' : '승격 결정전 패배… 내년엔 1위로 직행하자', 5);
             { const G = win ? ['오늘 경기 평점 매겨봄 (스압)', '이 정도면 이번 시즌 기대해도 되냐?', '중립기어 박았던 사람들 다 어디감 ㅋㅋ', '감독 전술 오늘은 진짜 인정한다', `${en} 팬들 반응 보러 다녀옴 ㅋㅋ`, '직관 후기) 분위기 미쳤다 [사진]'] : lose ? ['오늘 경기 3줄 요약.txt', '라인업 발표 때부터 불안했던 사람?', '감독 경질 얘기는 아직 이르다 (진지)', '하… 오늘은 하이라이트도 안 본다', '다음 경기 선발 이렇게 가자 (뇌피셜)', `${en}한테 이렇게 지는 게 맞냐`] : ['무승부 평가 ㄱㄱ', '이길 수 있었던 경기 같은데 나만 그럼?', '승점 1점 vs 승점 2점 날림 투표', '오늘 경기력 자체는 괜찮았다고 봄']; G.sort(() => Math.random() - 0.5).slice(0, 3).forEach(t => add(t, 1)); }
+            try { moreFanPosts(st, add); } catch (e) { console.error(e); }
             const out = [], pool = [...L];
-            while (out.length < 6 && pool.length) { const tot = pool.reduce((a, x) => a + x.w, 0); let r = Math.random() * tot, i = 0; while ((r -= pool[i].w) > 0) i++; out.push(pool.splice(i, 1)[0]); }
+            while (out.length < 7 && pool.length) { const tot = pool.reduce((a, x) => a + x.w, 0); let r = Math.random() * tot, i = 0; while ((r -= pool[i].w) > 0) i++; out.push(pool.splice(i, 1)[0]); }
             return out.map((c, i) => ({ n: FAN_NICKS[Math.floor(Math.random() * FAN_NICKS.length)], t: c.t, like: Math.round((c.w * 40 + Math.random() * 120) * (i === 0 ? 2.2 : 1)) })).sort((a, b) => b.like - a.like);
         }
         function renderFanReactionsOld(st) {
@@ -6868,8 +6926,26 @@
             wind: { n: '🌬️ 강풍', w: 6, d: '20m 밖 중거리 정확도 -10%', far: 0.9 },
             heat: { n: '🥵 폭염', w: 7, d: '양 팀 체력 소모 +15% · 교체 타이밍이 중요해요', fat: 1.15 }
         };
-        const REF_POOL = [['강태오', 1.3], ['서민재', 1], ['윤도한', 0.8], ['한지석', 1.15], ['M. Hartley', 1], ['L. Brandt', 1.25], ['R. Costa', 0.85], ['J. Moreau', 1.1], ['T. Nakamura', 0.95], ['A. Rossi', 1.2]];
+        // 주심 성향: s = 카드 엄격도, f = 휘슬(파울 선언) 빈도, v = VAR 모니터를 찾는 빈도, a = 어드밴티지 성향. 모두 경기 흐름을 깨지 않는 범위(±25%)
+        const REF_POOL = [
+            { n: '강태오', s: 1.3, f: 1.15, v: 1.0, tag: '카드 공장', d: '경고를 아끼지 않는 원칙주의자' },
+            { n: '서민재', s: 1, f: 1, v: 1, tag: '정석', d: '교과서 같은 판정' },
+            { n: '윤도한', s: 0.8, f: 0.8, v: 0.7, tag: '흐름 중시', d: '웬만한 몸싸움은 넘어가고 휘슬을 아낌' },
+            { n: '한지석', s: 1.15, f: 1.2, v: 1.35, tag: '휘슬 · VAR 잦음', d: '작은 접촉도 불고, 애매하면 모니터로 감' },
+            { n: 'M. Hartley', s: 1, f: 0.9, v: 0.6, tag: 'VAR 최소 개입', d: '“명백한 오심”만 VAR로 보는 잉글랜드식' },
+            { n: 'L. Brandt', s: 1.25, f: 1.1, v: 1.2, tag: '엄격', d: '독일식 원칙 판정, 항의에 단호함' },
+            { n: 'R. Costa', s: 0.85, f: 0.85, v: 1.45, tag: '모니터 단골', d: '카드는 아끼지만 VAR은 꼼꼼히 확인' },
+            { n: 'J. Moreau', s: 1.1, f: 1.05, v: 0.9, tag: '보통', d: '무난하지만 PK 판정엔 단호함' },
+            { n: 'T. Nakamura', s: 0.95, f: 1, v: 1.5, tag: 'VAR 신봉자', d: '득점 장면마다 꼼꼼히 체크' },
+            { n: 'A. Rossi', s: 1.2, f: 1.2, v: 1.1, tag: '깐깐함', d: '이탈리아식 잦은 휘슬' },
+            { n: 'P. Silva', s: 0.9, f: 0.85, v: 0.8, tag: '어드밴티지 장인', d: '파울이 나와도 흐름을 살려 줌' },
+            { n: '오세훈', s: 1.05, f: 1.25, v: 1, tag: '휘슬 잦음', d: '경기가 자주 끊길 수 있음' }
+        ];
+        function refF(st) { return (st && st.ref && st.ref.f) || 1; }
+        function refV(st) { return (st && st.ref && st.ref.v) || 1; }
         function JO(w, a, b) { w = String(w || ''); const c = w.charCodeAt(w.length - 1); return w + (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b); }
+        function refMeter(x) { return x >= 1.25 ? '매우 높음' : x >= 1.1 ? '높음' : x <= 0.75 ? '매우 낮음' : x <= 0.9 ? '낮음' : '보통'; }
+        function refInfo(R) { return `${R.d}\n· 경고 성향: ${refMeter(R.s)}\n· 파울 선언: ${refMeter(R.f)}\n· VAR 확인 빈도: ${refMeter(R.v)}`; }
         function refStyle(s) { return s >= 1.2 ? '엄격' : s <= 0.9 ? '관대' : '보통'; }
         function wxShot(st, d) { const W = WEATHER[st && st.wx] || {}; return (W.shot || 1) * (W.far && d > 20 ? W.far : 1); }
         function wxFat(st) { return (WEATHER[st && st.wx] || {}).fat || 1; }
@@ -6881,18 +6957,18 @@
             if (st.online) { st.wx = 'clear'; st.ref = null; if (wb) wb.classList.add('hidden'); if (rb) rb.classList.add('hidden'); return; }
             const keys = Object.keys(WEATHER); let r = Math.random() * keys.reduce((a, k) => a + WEATHER[k].w, 0);
             st.wx = keys.find(k => (r -= WEATHER[k].w) <= 0) || 'clear';
-            const R = REF_POOL[Math.floor(Math.random() * REF_POOL.length)]; st.ref = { n: R[0], s: R[1] };
+            const R = REF_POOL[Math.floor(Math.random() * REF_POOL.length)]; st.ref = { ...R };
             const W = WEATHER[st.wx];
             if (pitch) pitch.classList.add('wx-' + st.wx);
             if (wb) { wb.textContent = W.n; wb.title = W.d || '경기 영향 없음'; wb.classList.remove('hidden'); }
-            if (rb) { rb.textContent = `🧑‍⚖️ ${R[0]} · ${refStyle(R[1])}`; rb.title = R[1] >= 1.2 ? '카드를 자주 꺼내는 주심 (경고 확률 ↑)' : R[1] <= 0.9 ? '웬만한 몸싸움은 넘어가는 주심 (경고 확률 ↓)' : '평범한 판정 성향'; rb.classList.remove('hidden'); }
-            setTimeout(() => { if (currentMatchState !== st) return; comm(st, `${W.n} ${W.d ? '— ' + W.d : '— 경기하기 좋은 날씨입니다'}`, 'info'); comm(st, `🧑‍⚖️ 오늘의 주심 ${R[0]} (${refStyle(R[1])})${R[1] >= 1.2 ? ' — 카드를 아끼지 않는 스타일입니다. 거친 태클 주의!' : R[1] <= 0.9 ? ' — 웬만한 몸싸움은 넘어가는 스타일' : ''}`, 'info'); }, 0);
+            if (rb) { rb.textContent = `🧑‍⚖️ ${R.n} · ${R.tag}`; rb.title = refInfo(R); rb.classList.remove('hidden'); }
+            setTimeout(() => { if (currentMatchState !== st) return; comm(st, `${W.n} ${W.d ? '— ' + W.d : '— 경기하기 좋은 날씨입니다'}`, 'info'); comm(st, `🧑‍⚖️ 오늘의 주심 ${R.n} [${R.tag}] — ${R.d}`, 'info'); }, 0);
         }
         function showAddedBoard(st, n) { const b = document.getElementById('match-added'); if (b) { b.textContent = '+' + n; b.classList.remove('hidden'); } }
         // ---- 매 틱: 추가시간 · 올레 · 막판 분위기 · 진통제 투혼 후유증 ----
         function tickExtras(st) {
             if (!st.ex || (st.online && !st.online.isHost)) return;
-            recHist(st); trackTurnover(st);
+            recHist(st); trackTurnover(st); trackMom(st);
             moveRef(st); { const slow = !!(st.slowUntil && st.time < st.slowUntil); if (slow !== !!st.slowShown) { st.slowShown = slow; const c = document.querySelector('.mt-clock'); if (c) c.classList.toggle('slow', slow); } }
             const ex = st.ex, H = st.scoreHome, A_ = st.scoreAway;
             if (!st.htDone && !st.added1 && st.time >= 44) { st.added1 = 1 + (Math.random() < 0.45 ? 1 : 0) + (ex.inj ? 1 : 0); comm(st, `⏱️ 전반 추가시간 +${st.added1}분`, 'info'); showAddedBoard(st, st.added1); }
@@ -6932,16 +7008,119 @@
             return d === -1 && st.time >= endT - 3.5 && (!st.maxTime || !!st.etHT);
         }
 
-        // ---- VAR: 일부 득점은 판독 — 판독실 모니터로 리플레이를 보여주고(오프사이드는 실제 위치로 판정) 결과 발표 ----
-        const VAR_REASONS = ['오프사이드', '핸드볼', '공격자 파울'];
-        function recHist(st) {   // 최근 30틱의 선수·공 위치 (VAR 리플레이용)
-            const f = { p: {}, b: [st.ball.x, st.ball.y] };
+        // ===== 판정 엔진: 온필드 판정의 약 14%는 오심 → VAR이 대부분 바로잡고, 100번 중 4번 정도는 오심이 그대로 남는다 =====
+        const REF_ERR = 0.14, REF_KEEP = 0.04;
+        function refErr(st) {
+            if (!st || st.online || st.mode === 'onlineFriendly') return { wrong: false, fix: false };
+            const wrong = Math.random() < REF_ERR, fix = wrong && !st.varOn && !st.ended && Math.random() < (REF_ERR - REF_KEEP) / REF_ERR;
+            st.refCalls = (st.refCalls || 0) + 1; if (wrong) st.refWrong = (st.refWrong || 0) + 1; if (fix) st.refFixed = (st.refFixed || 0) + 1;
+            return { wrong, fix };
+        }
+        // VAR도 못 잡은 오심: 기록 → 중계 리플레이 → 경기 후 커뮤니티 논란
+        function keepRefErr(st, e) {
+            e.lab = minuteLabel(st); e.time = Math.floor(st.time); (st.refErr ||= []).push(e);
+            comm(st, '📺 VAR 체크 완료 — 온필드 판정 유지', 'info');
+            setTimeout(() => { if (currentMatchState !== st) return; comm(st, `🔁 중계 리플레이: ${e.txt}… 오심 논란!`, 'warn'); toast('⚠️ 오심 논란 — 판정 그대로 유지'); }, 1800);
+        }
+
+        // ---- VAR: 득점 장면은 '득점 방식에 맞는 항목'만 확인한다 ----
+        //   · 패스를 받아 넣은 골: 득점자 오프사이드 · 박스 안 경합 골: 공격자 파울 / 핸드볼
+        //   · 프리킥 직접골: 핸드볼 X — 슈팅 순간 오프사이드 위치 동료가 골키퍼 시야를 가렸는지만
+        //   · 중거리골: 핸드볼 X — 시야 방해 + 공격 시작(볼 탈취) 장면에서 득점 팀의 파울이 있었는지(APP)
+        const VAR_REASONS = ['오프사이드', '오프사이드(시야 방해)', '선행 장면 파울', '공격자 파울', '핸드볼'];
+        function recHist(st) {   // 최근 30틱의 선수·공 위치 + 공 소유자 (VAR 리플레이·선행 장면 확인용)
+            const f = { p: {}, b: [st.ball.x, st.ball.y], o: st.ball.ownerId != null ? String(st.ball.ownerId) : null };
             allOf(st).forEach(p => { if (!p.isRedCarded) f.p[p.id] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, p.isHome ? 1 : 0]; });
             (st.hist ||= []).push(f); if (st.hist.length > 30) st.hist.shift();
         }
+        function lastDefLine(f, own, dir) { const defs = Object.values(f.p).filter(q => q[2] !== own).map(q => q[0]).sort((a, b) => dir > 0 ? b - a : a - b); return defs[1] ?? 50; }
+        function shotFrame(Hs, hid) { for (let i = Hs.length - 1; i >= 0; i--) { const f = Hs[i], s = f.p[hid]; if (s && Math.hypot(s[0] - f.b[0], s[1] - f.b[1]) < 2.5) return i; } return -1; }
+        // 시야 방해 후보: 슈팅 순간 오프사이드 위치 + 공→골문 직선 근처 + 골키퍼 앞 (any=true면 가장 그럴듯한 동료 아무나)
+        function screenMate(Hs, ks, hid, isHome, any) {
+            const f = Hs[ks], own = isHome ? 1 : 0, dir = isHome ? 1 : -1, gx = isHome ? 97 : 3, b = f.b, lx = lastDefLine(f, own, dir); let best = null;
+            Object.entries(f.p).forEach(([id, q]) => {
+                if (id === hid || q[2] !== own) return;
+                const off = (q[0] - 50) * dir > 0 && (q[0] - b[0]) * dir > 0 && (q[0] - lx) * dir > 0.25;
+                const t = (q[0] - b[0]) / ((gx - b[0]) || 1), ly = b[1] + (50 - b[1]) * t, lane = t > 0.4 && t < 1.05 && Math.abs(q[1] - ly) < 5 && Math.abs(gx - q[0]) < 15;
+                const sc = (off ? 2 : 0) + (lane ? 1 : 0) - Math.abs(gx - q[0]) / 50;
+                if ((any || (off && lane)) && (!best || sc > best.sc)) best = { id, sc, off, lane };
+            });
+            return best;
+        }
+        // 선행 장면(APP): 이 공격이 상대 공을 '직접 빼앗으며' 시작됐다면 그 순간 몸싸움 거리(m)
+        function appGain(Hs, isHome, maxD) {
+            const own = isHome ? 1 : 0; let g = -1, j = -1;
+            for (let i = Hs.length - 1; i >= 0; i--) { const o = Hs[i].o, q = o && Hs[i].p[o]; if (!q) continue; if (q[2] === own) g = i; else { j = i; break; } }
+            if (g < 0 || j < 0 || g - j > 3) return null;   // 패스 가로채기·루즈볼은 제외
+            const f = Hs[g], gainer = f.o, loser = Hs[j].o, a = f.p[gainer], d0 = f.p[loser] || Hs[j].p[loser]; if (!a || !d0) return null;
+            const d = Math.hypot((a[0] - d0[0]) * MX, (a[1] - d0[1]) * MY);
+            return d < (maxD || 2.4) ? { k: g, id: gainer, foe: loser, d } : null;
+        }
+        // 득점 장면에서 실제로 확인할 거리가 있는지 — 우리 팀/상대 팀 똑같은 기준
+        function goalAmbiguity(st, isHome, scorer, assist, how) {
+            const Hs = (st.hist || []).slice(-28); if (!Hs.length) return null;
+            const side = isHome ? st.homePlayers.concat(st.homeOut || []) : st.awayPlayers.concat(st.awayOut || []);
+            const sp = side.find(p => p.name === scorer), ap = assist ? side.find(p => p.name === assist) : null, hid = sp ? String(sp.id) : '', dir = isHome ? 1 : -1, own = isHome ? 1 : 0, out = [];
+            if (!hid) return null;
+            const fk = how === 'fk', far = fk || how === 'long';
+            // ① 득점자 오프사이드 — 동료의 패스를 받아 넣은 골만
+            if (!far && ap) { let k = -1; for (let i = Hs.length - 1; i >= 0; i--) { const f = Hs[i], q = f.p[ap.id]; if (q && Math.hypot(q[0] - f.b[0], q[1] - f.b[1]) < 2.5) { k = i; break; } }
+                if (k >= 0) { const f = Hs[k], s = f.p[hid]; if (s) { const lx = lastDefLine(f, own, dir), gap = (s[0] - lx) * dir;
+                    if ((s[0] - 50) * dir > 0 && (s[0] - f.b[0]) * dir > 0 && Math.abs(gap) < 2.2) out.push({ kind: '오프사이드', p: 0.8 - Math.abs(gap) * 0.22, k, pid: hid }); } } }
+            // ② 시야 방해 오프사이드 — 프리킥·중거리포
+            if (far) { const ks = shotFrame(Hs, hid); if (ks >= 0) { const m = screenMate(Hs, ks, hid, isHome); if (m) out.push({ kind: '오프사이드(시야 방해)', p: 0.55, k: ks, pid: m.id, cancel: 0.5 }); } }
+            // ③ 선행 장면 득점 팀 파울 — 프리킥 직접골은 반칙으로 얻은 세트피스라 해당 없음
+            if (!fk) { const a = appGain(Hs, isHome); if (a) out.push({ kind: '선행 장면 파울', p: 0.16 + (2.4 - a.d) * 0.08, k: a.k, pid: a.id, cancel: 0.3 }); }
+            // ④ 득점자 본인 반칙·핸드볼 — 박스 안 경합 골만 (프리킥·중거리는 해당 없음)
+            const last = Hs[Hs.length - 1], s = last.p[hid];
+            if (!far && s && inBoxOf(isHome, s[0], s[1])) { const near = Object.values(last.p).filter(q => q[2] !== own && Math.hypot((q[0] - s[0]) * MX, (q[1] - s[1]) * MY) < 2.6).length;
+                if (near) out.push({ kind: '공격자 파울', p: 0.07 + near * 0.05, cancel: 0.2, pid: hid });
+                if (how === 'header' || near >= 2) out.push({ kind: '핸드볼', p: 0.05 + (how === 'header' ? 0.04 : 0), cancel: 0.16, pid: hid }); }
+            return out.length ? out.sort((a, b) => b.p - a.p)[0] : null;
+        }
+        // 실제로 반칙이 있었나(진실) — 오프사이드는 위치 기록으로, 나머지는 장면 확률로
+        function offGeo(Hs, k, pid, isHome) {
+            const f = Hs[Math.max(0, Math.min(k ?? Hs.length - 1, Hs.length - 1))], dir = isHome ? 1 : -1, s = f.p[pid], lx = lastDefLine(f, isHome ? 1 : 0, dir), gap = s ? (s[0] - lx) * dir : -1;
+            return { line: { x: lx, sx: s ? s[0] : lx }, gap, offPos: !!s && gap > 0.25 && (s[0] - 50) * dir > 0 && (s[0] - f.b[0]) * dir > 0 };
+        }
+        function goalTruth(st, isHome, amb, Hs) {
+            const R = { reason: amb.kind, k: amb.k, pid: amb.pid, no: false };
+            if (amb.kind.startsWith('오프사이드')) { Object.assign(R, offGeo(Hs, amb.k, amb.pid, isHome)); R.no = R.offPos && (amb.kind === '오프사이드' || Math.random() < amb.cancel); }
+            else R.no = Math.random() < (amb.cancel || 0.12) * Math.min(1.2, (st.ref && st.ref.s) || 1);
+            return R;
+        }
+        // 깨끗한 골을 주심이 잘못 취소할 때 내세우는 사유 — 득점 방식에 맞게 (프리킥·중거리에 핸드볼 X)
+        function fakeReason(isHome, hid, ap, how, Hs) {
+            const ks = shotFrame(Hs, hid);
+            if (how === 'long') { const a = appGain(Hs, isHome, 6); if (a) return { reason: '선행 장면 파울', k: a.k, pid: a.id, no: false }; }
+            if ((how === 'fk' || how === 'long') && ks >= 0) { const m = screenMate(Hs, ks, hid, isHome, true); if (m) return Object.assign({ reason: '오프사이드(시야 방해)', k: ks, pid: m.id, no: false }, offGeo(Hs, ks, m.id, isHome)); }
+            if (how === 'fk' || how === 'long') return { reason: '선행 장면 파울', k: Math.max(0, ks), pid: hid, no: false };
+            if (ap) { let k = -1; for (let i = Hs.length - 1; i >= 0; i--) { const f = Hs[i], q = f.p[ap.id]; if (q && Math.hypot(q[0] - f.b[0], q[1] - f.b[1]) < 2.5) { k = i; break; } }
+                if (k >= 0) { const G = offGeo(Hs, k, hid, isHome); if (!G.offPos) return Object.assign({ reason: '오프사이드', k, pid: hid, no: false }, G); } }
+            return { reason: '공격자 파울', pid: hid, no: false };
+        }
         function triggerGoal(isHome, scorer, time, assist, how) {
             const st = currentMatchState;
-            if (st && canVar(st) && how !== 'pk' && how !== 'empty' && Math.random() < 0.13) { st.varN = (st.varN || 0) + 1; varReview(st, isHome, scorer, time, assist, how); return; }
+            if (st && !st.online && st.mode !== 'onlineFriendly' && !st.varOn && !st.ended && how !== 'pk' && how !== 'empty') {
+                const Hs = (st.hist || []).slice(-28), side = isHome ? st.homePlayers.concat(st.homeOut || []) : st.awayPlayers.concat(st.awayOut || []);
+                const sp = side.find(p => p.name === scorer), ap = assist ? side.find(p => p.name === assist) : null, hid = sp ? String(sp.id) : '';
+                if (Hs.length && hid) {
+                    const amb = goalAmbiguity(st, isHome, scorer, assist, how), T = amb ? goalTruth(st, isHome, amb, Hs) : { no: false };
+                    const E = refErr(st), onNo = E.wrong ? !T.no : T.no;
+                    const R = onNo && !T.no && !amb ? fakeReason(isHome, hid, ap, how, Hs) : T;
+                    R.reason ||= '공격자 파울'; R.onNo = onNo; R.finalNo = E.wrong && !E.fix ? onNo : T.no;
+                    const review = (E.wrong && E.fix) || (!E.wrong && canVar(st) && Math.random() < Math.min(0.9, (amb ? amb.p : 0.03) * refV(st) + (onNo ? 0.5 : 0)));
+                    if (review) { st.varN = (st.varN || 0) + 1; varReview(st, isHome, scorer, time, assist, how, R, Hs, hid); return; }
+                    if (E.wrong) {   // VAR도 못 잡은 오심
+                        const T2 = isHome ? teamName : st.enemy.name;
+                        if (onNo) { cancelGoal(st, isHome, scorer, assist, R.reason, 'field', false, true); keepRefErr(st, { kind: 'goal-no', hurtHome: isHome, who: scorer, team: T2, reason: R.reason, txt: `${scorer}의 골은 ${R.reason}이 아니었습니다${R.line && R.gap < 0 ? ` (${Math.round(-R.gap * 105)}cm 온사이드)` : ''} — 정상 골이 취소됐습니다` }); }
+                        else { goalNow(isHome, scorer, time, assist, how); const g = st.goalLog[st.goalLog.length - 1]; if (g) g.err = R.reason; keepRefErr(st, { kind: 'goal-yes', hurtHome: !isHome, who: scorer, team: T2, reason: R.reason, txt: `${scorer}의 골 장면, 명백한 ${R.reason}이었습니다 — 그런데 골 인정` }); }
+                        return;
+                    }
+                    if (onNo) { cancelGoal(st, isHome, scorer, assist, R.reason, 'field'); return; }
+                    if (Math.random() < 0.2 * refV(st)) st.varSilent = true;   // 조용한 체크: 흐름은 안 끊고 중계 멘트만
+                }
+            }
             goalNow(isHome, scorer, time, assist, how);
         }
         function varSvg(f, isHome, o) {
@@ -6953,52 +7132,52 @@
             if (o.ring) { const q = f.p[o.hl]; if (q) g += `<ellipse cx="${X(q[0])}" cy="${q[1]}" rx="4" ry="6" fill="none" stroke="#facc15" stroke-width=".4" stroke-dasharray="1 .7"/>`; }
             return `<svg viewBox="47 2 53 96" preserveAspectRatio="none" class="var-svg">${g}</svg>`;
         }
-        function varReview(st, isHome, scorer, time, assist, how) {
-            st.isPaused = true; if (st.ex) st.ex.var++;
-            const side = isHome ? st.homePlayers.concat(st.homeOut || []) : st.awayPlayers, sp = side.find(p => p.name === scorer), ap = assist ? side.find(p => p.name === assist) : null;
-            const Hs = (st.hist || []).slice(-28); if (!Hs.length) { goalNow(isHome, scorer, time, assist, how); return; }
-            let k = -1; if (ap) for (let i = Hs.length - 1; i >= 0; i--) { const f = Hs[i], q = f.p[ap.id]; if (q && Math.hypot(q[0] - f.b[0], q[1] - f.b[1]) < 2.5) { k = i; break; } }
-            const reason = k >= 0 && Math.random() < 0.75 ? '오프사이드' : pick(['핸드볼', '공격자 파울']);
-            let no, line = null, gap = 0; const hid = sp ? String(sp.id) : '';
-            if (reason === '오프사이드') {
-                const f = Hs[k], dir = isHome ? 1 : -1, s = f.p[hid];
-                const defs = Object.values(f.p).filter(q => q[2] !== (isHome ? 1 : 0)).map(q => q[0]).sort((a, b) => dir > 0 ? b - a : a - b);
-                const lx = defs[1] ?? 50; line = { x: lx, sx: s ? s[0] : lx };
-                gap = s ? (s[0] - lx) * dir : -1;
-                no = !!s && gap > 0.25 && (s[0] - 50) * dir > 0 && (s[0] - f.b[0]) * dir > 0;
-            } else no = Math.random() < 0.25;
+        const VAR_WHY = { '오프사이드': ['오프사이드 위치에서 패스를 받았습니다'], '오프사이드(시야 방해)': ['오프사이드 위치에서 골키퍼 시야를 가렸습니다', '오프사이드 위치 선수가 골키퍼 앞을 가로막았습니다'], '선행 장면 파울': ['공격 시작 과정에서 상대를 밀어 넘어뜨렸습니다', '볼을 빼앗는 과정에서 발목을 걷어찼습니다', '볼 탈취 과정에서 상대를 잡아당겼습니다'], '공격자 파울': ['슈팅 직전 수비수를 팔로 밀었습니다', '경합 과정에서 수비수를 붙잡았습니다'], '핸드볼': ['득점 직전 공이 손에 맞았습니다'] };
+        const VAR_OK = { '오프사이드(시야 방해)': '오프사이드 위치였지만 골키퍼 시야는 가리지 않았습니다', '선행 장면 파울': '볼 탈취 과정은 정당한 어깨 싸움이었습니다', '공격자 파울': '정당한 몸싸움 — 반칙 없음', '핸드볼': '공은 몸에 먼저 맞았습니다 — 핸드볼 아님' };
+        const VAR_CHK = { '오프사이드': '오프사이드 라인 확인 중…', '오프사이드(시야 방해)': '슈팅 순간 골키퍼 시야 방해 여부 확인 중…', '선행 장면 파울': '공격 시작(볼 탈취) 장면까지 되감아 확인 중…', '공격자 파울': '득점 직전 몸싸움 장면 확인 중…', '핸드볼': '득점 직전 손에 맞았는지 확인 중…' };
+        function varReview(st, isHome, scorer, time, assist, how, R, Hs, hid) {
+            st.isPaused = true; st.varOn = true; if (st.ex) st.ex.var++;
+            const reason = R.reason, pid = String(R.pid || hid), line = R.line || null, gap = R.gap || 0, no = !!R.finalNo, flip = !!R.onNo !== no, isOff = reason.startsWith('오프사이드');
             const ov = document.getElementById('var-overlay'), tx = document.getElementById('var-text'), mon = document.getElementById('var-mon');
-            comm(st, `📺 VAR이 ${scorer}의 득점 장면을 확인합니다 — ${reason} 여부 체크`, 'info');
+            const onTxt = R.onNo ? `${isOff ? '🚩' : '🧑‍⚖️'} 온필드: 골 취소 (${reason})` : '⚽ 온필드: 골';
+            comm(st, R.onNo ? (isOff ? `🚩 부심이 깃발을 듭니다 — ${reason}! VAR이 확인합니다` : `🧑‍⚖️ 주심의 휘슬 — ${reason}! VAR이 확인합니다`) : `📺 VAR이 ${scorer}의 득점 장면을 확인합니다 — ${reason} 여부 체크`, 'info');
             SFX.playTone(520, 'square', 0.12, 0.06);
-            if (!ov) { (no ? cancelGoal : (a, b, c, d, e) => goalNow(b, c, time, d, how))(st, isHome, scorer, assist, reason); return; }
-            ov.className = 'var-overlay'; tx.innerHTML = `판독실 · ${isHome ? teamName : st.enemy.name} 득점 장면<br><small>${reason} 여부 확인 중…</small>`;
-            const freeze = reason === '오프사이드' ? k : Hs.length - 1, frames = Hs.slice(Math.max(0, freeze - 18), freeze + 1);
+            const finish = () => { st.varOn = false; if (ov) { ov.className = 'var-overlay hidden'; mon.innerHTML = ''; } if (currentMatchState !== st) return;
+                if (no) cancelGoal(st, isHome, scorer, assist, reason, 'var', flip); else { comm(st, flip ? `📺 판정 번복! ${reason} 아님 — ${scorer}의 골 인정!` : '📺 VAR 확인 완료 — 골 인정!', 'goal'); st.varOk = reason; goalNow(isHome, scorer, time, assist, how); } };
+            if (!ov) { finish(); return; }
+            ov.className = 'var-overlay'; tx.innerHTML = `판독실 · ${isHome ? teamName : st.enemy.name} 득점 장면<br><small>${onTxt} · ${reason} 여부 확인 중…</small>`;
+            const freeze = Math.max(0, Math.min(Hs.length - 1, R.k ?? Hs.length - 1)), frames = Hs.slice(Math.max(0, freeze - 18), freeze + 1);
             let i = 0; clearInterval(varReview.h);
-            varReview.h = setInterval(() => { if (currentMatchState !== st) { clearInterval(varReview.h); return; } mon.innerHTML = varSvg(frames[i % frames.length], isHome, { hl: hid }); i++; if (i >= frames.length * 2) { clearInterval(varReview.h); mon.innerHTML = varSvg(frames[frames.length - 1], isHome, { hl: hid, line, no: false, ring: reason !== '오프사이드' }); tx.innerHTML = reason === '오프사이드' ? `오프사이드 라인 확인 중…<br><small>노란선 = 최종 수비수 · 점선 = 득점자</small>` : `${reason} 장면 정밀 확인 중…<br><small>주심이 모니터 앞으로 갑니다</small>`; } }, 110);
+            varReview.h = setInterval(() => { if (currentMatchState !== st) { clearInterval(varReview.h); return; } mon.innerHTML = varSvg(frames[i % frames.length], isHome, { hl: pid }); i++; if (i >= frames.length * 2) { clearInterval(varReview.h); mon.innerHTML = varSvg(frames[frames.length - 1], isHome, { hl: pid, line, no: false, ring: !line || reason !== '오프사이드' }); tx.innerHTML = `${VAR_CHK[reason] || '장면 정밀 확인 중…'}<br><small>${line ? '노란선 = 최종 수비수 · 점선 = 확인 대상 선수' : '주심이 모니터 앞으로 갑니다'}</small>`; } }, 110);
             const decideAt = 110 * frames.length * 2 + 1500;
             setTimeout(() => {
                 if (currentMatchState !== st) return;
                 const cmN = Math.round(Math.abs(gap) * 105), cm = cmN >= 100 ? (cmN / 100).toFixed(1).replace('.0', '') + 'm' : cmN + 'cm';
-                if (line) mon.innerHTML = varSvg(frames[frames.length - 1], isHome, { hl: hid, line, no });
+                if (line) mon.innerHTML = varSvg(frames[frames.length - 1], isHome, { hl: pid, line, no, ring: reason !== '오프사이드' });
                 ov.className = 'var-overlay ' + (no ? 'no' : 'ok');
-                tx.innerHTML = no ? `❌ NO GOAL<br><small>${reason}${line ? ` · ${cm} 차이` : ''}</small>` : `✅ GOAL 인정<br><small>${line ? (gap > 0 ? `간발의 차 온사이드 판정` : `온사이드 · ${cm} 여유`) : '반칙 없음'}</small>`;
-                if (line) comm(st, no ? `📏 오프사이드 라인 판독: ${scorer}, ${cm} 앞서 있었습니다` : `📏 오프사이드 라인 판독: ${gap > 0 ? '간발의 차로' : cm + ' 차이로'} 온사이드!`, 'info');
-                setTimeout(() => { ov.className = 'var-overlay hidden'; mon.innerHTML = ''; if (currentMatchState !== st) return; if (no) cancelGoal(st, isHome, scorer, assist, reason); else { comm(st, '📺 VAR 확인 완료 — 골 인정!', 'goal'); goalNow(isHome, scorer, time, assist, how); } }, 1500);
+                const okWhy = line && !R.offPos ? (gap > 0 ? '간발의 차 온사이드' : `온사이드 · ${cm} 여유`) : VAR_OK[reason] || '반칙 없음';
+                const noWhy = pick(VAR_WHY[reason] || [reason]) + (line && R.offPos ? ` · ${cm} 앞` : '');
+                tx.innerHTML = no ? `❌ NO GOAL${flip ? ' — 판정 번복' : ''}<br><small>${reason} · ${noWhy}</small>` : `✅ GOAL ${flip ? '— 판정 번복!' : '인정'}<br><small>${okWhy}</small>`;
+                if (line) comm(st, R.offPos ? `📏 오프사이드 라인 판독: ${cm} 앞서 있었습니다` : `📏 오프사이드 라인 판독: ${gap > 0 ? '간발의 차로' : cm + ' 차이로'} 온사이드!`, 'info');
+                comm(st, `📺 VAR 판독: ${no ? noWhy : okWhy}`, 'info');
+                setTimeout(finish, 1500);
             }, decideAt);
         }
-        function cancelGoal(st, isHome, scorer, assist, reason) {
+        // src: 'var'(VAR 판독 취소) · 'field'(주심·부심 온필드 판정) / err: 오심이 그대로 유지된 경우
+        function cancelGoal(st, isHome, scorer, assist, reason, src, flip, err) {
             const side = isHome ? st.homePlayers.concat(st.homeOut || []) : st.awayPlayers, sp = side.find(p => p.name === scorer);
             if (sp && st.playerStats[sp.id]) st.playerStats[sp.id].goals = Math.max(0, (st.playerStats[sp.id].goals || 0) - 1);
             if (assist) { const ap = side.find(p => p.name === assist), ps = ap && st.playerStats[ap.id]; if (ps && ps.assists) { ps.assists--; const k = (isHome ? 'home_' : 'away_') + 'assists'; if (st.stats[k]) st.stats[k]--; } }
-            (st.varNo ||= []).push({ home: isHome, scorer, reason, time: Math.floor(st.time) });
-            comm(st, `📺 VAR 판독 결과 ${reason}! ${scorer}의 골이 취소됩니다`, 'card'); toast(`📺 골 취소 — ${reason}`);
+            const rec = { home: isHome, scorer, reason, time: Math.floor(st.time), lab: minuteLabel(st), src: src || 'var', err: !!err };
+            if (src === 'field') { (st.fieldNo ||= []).push(rec); comm(st, `${reason.startsWith('오프사이드') ? '🚩 부심의 깃발' : '🧑‍⚖️ 주심의 휘슬'} — ${reason}! ${scorer}의 골은 인정되지 않습니다`, 'card'); toast(`🚩 골 취소 — ${reason}`); }
+            else { (st.varNo ||= []).push(rec); comm(st, `📺 VAR 판독 결과 ${reason}! ${flip ? '온필드 판정을 뒤집고 ' : ''}${scorer}의 골이 취소됩니다`, 'card'); toast(`📺 골 취소 — ${reason}`); }
             if (sp) psychAdjust(sp, { frustration: 8, confidence: -3 });
             comm(st, pick([`🗣️ ${isHome ? teamName : st.enemy.name} 벤치가 믿을 수 없다는 듯 두 팔을 벌립니다`, `😤 ${scorer}, 하늘을 올려다보며 허탈하게 웃습니다`, `🙉 관중석에서 거센 야유가 쏟아집니다`]), 'warn');
             allOf(st).forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; });
             st.ball.fl = null; st.sp = null; st.kickPass = null; st.cornerHold = null;
             const gk = (isHome ? st.awayPlayers : st.homePlayers).find(p => p.role === 'GK' && !p.isRedCarded);
             if (gk) { st.ball.ownerId = gk.id; st.ball.x = gk.x; st.ball.y = gk.y; st.lastPoss = gk.isHome; st.goalKick = gk.id; gk.hold = 0; } else kickoff(st, !isHome);
-            snapAll(st); setTimeout(() => { if (currentMatchState === st) st.isPaused = false; }, 700);
+            snapAll(st); st.isPaused = true; setTimeout(() => { if (currentMatchState === st && !st.varOn) st.isPaused = false; }, 700);
         }
 
         // ---- 골 세리머니: 상황에 맞게 ----
@@ -7015,7 +7194,10 @@
             if (sp && sp.ace) setTimeout(() => comm(st, `⭐ 에이스 ${scorer}, 해결사다운 한 방!`, 'goal'), 0);
             SFX.goal();
             const lab = minuteLabel(st);
-            st.goalLog ||= []; st.goalLog.push({ home: isHome, time: Number(time) || 0, lab, et: !!st.maxTime, homeBefore: st.scoreHome, awayBefore: st.scoreAway, scorer, how });
+            const dist = (() => { const H = st.hist && st.hist[st.hist.length - 1], q = sp && H && H.p[sp.id]; return q ? Math.round(Math.hypot(((isHome ? 97 : 3) - q[0]) * MX, (50 - q[1]) * MY)) : 0; })();
+            const vr = st.varOk ? 'review' : st.varSilent ? 'check' : null; st.varOk = null; st.varSilent = false;
+            st.goalLog ||= []; st.goalLog.push({ home: isHome, time: Number(time) || 0, lab, et: !!st.maxTime, homeBefore: st.scoreHome, awayBefore: st.scoreAway, scorer, how, assist: assist || null, dist, vr, mi: st.momB ? st.momB.length - 1 : -1 });
+            if (vr === 'check') setTimeout(() => { if (currentMatchState === st) comm(st, pick(['📺 VAR 체크 완료 — 득점 그대로 인정됩니다', '📺 VOR에서 빠르게 확인… 이상 없음, 골!', '📺 주심이 이어폰에 손을 댑니다… 체크 완료, 골 인정']), 'info'); }, 0);
             if (isHome) { st.scoreHome++; document.getElementById('match-score-home').innerText = st.scoreHome; }
             else { st.scoreAway++; document.getElementById('match-score-away').innerText = st.scoreAway; }
             if (st.ex && st.htDone) st.ex.goals2++;
@@ -7146,6 +7328,9 @@
             if (st.ref && ((X.home_yc || 0) + (X.away_yc || 0) + (X.home_rc || 0) + (X.away_rc || 0)) >= 5) P('fan', pick(['카드수집가', '심판분석러']), '팬', `오늘 주심 ${st.ref.n} 카드 ${(X.home_yc || 0) + (X.away_yc || 0)}장 ㅋㅋ 주머니에 카드 공장 있냐`, 1.2);
             if ((st.ex || {}).waste >= 2 && !win && H < A) P('fan', '시간은금이다', '팬', `상대 골키퍼 골킥 한 번에 1분씩 쓰더라… 추가시간 ${st.added}분 너무 짧다`, 1.1);
             if (gl.some(g => g.how === 'empty')) P('meme', pick(MEME_ACC), '밈 계정', '골키퍼까지 올라왔다가 빈 골대에 먹히는 거 = 축구에서 제일 웃긴 장면 🥅🏃‍♂️', 1.4);
+            (st.refErr || []).forEach(e => { P('journalist', pick(['김도현 기자', '이수민 기자', '박성재 기자']), '기자', `[오심 논란] ${T}–${O}전 ${e.lab}분 ${errDesc(e)} — VAR도 바로잡지 못했다. 경기 후 ${e.hurtHome ? T : O} 측은 "납득할 수 없다"며 공식 항의를 예고했다.`, 2.6, pick(['이건 기사 나와야 함', '협회 답변 기다린다', '심판 실명 공개하라']));
+                P('fan', pick(['VAR감시단', '판정분석러', '오심박제봇']), '팬', e.hurtHome ? `${e.lab}분 ${errDesc(e)}… 리플레이 보면 볼수록 화남 😡 #오심` : `${e.lab}분 ${errDesc(e)}은 솔직히 우리가 덕 봄. 상대 팬들 화날 만함`, 2.2, pick(['ㄹㅇ', '박제 완료', '공론화 가자']));
+                P('foreign', pick(['FootyGlobal', 'UK Football Talk']), '해외 반응 🇬🇧', `VAR howler of the week: ${errDescEn(e)}. Absolute shambles.`, 2); });
             if (st.mode === 'career') P('media', pick(['UCL on YFM', 'Champions Night']), '매체', win ? `⭐ CHAMPIONS NIGHT | ${T}, ${ctx}에서 ${O} 격파!` : lose ? `⭐ ${ctx} | ${O}, ${T}에 ${A}–${H} 승리` : `⭐ ${ctx} | ${T}–${O}, 승부는 다음으로`, 1.6);
             if (st.leaguePlayoff) P('media', 'YFM Sports', '매체', win ? `⬆️ PROMOTED | ${T}, 승격 결정전 승리! 다음 시즌 ${LG[Math.min(LG.length - 1, leagueState.li + 1)].n}에서 만난다` : `${T}, 승격 결정전에서 고배… 다음 시즌을 기약`, 3);
             if (st.theatre) { const th = st.theatre; if (th.home) { P('club', `${T} 공식`, '공식 계정 ✔', `🎭 ${th.lab}' ${th.scorer.toUpperCase()}!!!!!!!!\n${th.win ? '이게 우리 팀입니다' : '포기는 없다'} 💙🔥`, 4, pick(['심장 떨어질 뻔', '소리 질렀다 진짜', '평생 기억할 장면'])); P('meme', pick(MEME_ACC), '밈 계정', `${th.lab}분 전 팬들: 😐📱 / ${th.lab}분 후 팬들: 🤯🤯🔥🔥`, 3, 'ㅋㅋㅋㅋ 나네'); const f = pick(FOREIGN); P('foreign', f[0], `해외 반응 ${f[1]}`, `${th.scorer} in the ${th.lab}' — absolute cinema 🎬`, 2); } else P('opp', pick(OPP_FANS), `${O} 팬`, `${th.lab}분 ${th.scorer}!!! 너희 표정 보고 싶다 ㅋㅋㅋ`, 2.5); }
@@ -7209,8 +7394,19 @@
         }
 
         // ===================== beta45: 경기 종료 휘슬 · 실수 평점 · 기록 축하 · 극장골 · 수석코치 =====================
-        function minuteLabel(st) { const t = Math.floor(st.time); if (st.maxTime) return String(t); if (!st.htDone && t >= 45) return `45+${t - 44}`; if (st.htDone && t >= 90) return `90+${t - 89}`; return String(t + 1 > 90 ? 90 : Math.max(1, t)); }
+        function minuteLabel(st) { const t = Math.floor(shownT(st, st.time)); if (st.maxTime) return String(t); if (!st.htDone && t >= 45) return `45+${t - 44}`; if (st.htDone && t >= 90) return `90+${t - 89}`; return String(t + 1 > 90 ? 90 : Math.max(1, t)); }
         // 주심은 마지막 공격·날아가는 공·페널티킥이 끝날 때까지 휘슬을 기다린다
+        const EXT_MAX = 8;
+        function shownT(st, t) { const e = st && st.extOn; return e != null && t > e ? e + (t - e) / 2 : t; }   // 연장된 공격 시간은 시계·기록에 절반만
+        function resetExt(st) { st.extOn = null; st.extShown = 0; st.pushSaid = false; st.extSaid = false; st.holdSaid = false; }
+        function homePush(st) {   // 우리 팀 공격이 하프라인을 넘어 살아 있나
+            if (!st || st.online || st.mode === 'onlineFriendly' || st.ended) return false;
+            if (st.sp) return !!st.sp.team && (st.sp.kind === 'corner' || st.sp.kind === 'pen' || st.sp.x > 50);
+            if (st.cornerHold) return !!st.lastPoss;
+            const o = st.ball.ownerId != null && allOf(st).find(p => p.id === st.ball.ownerId);
+            if (o) return o.isHome && o.role !== 'GK' && o.x > 50;
+            return !!st.lastPoss && st.ball.x > 50;   // 패스·크로스·슈팅이 날아가는 중 / 루즈볼
+        }
         function holdWhistle(st, endT) {
             if (st.online && !st.online.isHost) return false;
             if (st.varOn) return true;
@@ -7220,6 +7416,16 @@
             else if (st.sp) hold = cap && (st.sp.kind === 'corner' || (st.sp.team ? st.sp.x > 50 : st.sp.x < 50));     // 코너킥 · 상대 진영 프리킥
             else if (st.cornerHold) hold = cap;
             else { const o = st.ball.ownerId && allOf(st).find(p => p.id === st.ball.ownerId); if (o && o.role !== 'GK' && (o.isHome ? o.x > 50 : o.x < 50)) hold = cap; }   // 하프라인 넘어 공격 중
+            // 우리 팀이 하프라인을 넘어 공격 중이거나 마지막 공격이면 최대 +8분까지 기회를 더 준다 — 공식 추가시간엔 절반만 반영
+            const push = !hold && homePush(st) && st.time < endT + EXT_MAX;
+            if (push) hold = true;
+            if (hold && st.time >= endT) {
+                if (st.extOn == null) st.extOn = endT;
+                if (push && !st.pushSaid) { st.pushSaid = true; st.holdSaid = true; comm(st, pick([`⏱️ 시간은 다 됐지만 ${teamName}의 공격이 이어집니다 — 주심이 휘슬을 미룹니다`, `⏱️ 주심이 시계를 보고도 ${teamName}의 공격을 끝까지 지켜봅니다`, `⏱️ ${teamName}, 마지막 공격! 주심은 아직 휘슬을 불지 않습니다`]), 'info'); }
+                const add = Math.round((st.time - endT) / 2);
+                if (!st.maxTime && add > (st.extShown || 0)) { st.extShown = add; showAddedBoard(st, (st.htDone ? st.added : st.added1) + add); }
+            }
+            if (!hold && st.extOn != null && !st.extSaid && !st.maxTime && st.time - endT > 1.6) { st.extSaid = true; const real = Math.round((st.time - endT) * 10) / 10; if (!st.maxTime && st.htDone) st.addedOff = st.added + (st.extShown || 0); const base = st.maxTime ? 0 : (st.htDone ? st.added : st.added1) || 0; comm(st, `⏱️ 공식 기록 추가시간 +${base + (st.extShown || 0)}분 — 공격 기회로 ${real}분을 더 줬지만 기록엔 절반만 반영`, 'info'); }
             if (hold && !st.holdSaid) { st.holdSaid = true; comm(st, st.sp && st.sp.kind === 'pen' ? '⏱️ 시간은 다 됐지만 페널티킥은 차고 끝납니다' : st.sp && st.sp.kind === 'corner' ? '⏱️ 마지막 코너킥! 주심이 휘슬을 입에 문 채 지켜봅니다' : '⏱️ 시간이 다 됐지만 주심이 마지막 공격까지 지켜봅니다', 'info'); }
             if (!hold) st.holdSaid = false;
             return hold;
@@ -7323,44 +7529,65 @@
             if (cap) setTimeout(() => { if (currentMatchState === st) comm(st, `🫡 주장 ${JO(cap.name, '이', '가')} 동료들을 떼어내며 진정시킵니다`, 'info'); }, 0);
             if (Math.random() < 0.25 * ((st.ref && st.ref.s) || 1)) { const loud = L[0]; if (loud && !loud.cards) setTimeout(() => { if (currentMatchState !== st || st.ended || loud.isRedCarded) return; comm(st, `🟨 주심이 참지 않습니다 — ${loud.name} 항의로 경고!`, 'card'); triggerCard(loud, 'yellow', Math.floor(st.time)); }, 2300); }
         }
-        // 파울 이후: 퇴장·PK는 애매하면 VAR → 항의
+        // 파울 이후: 퇴장·PK 판정도 14%는 오심 → VAR이 대부분 바로잡고 일부는 그대로 남는다
         function afterFoul(st, fouler, victim, inBox, card) {
-            const t = Math.floor(st.time);
-            if (card === 'red' && canVar(st) && Math.random() < 0.5) { varIncident(st, { kind: 'red', fouler, victim, inBox }); return; }
-            if (card) { triggerCard(fouler, card, t); }
+            const t = Math.floor(st.time), live = !st.online && st.mode !== 'onlineFriendly';
+            let shown = card;
+            if (live && (card === 'red' || (card === 'yellow' && st.lastDogso))) {   // 퇴장성 판정 (레드 · 득점 기회 저지 옐로)
+                const truth = card === 'red', E = refErr(st), on = E.wrong ? !truth : truth, o = { kind: 'red', fouler, victim, inBox, on, final: truth };
+                if ((E.wrong && E.fix) || (!E.wrong && truth && canVar(st) && Math.random() < 0.5 * refV(st))) {
+                    comm(st, `${on ? '🟥' : '🟨'} 주심이 ${on ? '레드카드' : '경고'}를 꺼내려는 순간 — 이어폰에 손을 댑니다. VAR!`, 'warn'); varIncident(st, o); return;
+                }
+                if (E.wrong) { shown = on ? 'red' : 'yellow';
+                    keepRefErr(st, on ? { kind: 'red-yes', hurtHome: fouler.isHome, who: fouler.name, reason: '과한 퇴장', txt: `${fouler.name}의 반칙은 경고면 충분했습니다 — 과한 레드카드` } : { kind: 'red-no', hurtHome: victim.isHome, who: fouler.name, reason: '퇴장 미선언', txt: `${fouler.name}의 반칙은 명백한 득점 기회 저지였습니다 — 경고에 그침` });
+                    if (!st.online) setTimeout(() => { if (currentMatchState === st && !st.ended) protest(st, on ? fouler.isHome : victim.isHome, on ? '퇴장' : '반칙'); }, 0); }
+            }
+            if (shown) { triggerCard(fouler, shown, t); }
             else { st.isPaused = true; setTimeout(() => { if (currentMatchState === st && !st.varOn) st.isPaused = false; }, inBox ? 900 : 550); }
-            if (inBox && card !== 'red' && !st.forcePen) { if (!st.online && Math.random() < 0.5) protest(st, fouler.isHome, 'PK'); if (canVar(st) && Math.random() < 0.3) setTimeout(() => { if (currentMatchState === st && st.sp && st.sp.kind === 'pen' && !st.sp.penSet) varIncident(st, { kind: 'pen', fouler, victim, card }); }, card ? 2150 : 950); }
+            if (inBox && shown !== 'red' && !st.forcePen) {
+                if (!st.online && Math.random() < 0.5) protest(st, fouler.isHome, 'PK');
+                if (live) { const E = refErr(st);
+                    if (E.wrong || (canVar(st) && Math.random() < 0.3 * refV(st))) {
+                        const o = { kind: 'pen', fouler, victim, card: shown, on: true, final: !E.wrong, why: E.wrong ? pick(['접촉 없음 · 시뮬레이션', '파울 지점이 박스 밖', '수비수가 공을 먼저 건드림']) : null };
+                        if (!E.wrong || E.fix) setTimeout(() => { if (currentMatchState === st && st.sp && st.sp.kind === 'pen' && !st.sp.penSet) varIncident(st, o); }, shown ? 2150 : 950);
+                        else keepRefErr(st, { kind: 'pen-yes', hurtHome: fouler.isHome, who: victim.name, reason: 'PK 오심', txt: `${victim.name}에게 준 페널티킥 — 리플레이상 ${o.why}` });
+                    } }
+            }
         }
         const VAR_TXT = {
-            red: { t: '🟥 퇴장 판정 확인', chk: '태클 강도 · 발바닥 접촉 · 득점 기회 저지 여부 확인 중', p: 0.3 },
-            pen: { t: '🎯 페널티킥 판정 확인', chk: '접촉 여부 · 파울 지점 확인 중', p: 0.3 },
-            nopen: { t: '🎯 PK 미선언 장면 확인', chk: '박스 안 접촉 장면 정밀 확인 중', p: 0.45 },
-            hand: { t: '✋ 핸드볼 확인', chk: '팔 위치 · 고의성 · 몸에 먼저 맞았는지 확인 중', p: 0.4 }
+            red: { t: '🟥 퇴장 판정 확인', chk: '태클 강도 · 발바닥 접촉 · 득점 기회 저지 여부 확인 중' },
+            pen: { t: '🎯 페널티킥 판정 확인', chk: '접촉 여부 · 파울 지점 확인 중' },
+            nopen: { t: '🎯 PK 미선언 장면 확인', chk: '박스 안 접촉 장면 정밀 확인 중' },
+            hand: { t: '✋ 핸드볼 확인', chk: '팔 위치 · 고의성 · 몸에 먼저 맞았는지 확인 중' }
         };
+        const VAR_ON = { red: on => on ? '🟥 온필드: 레드카드' : '🟨 온필드: 경고', pen: () => '🎯 온필드: 페널티킥', nopen: () => '▶ 온필드: 반칙 없음', hand: on => on ? '✋ 온필드: 핸드볼 PK' : '▶ 온필드: 핸드볼 아님' };
+        // o.on = 주심의 온필드 판정 · o.final = VAR 이후 최종 판정 (red/pen: 유지 여부, nopen/hand: PK 여부)
         function varIncident(st, o) {
             const V = VAR_TXT[o.kind]; if (!V) return; st.varOn = true; st.isPaused = true; st.varN = (st.varN || 0) + 1; if (st.ex) st.ex.var++;
             const ov = document.getElementById('var-overlay'), tx = document.getElementById('var-text'), mon = document.getElementById('var-mon');
-            const turn = Math.random() < V.p, hid = String((o.fouler || {}).id || ''), Hs = (st.hist || []).slice(-16);
+            if (o.on === undefined) o.on = o.kind === 'red' || o.kind === 'pen';
+            if (o.final === undefined) o.final = o.on;
+            const turn = o.kind === 'red' || o.kind === 'pen' ? !o.final : !!o.final, flip = o.on !== o.final, hid = String((o.fouler || {}).id || ''), Hs = (st.hist || []).slice(-16);
             comm(st, `📺 VAR — ${V.t.replace(/^\S+\s/, '')} 중입니다…`, 'info'); SFX.playTone(520, 'square', 0.12, 0.06);
             const isAtt = o.victim ? o.victim.isHome : true;
             const done = () => { st.varOn = false; if (ov) { ov.className = 'var-overlay hidden'; mon.innerHTML = ''; } if (currentMatchState !== st) return; varApply(st, o, turn); };
             if (!ov || !Hs.length) { setTimeout(done, 600); return; }
-            ov.className = 'var-overlay'; tx.innerHTML = `${V.t}<br><small>${V.chk}</small>`;
+            ov.className = 'var-overlay'; tx.innerHTML = `${V.t}<br><small>${VAR_ON[o.kind](o.on)} · ${V.chk}</small>`;
             let i = 0; clearInterval(varIncident.h);
             varIncident.h = setInterval(() => { if (currentMatchState !== st) { clearInterval(varIncident.h); return; } mon.innerHTML = varSvg(Hs[i % Hs.length], isAtt, { hl: hid, ring: true }); i++; if (i >= Hs.length * 2) { clearInterval(varIncident.h); tx.innerHTML = `${V.t}<br><small>주심이 온필드 리뷰 모니터 앞으로 갑니다…</small>`; } }, 115);
             const decideAt = 115 * Hs.length * 2 + 1400;
             setTimeout(() => {
                 if (currentMatchState !== st) return;
-                const res = varResult(o, turn); ov.className = 'var-overlay ' + (res.bad ? 'no' : 'ok'); tx.innerHTML = `${res.h}<br><small>${res.why}</small>`;
-                comm(st, `📺 VAR 판독: ${res.h.replace(/<[^>]+>/g, '')} — ${res.why}`, res.bad ? 'card' : 'info');
+                const res = varResult(o, turn, flip); ov.className = 'var-overlay ' + (res.bad ? 'no' : 'ok'); tx.innerHTML = `${res.h}${flip ? ' <small>(판정 번복)</small>' : ''}<br><small>${res.why}</small>`;
+                comm(st, `📺 VAR 판독${flip ? ' — 온필드 판정 번복!' : ''}: ${res.h.replace(/<[^>]+>/g, '')} — ${res.why}`, res.bad ? 'card' : 'info');
                 setTimeout(done, 1600);
             }, decideAt);
         }
-        function varResult(o, turn) {
-            if (o.kind === 'red') return turn ? { h: '🟨 경고로 정정', why: pick(['공을 먼저 건드린 것이 확인됐습니다', '접촉이 생각보다 약했습니다', '다른 수비수가 커버 가능한 위치였습니다']) } : { h: '🟥 퇴장 유지', why: pick(['명백한 득점 기회 저지', '발바닥으로 정강이를 가격한 위험한 태클', '볼과 무관한 과도한 접촉']), bad: true };
-            if (o.kind === 'pen') { o.why = pick(['접촉 없음 · 시뮬레이션 의심', '파울 지점이 박스 밖', '수비수가 공을 먼저 건드림']); return turn ? { h: '❌ PK 취소', why: o.why, bad: true } : { h: '✅ PK 유지', why: pick(['발목 접촉 명확', '공과 무관하게 다리를 걸었습니다', '진로 방해 확인']) }; }
+        function varResult(o, turn, flip) {
+            if (o.kind === 'red') return turn ? { h: '🟨 경고로 정정', why: pick(['공을 먼저 건드린 것이 확인됐습니다', '접촉이 생각보다 약했습니다', '다른 수비수가 커버 가능한 위치였습니다']) } : { h: flip ? '🟥 레드카드로 상향!' : '🟥 퇴장 유지', why: pick(['명백한 득점 기회 저지', '발바닥으로 정강이를 가격한 위험한 태클', '볼과 무관한 과도한 접촉']), bad: true };
+            if (o.kind === 'pen') { o.why ||= pick(['접촉 없음 · 시뮬레이션 의심', '파울 지점이 박스 밖', '수비수가 공을 먼저 건드림']); return turn ? { h: '❌ PK 취소', why: o.why, bad: true } : { h: '✅ PK 유지', why: pick(['발목 접촉 명확', '공과 무관하게 다리를 걸었습니다', '진로 방해 확인']) }; }
             if (o.kind === 'nopen') return turn ? { h: '🎯 PK 선언!', why: '주심이 모니터를 보고 판정을 번복합니다 — 접촉 확인' } : { h: '▶ 경기 계속', why: '정당한 태클 — 공을 먼저 건드렸습니다' };
-            if (o.kind === 'hand') return turn ? { h: '✋ 핸드볼 — PK!', why: '팔을 부자연스럽게 벌려 슈팅을 막았습니다' } : { h: '▶ 핸드볼 아님', why: pick(['몸에 먼저 맞고 팔에 닿았습니다', '팔이 몸에 붙어 있었습니다']) };
+            if (o.kind === 'hand') return turn ? { h: flip ? '✋ 핸드볼 — PK!' : '✋ 핸드볼 PK 유지', why: '팔을 부자연스럽게 벌려 슈팅을 막았습니다' } : { h: flip ? '❌ PK 취소 — 핸드볼 아님' : '▶ 핸드볼 아님', why: pick(['몸에 먼저 맞고 팔에 닿았습니다', '팔이 몸에 붙어 있었습니다', '공이 어깨에 맞았습니다']), bad: flip };
             return { h: '확인 완료', why: '' };
         }
         function varApply(st, o, turn) {
@@ -7388,16 +7615,213 @@
             draw: ['승점 1점이면 뭐…', '이길 수 있었는데 ㅅㅂ 아깝다', '애매하네 진짜', '결정력만 있었어도', '무승부치고 경기력은 괜찮았음'],
             any: ['ㅇㅈ', 'ㄹㅇ', '222', '이건 맞말', '공감 박고 간다', '오늘 직관 갔는데 분위기 미쳤음', '하이라이트 언제 올라옴?', '이거 개념글 가자']
         };
-        function galTag(t) { return /MOM|평점|평가/.test(t) ? '[평점]' : /VAR|주심|카드|판정/.test(t) ? '[판정]' : /xG|점유율|전술|교체/.test(t) ? '[분석]' : /직관|분위기|비|눈/.test(t) ? '[직관]' : /골|극장|해트트릭|원더골/.test(t) ? '[하이라이트]' : '[잡담]'; }
+        function galTag(t) { return /MOM|평점|평가/.test(t) ? '[평점]' : /VAR|주심|카드|판정|오심|심판/.test(t) ? '[판정]' : /xG|점유율|전술|교체/.test(t) ? '[분석]' : /직관|분위기|비|눈/.test(t) ? '[직관]' : /골|극장|해트트릭|원더골/.test(t) ? '[하이라이트]' : '[잡담]'; }
+        function toggleWx() { const p = document.getElementById('match-pitch'); if (!p) return; const off = !p.classList.contains('wx-off'); p.classList.toggle('wx-off', off); try { localStorage.setItem('fm_wxfx', off ? 'off' : 'on'); } catch (e) {} toast(off ? '🌦️ 날씨 효과 끔 (능력치 영향은 그대로)' : '🌦️ 날씨 효과 켬'); }
+
+        // ===================== beta47: 득점 기록 · 경기 흐름 그래프 · 커뮤니티 3탭(우리 갤 / 상대 팬 / 해외 반응) =====================
+        // ---- 경기 흐름(어택 모멘텀): 분 단위로 공격 깊이 + 슈팅을 누적 → 경기 후 그래프 ----
+        function trackMom(st) {
+            const key = (st.htDone ? 'b' : 'a') + Math.floor(st.time), B = st.momB || (st.momB = []);
+            if (!B.length || B[B.length - 1].k !== key) { if (B.length > 160) return; B.push({ k: key, lab: minuteLabel(st), v: 0, n: 0, s: 0 }); }
+            const b = B[B.length - 1], fl = st.ball.fl;
+            if (st.ball.ownerId) { const o = allOf(st).find(p => p.id === st.ball.ownerId); if (o) { const d = o.isHome ? o.x : 100 - o.x; b.v += (o.isHome ? 1 : -1) * Math.max(0, d - 38) / 62; b.n++; } }
+            if (fl && fl.kind === 'shot' && !fl.momed) { fl.momed = 1; b.s += fl.ex > 50 ? 1 : -1; }
+        }
+        function momSeries(st) {
+            const B = st.momB || []; if (!B.length) return [];
+            const raw = B.map(b => (b.n ? b.v / b.n : 0) * 1.6 + b.s * 0.55);
+            return raw.map((v, i) => Math.max(-1.6, Math.min(1.6, (v * 2 + (raw[i - 1] ?? v) + (raw[i + 1] ?? v)) / 4)));
+        }
+        function momSvg(st, compact) {
+            const V = momSeries(st), n = V.length; if (n < 3) return '';
+            const W = 600, Hh = compact ? 46 : 70, mid = Hh / 2, bw = W / n, sc = (mid - 6) / 1.6, gl = st.goalLog || [];
+            let g = `<line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="rgba(148,163,184,.35)" stroke-width="1"/>`;
+            V.forEach((v, i) => { const h = Math.max(0.6, Math.abs(v) * sc); g += `<rect x="${(i * bw + 0.4).toFixed(1)}" y="${(v >= 0 ? mid - h : mid).toFixed(1)}" width="${Math.max(0.8, bw - 0.8).toFixed(1)}" height="${h.toFixed(1)}" rx="1" fill="${v >= 0 ? '#3b82f6' : '#ef4444'}" opacity="${(0.45 + Math.min(1, Math.abs(v)) * 0.5).toFixed(2)}"/>`; });
+            const B = st.momB, ht = B.findIndex(b => b.k[0] === 'b');
+            if (ht > 0) g += `<line x1="${(ht * bw).toFixed(1)}" y1="2" x2="${(ht * bw).toFixed(1)}" y2="${Hh - 2}" stroke="rgba(255,255,255,.45)" stroke-dasharray="3 3"/>`;
+            let mk = ht > 0 ? `<b class="mom-ht" style="left:${(ht / n * 100).toFixed(2)}%">HT</b>` : ''; gl.forEach(x => { if (x.mi < 0 || x.mi >= n) return; const cx = (x.mi + 0.5) * bw; g += `<line x1="${cx.toFixed(1)}" y1="${mid}" x2="${cx.toFixed(1)}" y2="${x.home ? 7 : Hh - 7}" stroke="${x.home ? '#93c5fd' : '#fca5a5'}" stroke-width="1.2"/>`; mk += `<i class="${x.home ? 'h' : 'a'}" style="left:${(cx / W * 100).toFixed(2)}%" title="${leagueEsc((x.lab || x.time) + "' " + x.scorer)}">⚽</i>`; });
+            return `<div class="mom-wrap"><div class="mom-h"><span>📈 경기 흐름</span><small><i class="h"></i>${leagueEsc(teamName)} <i class="a"></i>${leagueEsc(st.enemy.name)}</small></div><div class="mom-plot"><svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" class="mom-svg" style="height:${Hh}px">${g}</svg>${mk}</div><div class="mom-x"><span>1'</span>${ht > 0 ? `<span>45'</span>` : ''}<span>${leagueEsc(B[n - 1].lab)}'</span></div></div>`;
+        }
+        // ---- 득점 기록표: 몇 분에 누가 · 도움 · 방식 · 거리 · VAR / 퇴장 / 취소된 골 ----
+        const HOW_SHORT = { pk: 'PK', fk: '프리킥', header: '헤딩', volley: '발리', long: '중거리', cut: '컷백', '1v1': '1대1', empty: '빈 골대' };
+        function goalSheetRows(st) {
+            const ev = [];
+            (st.goalLog || []).forEach((g, i) => ev.push({ o: i, home: g.home, ic: '⚽', lab: g.lab || g.time, n: g.scorer, sub: [g.how === 'pk' ? null : g.assist ? `도움 ${g.assist}` : null, g.how === 'pk' ? null : HOW_SHORT[g.how] || null, g.dist >= 18 && g.how !== 'pk' ? `${g.dist}m` : null, g.vr === 'review' ? '📺 VAR 확인 후 인정' : null, g.err ? `⚠️ 오심 논란 · ${g.err}` : null].filter(Boolean).join(' · '), pk: g.how === 'pk', late: !!(st.theatre && st.theatre.scorer === g.scorer && st.theatre.lab === g.lab) }));
+            (st.varNo || []).forEach(v => ev.push({ o: 900, home: v.home, ic: '⚽', lab: v.lab || v.time, n: v.scorer, sub: `📺 VAR 취소 · ${v.reason}`, no: true }));
+            (st.fieldNo || []).forEach(v => ev.push({ o: 900, home: v.home, ic: '⚽', lab: v.lab || v.time, n: v.scorer, sub: `🚩 골 취소 · ${v.reason}${v.err ? ' · ⚠️ 오심 논란' : ''}`, no: true }));
+            (st.cardLog || []).filter(c => c.red).forEach(c => ev.push({ o: 950, home: c.home, ic: c.two ? '🟨🟥' : '🟥', lab: c.lab, n: c.n, sub: c.two ? '경고 누적 퇴장' : '퇴장', red: true }));
+            const key = l => { const m = String(l).match(/^(\d+)(?:\+(\d+))?/); return m ? +m[1] + (m[2] ? +m[2] / 100 : 0) : 0; };
+            return ev.sort((a, b) => key(a.lab) - key(b.lab) || a.o - b.o);
+        }
+        function renderGoalSheet(st, elId, compact) {
+            const el = document.getElementById(elId || 'end-goals'); if (!el) return;
+            if (!st || st.forfeit) { el.innerHTML = ''; return; }
+            const ev = goalSheetRows(st), row = e => `<div class="gs-row ${e.home ? 'h' : 'a'} ${e.no ? 'no' : ''} ${e.red ? 'red' : ''} ${e.late ? 'late' : ''}"><span class="gs-ic">${e.ic}</span><b class="gs-min">${leagueEsc(String(e.lab))}'</b><span class="gs-n">${leagueEsc(e.n)}${e.pk ? ' <em>(PK)</em>' : ''}${e.late ? ' <em class="gs-th">🎭</em>' : ''}</span>${e.sub && !compact ? `<small>${leagueEsc(e.sub)}</small>` : ''}</div>`;
+            const H = ev.filter(e => e.home), A = ev.filter(e => !e.home);
+            const pens = st.pens && !compact ? `<div class="gs-pens">🎯 승부차기 <b>${st.pens.h.filter(Boolean).length} : ${st.pens.a.filter(Boolean).length}</b> <span>${st.pens.h.map(x => x ? '●' : '○').join('')} / ${st.pens.a.map(x => x ? '●' : '○').join('')}</span></div>` : '';
+            const tl = !compact && ev.length ? `<div class="gs-tl">${ev.filter(e => !e.no).map(e => { const m = String(e.lab).match(/^(\d+)(?:\+(\d+))?/), t = m ? Math.min(+m[1] + (m[2] ? +m[2] * 0.3 : 0), st.maxTime || 92) : 0; return `<i class="${e.home ? 'h' : 'a'} ${e.red ? 'red' : ''}" style="left:${(t / (st.maxTime || 92) * 100).toFixed(1)}%" title="${leagueEsc(e.lab + "' " + e.n)}">${e.red ? '🟥' : '⚽'}</i>`; }).join('')}<span style="left:${(45 / (st.maxTime || 92) * 100).toFixed(1)}%"></span></div>` : '';
+            el.innerHTML = `<div class="gs-box ${compact ? 'compact' : ''}"><div class="gs-cols"><div class="gs-col h">${H.map(row).join('') || '<div class="gs-none">득점 없음</div>'}</div><div class="gs-mid">${compact ? '⚽' : '⚽<small>득점 기록</small>'}</div><div class="gs-col a">${A.map(row).join('') || '<div class="gs-none">득점 없음</div>'}</div></div>${pens}${momSvg(st, compact)}</div>`;
+        }
+
+        // ---- 국내 갤러리: 상황별 글 추가 ----
+        function moreFanPosts(st, add) {
+            const H = st.scoreHome, A = st.scoreAway, win = H > A || (H === A && st.penWinner === 'home'), lose = A > H || (H === A && st.penWinner === 'away'), en = st.enemy.name, gl = st.goalLog || [], X = st.stats;
+            const mine = [...st.homePlayers, ...(st.homeOut || [])], PS = id => st.playerStats[id] || {};
+            const myG = gl.filter(g => g.home), opG = gl.filter(g => !g.home), vno = st.varNo || [];
+            (st.refErr || []).forEach(e => add(e.hurtHome ? pick([`[오심] ${e.lab}분 ${errDesc(e)} — VAR실 뭐 하냐 진짜`, `${e.lab}분 판정 보고 리모컨 던짐… ${errDesc(e)}`, `주심 ${st.ref ? st.ref.n : ''} 오늘 경기 망침 (${errDesc(e)})`]) : pick([`${e.lab}분 ${errDesc(e)}… 솔직히 우리가 이득 본 건 맞다`, `판정 덕 봤다는 소리 나오겠네 (${errDesc(e)})`]), 6 + errHeat(st, e) / 2));
+            (st.fieldNo || []).filter(v => v.home && !v.err).forEach(v => add(`${v.scorer} 골 ${v.reason}로 취소된 건 아쉽지만 맞는 판정이긴 함`, 2));
+            if (vno.some(v => !v.home)) add(`상대 골 VAR로 취소될 때 소리 질렀다 ㅋㅋㅋ 📺 ${vno.find(v => !v.home).reason} 잡아낸 거 칭찬한다`, 5);
+            if (gl.some(g => g.vr === 'review' && g.home)) add('VAR 판독 들어갔을 때 심장 멎는 줄… 골 인정돼서 진짜 다행 😮‍💨', 4);
+            if (gl.some(g => g.vr === 'review' && !g.home)) add('상대 골 VAR 봤는데 결국 인정… 화면으로 봐도 깔끔하긴 했다', 3);
+            if (H - A >= 3) add(pick([`${en} 상대로 ${H}골 ㅋㅋ 이건 경기가 아니라 학살이다`, `${H}:${A}… 스코어보드 고장난 줄 알았음`, `오늘 ${en} 팬들 단체로 탈주각`]), 5);
+            if (A - H >= 3) add(pick([`${A}실점 실화냐… 오늘 경기는 기억에서 지운다`, `오늘 수비 라인 누가 짰냐 진지하게`, `${A}골 먹는 동안 우리 수비 뭐 함?`]), 5);
+            if (H === 0 && A === 0) add(pick(['0:0… 90분 동안 나 뭐 본 거냐', '득점 없는 경기도 나름 전술 싸움이었음 (정신승리)', '양 팀 골키퍼만 일한 경기']), 3);
+            if (!H && (X.homeShots || 0) >= 12) add(`슈팅 ${X.homeShots}개 때리고 0골… 골대에 자석 붙었냐`, 4);
+            if (myG.length && myG[0].time <= 4) add(`${myG[0].lab}분 만에 선제골 ㅋㅋ 자리에 앉기도 전에 넣음`, 3);
+            const far = [...myG].filter(g => g.how !== 'pk').sort((a, b) => (b.dist || 0) - (a.dist || 0))[0];
+            if (far && far.dist >= 24) add(`${far.scorer} ${far.dist}m 거리에서 꽂았다고? 이건 반칙이지 ㅋㅋ 🚀`, 4);
+            const hd = myG.find(g => g.how === 'header'); if (hd) add(`${hd.scorer} 헤딩 타점 미쳤다. 공중전은 우리가 이김`, 2);
+            const fk = myG.find(g => g.how === 'fk'); if (fk) add(`${fk.scorer} 프리킥 각도 봤냐? 벽 위로 감아서 꽂음 🎯`, 4);
+            const dA = mine.find(p => (PS(p.id).assists || 0) >= 2); if (dA) add(`${dA.name} 도움 ${PS(dA.id).assists}개 ㄷㄷ 오늘 패스 마스터`, 4);
+            const gk = mine.find(p => p.role === 'GK' && !p.subIn); if (gk && A === 0 && (X.awayShots || 0) >= 8) add(`${gk.name} 오늘 선방 쇼 ㄷㄷ 슈팅 ${X.awayShots}개 다 막음 🧤`, 4);
+            if ((X.away_rc || 0) > 0 && win) add('상대 퇴장 나오고 수적 우위 제대로 살린 거 굿', 3);
+            if ((X.away_rc || 0) > 0 && !win) add('11대 10인데 못 이기는 건 좀 반성해야 함…', 4);
+            if (lose && myG.length && gl.length && gl[0].home && opG.length >= 2) add('선제골 넣고 역전패… 데미지 두 배다', 4);
+            if (!win && opG.some(g => g.time >= 90 && g.homeBefore > g.awayBefore)) add('추가시간 실점… 오늘 밤 잠 다 잤다', 5);
+            if (st.pens) add(st.penWinner === 'home' ? pick(['승부차기 보다가 수명 3년 줄어듦 ㅋㅋ 근데 이겼으니 됐다', '키커들 멘탈 강철이네 🎯']) : pick(['승부차기는 운이라지만… 너무 아프다', '승부차기 실축한 선수 탓하지 말자 거기까지 간 게 대단']), 5);
+            const R = st.ref, fouls = (X.home_foul || 0) + (X.away_foul || 0);
+            if (R && R.f >= 1.15 && fouls >= 14) add(`주심 ${R.n} 오늘 휘슬 몇 번 불었냐 ㅋㅋ 흐름 계속 끊김`, 3);
+            if (R && R.v >= 1.35 && (st.varN || 0) >= 2) add(`${R.n} 주심 VAR 너무 자주 보는 거 아님? 모니터랑 사귀는 줄`, 3);
+            if (R && R.f <= 0.85 && win) add(`주심이 웬만하면 안 불어서 경기 시원시원했다. 이런 판정 좋음`, 2);
+            add(pick(['내일 출근인데 하이라이트만 세 번 돌려봄', '다음 경기 언제냐 벌써 기다려짐', '오늘 경기 평점 정리해 볼 사람?', '직관 간 사람 후기 좀', '경기 끝나고 FM 켰다가 이 팀으로 세이브 시작함 ㅋㅋ']), 1);
+        }
+        const GAL_CMT2 = {
+            var: ['VAR 볼 때 숨 참았다', '선 긋는 거 보니까 확실하던데', '판독 화면 보는데 심장 쫄깃', 'VAR 없었으면 난리났다 진짜', '이건 판독 볼 만했음'],
+            theatre: ['소리 지르다 목 쉼', '극장골은 못 참지', '이게 축구지 ㄹㅇ', '새벽에 이웃집 다 깼을 듯', '방금 영상 10번 돌려봄'],
+            ref: ['주심 오늘 컨디션 별로였음', '판정은 양쪽 다 애매했다', '카드 기준 일관성 좀…', '어드밴티지 줄 땐 잘 줬음'],
+            analysis: ['xG는 거짓말 안 한다', '전술 변화 타이밍이 핵심이었음', '중원 싸움에서 이겼다', '측면 공략 잘 먹혔음'],
+            big: ['스코어 실화냐', 'ㅋㅋㅋㅋ 이게 뭐임', '학살 ㄷㄷ', '오늘 일기장에 쓴다'],
+        };
+        function galComment(tag, mood) { const k = tag === '[판정]' ? (Math.random() < 0.6 ? 'var' : 'ref') : tag === '[분석]' ? 'analysis' : tag === '[하이라이트]' && Math.random() < 0.5 ? 'theatre' : null; return k ? pick(GAL_CMT2[k]) : pick(GAL_CMT[mood]); }
+
+        // ---- 상대 팀 팬 반응 ----
+        function oppFanPosts(st) {
+            const H = st.scoreHome, A = st.scoreAway, theyWin = A > H || (H === A && st.penWinner === 'away'), theyLose = H > A || (H === A && st.penWinner === 'home'), T = teamName || '저 팀', O = st.enemy.name, gl = st.goalLog || [];
+            const myTop = gl.filter(g => g.home).reduce((m, g) => (m[g.scorer] = (m[g.scorer] || 0) + 1, m), {}), star = Object.keys(myTop).sort((a, b) => myTop[b] - myTop[a])[0];
+            const theirTop = gl.filter(g => !g.home).map(g => g.scorer)[0], L = [], add = (t, w = 1) => L.push({ t, w });
+            if (theyLose) { add(pick([`오늘 우리 수비 뭐 함?`, `감독 나가라 진짜로`, `${T} 생각보다 훨씬 강하더라 인정`, `그래도 선수들 끝까지 뛴 건 인정한다`, `다음 홈경기 때 두고 보자 ${T}`]), 3);
+                if (star) add(pick([`${star} 하나를 못 막냐…`, `${star} 우리 팀에 데려오면 안 되냐`, `${star} 막으라고 붙인 놈 누구냐`]), 4);
+                if (H - A >= 3) add(pick(['오늘 경기 본 사람 손 들어봐… 나 혼자 상처받기 싫음', '이 스코어는 좀 많이 아프다', '구단 SNS 댓글창 지옥 됐다']), 4); }
+            if (theyWin) { add(pick([`${T} 별거 없네 ㅋㅋ`, `원정에서 3점 꿀맛`, `${T} 팬들 오늘 조용하네`, `우리 감독 전술 오늘은 인정`]), 3);
+                if (theirTop) add(`${theirTop} 영입한 거 신의 한 수`, 3); }
+            if (!theyWin && !theyLose) add(pick(['승점 1점 감지덕지', '비긴 게 다행인 경기', '이길 수 있었는데 아깝다', `${T} 상대로 무승부면 나쁘지 않음`]), 3);
+            if ((st.varNo || []).some(v => !v.home)) add(`우리 골 VAR 취소는 아직도 납득 안 됨 📺 ${st.varNo.find(v => !v.home).reason}이라니`, 5);
+            if ((st.varNo || []).some(v => v.home)) add(`${T} 골 VAR 취소된 거 보고 웃음 참음 ㅋㅋ`, 3);
+            (st.refErr || []).forEach(e => add(!e.hurtHome ? pick([`${e.lab}분 ${errDesc(e)} 이게 말이 되냐고!!! 심판 매수 아님?`, `오늘 경기는 심판이 이김. ${errDesc(e)}`, `VAR 있으면 뭐 하냐 ${errDesc(e)} 그냥 넘어가는데`]) : pick([`${errDesc(e)}… 솔직히 우리가 운 좋았다`, `저쪽 팬들 화날 만하긴 함 ㅋㅋ (${errDesc(e)})`]), 7));
+            if (st.theatre) add(st.theatre.home ? `${st.theatre.lab}분에 먹히는 게 말이 되냐… 다 이긴 경기를` : `${st.theatre.lab}분 극장골!!! 원정석 난리 났다 🎭`, 6);
+            if ((st.ex || {}).waste >= 3 && theyWin) add('키퍼 시간 끈 거 그것도 전술이다 ㅋㅋ', 2);
+            if (st.ref && ((st.stats.away_yc || 0) >= 3 || (st.stats.away_rc || 0))) add(`주심 ${st.ref.n} 우리한테만 카드 꺼내더라`, 3);
+            const out = [], pool = [...L]; while (pool.length && out.length < 4) { const tot = pool.reduce((a, x) => a + x.w, 0); let r = Math.random() * tot, i = 0; while ((r -= pool[i].w) > 0) i++; out.push(pool.splice(i, 1)[0]); }
+            return out.map((c, i) => ({ n: pick(OPP_FANS), t: c.t, like: Math.round((c.w * 30 + Math.random() * 90) * (i === 0 ? 1.8 : 1)) })).sort((a, b) => b.like - a.like);
+        }
+
+        // ---- 해외 반응 (해외 커뮤니티 원문 + 번역) ----
+        const INTL_SITES = { en: ['🇬🇧', 'Reddit r/soccer'], en2: ['🇺🇸', 'X (Twitter)'], es: ['🇪🇸', 'Marca 댓글'], pt: ['🇧🇷', 'Globo Esporte 댓글'], ja: ['🇯🇵', '5ch 해외축구판'], de: ['🇩🇪', 'kicker 포럼'], it: ['🇮🇹', 'Tifosi 포럼'], fr: ['🇫🇷', "L'Équipe 댓글"], zh: ['🇨🇳', '후푸(虎扑)'], ar: ['🇸🇦', 'X (아랍권)'] };
+        function intlPosts(st) {
+            const H = st.scoreHome, A = st.scoreAway, win = H > A || (H === A && st.penWinner === 'home'), lose = A > H || (H === A && st.penWinner === 'away'), T = teamName || 'this team', O = st.enemy.name, gl = st.goalLog || [];
+            const myG = gl.filter(g => g.home), cnt = myG.reduce((m, g) => (m[g.scorer] = (m[g.scorer] || 0) + 1, m), {}), star = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+            const far = myG.filter(g => g.how !== 'pk').sort((a, b) => (b.dist || 0) - (a.dist || 0))[0], th = st.theatre, under = st.fav === 'away' && (st.gap || 0) >= 8;
+            const L = [], add = (s, o, k, w = 1, re) => L.push({ s, o, k, w, re });
+            if (star && cnt[star] >= 3) { add('en', `${star} with a hat-trick. I don't make the rules.`, `${star} 해트트릭. 내가 정한 거 아님 (그냥 인정하라는 뜻)`, 6, ['Ballon d\'Or when? → 발롱도르 언제냐']); add('ja', `${star}って何者？ハットトリックはエグい`, `${star} 정체가 뭐야? 해트트릭은 미쳤다`, 4); }
+            else if (star) add('en', `Who is ${star}? Asking for my FM save.`, `${star} 누구임? FM 세이브 때문에 물어보는 거임`, 3, ['Already signed him for 2M lol → 이미 200만에 영입했음 ㅋㅋ']);
+            if (far && far.dist >= 22) { add('pt', `Que golaço do ${far.scorer}! Pintura de ${far.dist} metros!`, `${far.scorer}의 미친 골! ${far.dist}미터짜리 예술 작품!`, 5); add('en2', `${far.scorer} from ${far.dist}m. Goal of the season contender, no debate.`, `${far.scorer} ${far.dist}m 골. 올해의 골 후보, 토론 불필요`, 4); }
+            if (th) { if (th.home) { add('en', `${th.lab}' ${th.win ? 'winner' : 'equaliser'}. Football, bloody hell.`, `${th.lab}분 ${th.win ? '결승골' : '동점골'}. 축구란 정말…`, 7, ['Scenes. Absolute scenes. → 장면이다. 이건 진짜 장면이다']); add('ja', `${th.lab}分の${th.win ? '決勝' : '同点'}ゴールは熱すぎる`, `${th.lab}분 ${th.win ? '결승골' : '동점골'}은 너무 뜨겁다`, 4); add('it', 'Che partita ragazzi, emozioni pazzesche!', '얘들아 무슨 경기냐, 감정이 미쳤다!', 3); }
+                else add('es', `Gol en el ${th.lab}, eso duele. Pobre ${T}.`, `${th.lab}분 실점, 저건 아프다. 불쌍한 ${T}`, 5); }
+            if (win && under) { add('en', `Massive upset. ${O} fans in shambles.`, `초대형 이변. ${O} 팬들 멘붕`, 6, ['Nobody had this on their bingo card → 아무도 예상 못 함']); add('de', `Was für eine Sensation gegen ${O}!`, `${O} 상대로 무슨 이런 대이변이!`, 4); }
+            if (win && H - A >= 3) { add('es', 'Qué equipazo, juegan de memoria.', '팀 미쳤다, 눈 감고도 패스하네', 4); add('zh', `${T}太强了，这比分太夸张`, `${T} 너무 강하다, 스코어가 너무 과장됨`, 3); }
+            if (win) { add('de', 'Verdienter Sieg, keine Diskussion.', '당연한 승리, 토론 필요 없음', 2); add('fr', `Quel match ! ${star || T} a régalé.`, `무슨 경기! ${star || T}가 눈호강 시켜줬다`, 2); add('en', `${T} are genuinely fun to watch this season.`, `${T} 이번 시즌 진짜 보는 맛 있음`, 2, ['Their manager is a tactical genius → 감독이 전술 천재임']); }
+            if (lose) { add('es', 'Vaya desastre de defensa, madre mía.', '수비 대참사네, 맙소사', 3); add('ja', `${T}の守備崩壊してて草`, `${T} 수비 붕괴돼서 웃김 ㅋㅋ`, 3); add('it', 'Difesa da Serie C oggi.', '오늘 수비는 세리에C 수준', 2); add('en', `${O} just exposed ${T}'s defence completely.`, `${O}가 ${T} 수비를 완전히 털어버렸다`, 2); }
+            if (lose && A - H >= 3) add('pt', 'Time sem alma hoje. Vergonha.', '오늘은 영혼 없는 팀. 창피하다', 4);
+            if (!win && !lose) { add('en', 'Fair result tbh. Neither side deserved it.', '솔직히 공정한 결과. 둘 다 이길 자격 없었음', 2); add('fr', 'Match nul logique, peu d\'occasions.', '무승부가 맞다, 찬스가 별로 없었음', 2); }
+            if ((st.varNo || []).length) { const v = st.varNo[0]; add('it', 'Il VAR? Una vergogna, come sempre.', 'VAR? 언제나처럼 수치다', 4); add('en', `VAR finding a toenail ${v.reason === '오프사이드' ? 'offside' : 'foul'} again. Ruining the game.`, `VAR이 또 발톱 ${v.reason}을 찾아냄. 축구를 망치는 중`, 4, ['Lines don\'t lie mate → 선은 거짓말 안 함']); }
+            else if (gl.some(g => g.vr === 'review')) add('es', 'El VAR acertó esta vez, hay que reconocerlo.', '이번엔 VAR이 맞았다, 인정해야 함', 3);
+            (st.refErr || []).forEach(e => add('en', e.hurtHome ? `${T} robbed by ${errDescEn(e)}. VAR is a joke.` : `${O} robbed by ${errDescEn(e)}. VAR is a joke.`, `${e.hurtHome ? T : O}, ${errDesc(e)}로 도둑맞음. VAR은 코미디다`, 6, ['PGMOL need to release the audio → 심판 기구는 VAR 교신 음성 공개해라']));
+            if (st.pens) add('en2', st.penWinner === 'home' ? `Penalties. Nerves of steel from ${T}.` : `Losing on penalties is the cruelest thing in football.`, st.penWinner === 'home' ? `승부차기. ${T} 강철 멘탈` : '승부차기 패배는 축구에서 가장 잔인한 것', 5);
+            if (st.ref && ((st.stats.home_yc || 0) + (st.stats.away_yc || 0)) >= 5) add('de', `Der Schiri ${st.ref.n} war heute eine Katastrophe.`, `오늘 주심 ${st.ref.n}은 재앙이었다`, 3);
+            if (st.mode === 'saudi') add('ar', 'يا له من هدف! مباراة رائعة', '이 무슨 골인가! 멋진 경기', 4);
+            if (st.mode === 'worldcup') add('en2', `${T} at the World Cup is must-watch TV.`, `월드컵의 ${T}는 무조건 봐야 하는 경기`, 3);
+            if (st.mode === 'career') add('en', `Champions League nights hit different.`, '챔스의 밤은 역시 다르다', 2);
+            const out = [], pool = [...L]; while (pool.length && out.length < 6) { const tot = pool.reduce((a, x) => a + x.w, 0); let r = Math.random() * tot, i = 0; while ((r -= pool[i].w) > 0) i++; out.push(pool.splice(i, 1)[0]); }
+            return out.map((c, i) => ({ ...c, up: Math.round((c.w * 380 + Math.random() * 900) * (i === 0 ? 2.4 : 1)) })).sort((a, b) => b.up - a.up);
+        }
+
+        // ===================== ⚖️ 오심 논란: VAR도 못 잡은 오심 → 한국·영국 축구 커뮤니티 반응 =====================
+        const ERR_EN = { '오프사이드': 'offside', '오프사이드(시야 방해)': 'offside (blocking the keeper)', '선행 장면 파울': 'a foul in the build-up', '공격자 파울': 'a foul by the attacker', '핸드볼': 'handball' };
+        function errDesc(e) {
+            const r = e.reason;
+            return { 'goal-no': `${e.who} 골 취소(${r})`, 'goal-yes': `${r}인데 ${e.who} 골 인정`, 'pen-yes': `${e.who} 다이빙 PK`, 'pen-no': `${e.who} PK 안 줌`, 'red-yes': `${e.who} 과한 퇴장`, 'red-no': `${e.who} 레드인데 경고`, 'hand-yes': `${e.who} 어깨 맞은 걸 핸드볼 PK`, 'hand-no': `${e.who} 핸드볼 안 줌` }[e.kind] || r;
+        }
+        function errDescEn(e) {
+            return { 'goal-no': `${e.who}'s goal chalked off for "${ERR_EN[e.reason] || 'a foul'}"`, 'goal-yes': `${e.who}'s goal standing despite clear ${ERR_EN[e.reason] || 'foul'}`, 'pen-yes': `that soft penalty for ${e.who}`, 'pen-no': `no penalty for the foul on ${e.who}`, 'red-yes': `${e.who} getting sent off for that`, 'red-no': `${e.who} only getting a yellow`, 'hand-yes': `a handball pen when it hit ${e.who}'s shoulder`, 'hand-no': `${e.who}'s blatant handball ignored` }[e.kind] || 'that decision';
+        }
+        // 논란 크기: 골·PK > 퇴장, 결과에 영향(1골 차 이내) · 막판일수록 ↑
+        function errHeat(st, e) {
+            const margin = Math.abs(st.scoreHome - st.scoreAway), big = /goal|pen|hand-yes|hand-no/.test(e.kind);
+            return Math.min(10, (big ? 5 : 3.5) + (margin <= 1 ? 2.5 : 0) + (e.time >= 80 ? 1.5 : 0) + (e.time >= 90 ? 1 : 0));
+        }
+        function refErrPosts(st) {
+            const E = st.refErr || []; if (!E.length) return null;
+            const T = teamName || '우리 팀', O = st.enemy.name, ref = st.ref ? st.ref.n : '오늘 주심', kr = [], uk = [], H = st.scoreHome, A = st.scoreAway;
+            const lost = A > H || (H === A && st.penWinner === 'away'), won = H > A || (H === A && st.penWinner === 'home');
+            const KR_SITE = ['펨코 축구', '디시 국내축구갤', '디시 해외축구갤', '네이버 스포츠 댓글', '더쿠 스포츠'], kn = () => pick(['ㅇㅇ(118.235)', 'ㅇㅇ(211.36)', '판정충', 'VAR감시단', '심판평가위원', '분노의직관러', '새벽축구', '오심박제봇', '10년차시즌권', '중립기어박살']);
+            let heat = 0;
+            E.forEach(e => {
+                const h = errHeat(st, e), d = errDesc(e), dEn = errDescEn(e), weHurt = e.hurtHome, lab = `${e.lab}'`; heat += h;
+                if (weHurt) {
+                    kr.push({ s: pick(KR_SITE), n: kn(), t: pick([`[판정] ${lab} ${d} 이거 오심 아니냐? 리플레이 봐라`, `VAR실 뭐 함? ${d}을 그냥 넘어가네`, `이게 VAR 있는 축구 맞냐… ${lab} ${d}`, `${ref} 주심 이름 기억해둔다 (${d})`]), w: h + 2,
+                        c: [pick(['이건 공론화 가야 됨', '캡처 떠놨다 박제함', '심판 매수설 나와도 할 말 없다', 'VAR실 커피 타임이었냐']), pick(['오심도 경기의 일부라는 소리 하면 차단', '선수들만 불쌍하다 진짜', '구단은 공식 항의 서한 보내라', '심판위원회 오심 인정해도 승점은 안 돌아옴 ㅋㅋ']), lost && h >= 7 ? '이거 아니었으면 결과 달라졌다 100%' : pick(['리플레이 10번 봤는데 그냥 오심임', '해설도 고개 갸웃하더라'])] });
+                    kr.push({ s: pick(KR_SITE), n: kn(), t: pick([`심판평가위원회 이번엔 오심 인정하냐 보자 (${lab} ${e.reason})`, `[움짤] ${lab} ${d} 장면 — 판단은 니들이 해라`, `해외에서도 이거 오심이라고 난리남 ㅋㅋ`, `${T} 이번 시즌 판정 피해 누적 정리해봄`]), w: h,
+                        c: [pick(['정리 고맙다 개추', '이 정도면 심판 배정 바꿔야지', '협회 일 안 하냐']), pick(['ㄹㅇ 매 시즌 이럼', '하… 또 우리만'])] });
+                    uk.push({ s: 'Reddit r/soccer', o: pick([`How on earth did VAR not overturn ${dEn}?`, `Another week, another VAR howler. ${dEn[0].toUpperCase() + dEn.slice(1)}.`, `"Clear and obvious" means nothing anymore. ${dEn[0].toUpperCase() + dEn.slice(1)}.`]), k: pick([`도대체 VAR이 어떻게 이걸(${d}) 안 뒤집음?`, `이번 주도 어김없이 VAR 대참사. ${d}.`, `"명백한 오심"이란 말이 이제 아무 의미 없음. ${d}.`]), w: h + 1,
+                        re: [pick(['PGMOL need to release the audio → 심판 기구는 VAR 교신 음성 공개해라', 'Refs should do post-match interviews → 주심도 경기 후 인터뷰해야 함', 'The VAR room was having a tea break → VAR실 티타임 중이었나 봄']), pick([`${T} genuinely robbed there → ${T} 진짜 도둑맞았다`, 'It evens out over a season (it doesn\'t) → 시즌 전체로 보면 똔똔이다 (아님)'])] });
+                    uk.push({ s: '🇬🇧 펍 토크 팬 포럼', o: pick([`Neutral here. ${O} got away with one today, no question.`, `I've watched it ten times. It's a shocker from the ref.`, `If that happened at Old Trafford we'd hear about it for a month.`]), k: pick([`중립팬임. 오늘 ${O}는 판정 덕 봤다, 의심의 여지 없음.`, '열 번 돌려봤다. 주심 완전 대형 사고임.', '이게 빅클럽 홈경기에서 났으면 한 달 내내 떠들었을 거다.']), w: h });
+                } else {
+                    kr.push({ s: pick(KR_SITE), n: kn(), t: pick([`솔직히 ${lab} ${d}은 우리가 이득 봤다…`, `상대 팬들 화날 만함 인정 (${d})`, `판정 덕 봤단 소리 안 들으려면 다음 경기 실력으로 보여줘야 함`, `${won ? '이긴 건 이긴 거다' : '판정 덕까지 봤는데'}… 근데 ${d}은 좀 찔린다`]), w: h,
+                        c: [pick(['양심 고백 ㅇㅈ', '근데 지난번엔 우리가 당했잖아', '그래도 찜찜한 건 맞음']), pick([`${O} 갤 지금 불바다임 ㅋㅋ`, '이건 쉴드 못 친다', '심판 실수까지 우리 탓은 아니지'])] });
+                    uk.push({ s: 'Reddit r/soccer', o: pick([`${O} absolutely robbed. ${dEn[0].toUpperCase() + dEn.slice(1)}?? VAR is a joke.`, `Stockley Park asleep again — ${dEn}.`, `Get VAR out of our game. ${dEn[0].toUpperCase() + dEn.slice(1)}.`]), k: pick([`${O} 완전 도둑맞음. ${d}?? VAR은 코미디다.`, `VAR 판독실 또 잠듦 — ${d}.`, `VAR 우리 축구에서 꺼져라. ${d}.`]), w: h + 1,
+                        re: [pick([`${O} fans are fuming and rightly so → ${O} 팬들 분노하는 거 당연함`, 'Honestly worst decision of the season → 솔직히 시즌 최악의 판정']), pick([`${T} fans pretending that was fine 🤡 → ${T} 팬들 괜찮은 척하는 중 🤡`, 'Ref will be demoted to the second tier next week → 다음 주에 주심 하부리그 강등각'])] });
+                    uk.push({ s: '🇬🇧 펍 토크 팬 포럼', o: pick([`Feel for ${O} fans. That's not a ${e.reason === '핸드볼' ? 'handball' : 'decision'} anyone can defend.`, `Pundits on telly couldn't believe it either.`]), k: pick([`${O} 팬들 안타깝다. 저건 누구도 쉴드 못 치는 판정.`, 'TV 해설진도 믿을 수 없다는 반응이었음.']), w: h });
+                }
+            });
+            const panel = E.map(e => `📋 [다음 날] 심판 평가 패널: ${e.lab}' ${errDesc(e)} — '오심' 결론, 주심 ${ref} 다음 라운드 배정 제외`);
+            return { kr: kr.sort((a, b) => b.w - a.w).slice(0, 6), uk: uk.sort((a, b) => b.w - a.w).slice(0, 5), heat: Math.min(10, heat), panel };
+        }
+        function renderRefErrPane(st) {
+            const R = refErrPosts(st); if (!R) return '';
+            const bars = '🔥'.repeat(Math.max(1, Math.round(R.heat / 2))), lv = R.heat >= 8 ? '폭발' : R.heat >= 6 ? '뜨거움' : '논쟁 중';
+            const krH = R.kr.map((c, i) => { const rec = Math.round((c.w * 70 + Math.random() * 300) * (i === 0 ? 2 : 1)); return `<details class="gal-row ${i === 0 ? 'best' : ''}"><summary><span class="gal-tag">[판정]</span><span class="gal-title">${leagueEsc(c.t)} <b class="gal-cn">[${Math.round(rec / 6 + Math.random() * 40)}]</b>${rec >= 300 ? ' <i class="gal-hot">개념</i>' : ''}</span><span class="gal-meta"><span>${leagueEsc(c.s)}</span><span>${leagueEsc(c.n)}</span><span>추천 <b>${rec}</b></span></span></summary><div class="gal-cmts">${c.c.map(x => `<div><span>${leagueEsc(GAL_NICK())}</span>${leagueEsc(x)}</div>`).join('')}</div></details>`; }).join('');
+            const ukH = R.uk.map((c, i) => `<details class="intl-row ${i === 0 ? 'best' : ''}"><summary><span class="intl-flag">🇬🇧</span><span class="intl-body"><span class="intl-ko">${leagueEsc(c.k)}</span><span class="intl-o">${leagueEsc(c.o)}</span></span><span class="intl-meta"><span>${leagueEsc(c.s)}</span><span>▲ ${Math.round(c.w * 520 + Math.random() * 1500).toLocaleString()}</span></span></summary>${c.re ? `<div class="intl-re">${c.re.map(r => { const [o, k] = r.split(' → '); return `<div><i>${leagueEsc(o)}</i><span>${leagueEsc(k || '')}</span></div>`; }).join('')}</div>` : ''}</details>`).join('');
+            return `<div class="intl-note" style="color:#fca5a5;font-weight:800">⚖️ 논란 지수 ${bars} ${lv} · VAR도 바로잡지 못한 오심 ${(st.refErr || []).length}건 (오늘 주요 판정 ${st.refCalls || 0}건 중 온필드 오심 ${st.refWrong || 0}건 → VAR 정정 ${st.refFixed || 0}건)</div>
+                ${R.panel.map(p => `<div class="intl-note" style="color:#fde68a">${leagueEsc(p)}</div>`).join('')}
+                <div class="intl-note">🇰🇷 국내 커뮤니티</div>${krH}<div class="intl-note">🇬🇧 영국 커뮤니티 (원문은 회색)</div>${ukH}`;
+        }
+
+        // ---- 3탭 커뮤니티 (+ 오심 논란 탭) ----
         function renderFanReactions(st) {
             const el = document.getElementById('end-fans'); if (!el) return;
             if (st.forfeit) { el.innerHTML = ''; return; }
             const L = fanReactions(st), H = st.scoreHome, A = st.scoreAway, mood = H > A || st.penWinner === 'home' ? 'win' : H < A || st.penWinner === 'away' ? 'lose' : 'draw';
-            const rows = L.map((c, i) => { const rec = c.like, cmts = Math.max(1, Math.round(rec / 9 + Math.random() * 12)), views = Math.round(rec * (6 + Math.random() * 10)); const C = [pick(GAL_CMT[mood]), pick(GAL_CMT.any), pick(GAL_CMT[mood])].filter((v, j, a) => a.indexOf(v) === j);
-                return `<details class="gal-row ${i === 0 ? 'best' : ''}"><summary><span class="gal-tag">${galTag(c.t)}</span><span class="gal-title">${leagueEsc(c.t)} <b class="gal-cn">[${cmts}]</b>${rec >= 300 ? ' <i class="gal-hot">개념</i>' : ''}</span><span class="gal-meta"><span>${leagueEsc(c.n)}</span><span>조회 ${views.toLocaleString()}</span><span>추천 <b>${rec}</b></span></span></summary><div class="gal-cmts">${C.map(x => `<div><span>${leagueEsc(GAL_NICK())}</span>${leagueEsc(x)}</div>`).join('')}</div></details>`; }).join('');
-            el.innerHTML = `<div class="gal-box"><div class="gal-head">💬 ${leagueEsc(teamName)} 갤러리 <small>실시간 · 경기 종료 후 새 글 ${L.length * 7 + Math.floor(Math.random() * 30)}개</small></div>${rows}<div class="gal-foot">글을 누르면 댓글이 보여요</div></div>`;
+            const cmt = t => { const tg = galTag(t); return [galComment(tg, mood), pick(GAL_CMT.any), galComment(tg, mood), Math.random() < 0.5 ? pick(GAL_CMT[mood]) : null].filter((v, j, a) => v && a.indexOf(v) === j); };
+            const gal = (list, nick) => list.map((c, i) => { const rec = c.like, cmts = Math.max(1, Math.round(rec / 9 + Math.random() * 12)), views = Math.round(rec * (6 + Math.random() * 10));
+                return `<details class="gal-row ${i === 0 ? 'best' : ''}"><summary><span class="gal-tag">${galTag(c.t)}</span><span class="gal-title">${leagueEsc(c.t)} <b class="gal-cn">[${cmts}]</b>${rec >= 300 ? ' <i class="gal-hot">개념</i>' : ''}</span><span class="gal-meta"><span>${leagueEsc(c.n)}</span><span>조회 ${views.toLocaleString()}</span><span>추천 <b>${rec}</b></span></span></summary><div class="gal-cmts">${(nick ? [pick(['ㅇㅈ', 'ㄹㅇ', '222', '공감']), pick(['다음엔 우리가 이긴다', '오늘은 인정', '할 말 없음…', '분위기 최악이다', '그래도 응원한다'])] : cmt(c.t)).map(x => `<div><span>${leagueEsc(nick ? pick(OPP_FANS) : GAL_NICK())}</span>${leagueEsc(x)}</div>`).join('')}</div></details>`; }).join('');
+            const opp = oppFanPosts(st), intl = intlPosts(st), errPane = renderRefErrPane(st);
+            const intlHtml = intl.map((c, i) => { const S2 = INTL_SITES[c.s]; return `<details class="intl-row ${i === 0 ? 'best' : ''}"><summary><span class="intl-flag">${S2[0]}</span><span class="intl-body"><span class="intl-ko">${leagueEsc(c.k)}</span><span class="intl-o">${leagueEsc(c.o)}</span></span><span class="intl-meta"><span>${S2[1]}</span><span>▲ ${c.up.toLocaleString()}</span></span></summary>${c.re ? `<div class="intl-re">${c.re.map(r => { const [o, k] = r.split(' → '); return `<div><i>${leagueEsc(o)}</i><span>${leagueEsc(k || '')}</span></div>`; }).join('')}</div>` : ''}</details>`; }).join('');
+            const tab = (k, n, on) => `<button class="gal-tab ${on ? 'on' : ''}" data-k="${k}" onclick="galTab(this)">${n}</button>`;
+            el.innerHTML = `<div class="gal-box"><div class="gal-head">💬 커뮤니티 반응 <small>경기 종료 후 새 글 ${L.length * 7 + Math.floor(Math.random() * 30)}개</small></div><div class="gal-tabs">${tab('my', `🏠 ${leagueEsc(teamName)} 갤`, 1)}${tab('opp', `⚔️ ${leagueEsc(st.enemy.name)} 팬`)}${tab('intl', '🌍 해외 반응')}${errPane ? tab('err', '🔥 오심 논란') : ''}</div>
+                <div class="gal-pane" data-k="my">${gal(L)}</div><div class="gal-pane hidden" data-k="opp">${gal(opp, true)}</div><div class="gal-pane hidden" data-k="intl"><div class="intl-note">해외 커뮤니티 반응 번역 · 원문은 회색</div>${intlHtml}</div>${errPane ? `<div class="gal-pane hidden" data-k="err">${errPane}</div>` : ''}
+                <div class="gal-foot">글을 누르면 댓글이 보여요</div></div>`;
         }
-        function toggleWx() { const p = document.getElementById('match-pitch'); if (!p) return; const off = !p.classList.contains('wx-off'); p.classList.toggle('wx-off', off); try { localStorage.setItem('fm_wxfx', off ? 'off' : 'on'); } catch (e) {} toast(off ? '🌦️ 날씨 효과 끔 (능력치 영향은 그대로)' : '🌦️ 날씨 효과 켬'); }
+        function galTab(b) { const box = b.closest('.gal-box'); if (!box) return; box.querySelectorAll('.gal-tab').forEach(x => x.classList.toggle('on', x === b)); box.querySelectorAll('.gal-pane').forEach(p => p.classList.toggle('hidden', p.dataset.k !== b.dataset.k)); }
 
         function finishMatch() {
             let st = currentMatchState;
@@ -7410,7 +7834,7 @@
                 document.getElementById('match-end-score').innerText = `${st.scoreHome} : ${st.scoreAway}`;
                 document.getElementById('end-home-name').textContent = teamName; document.getElementById('end-away-name').textContent = st.enemy.name;
                 document.getElementById('match-end-reward').innerText = '친선 경기 결과는 토큰이나 리그 기록에 반영되지 않습니다.';
-                document.getElementById('match-end-growth').textContent = ''; document.getElementById('end-home-ratings').replaceChildren(); document.getElementById('end-away-ratings').replaceChildren();
+                document.getElementById('match-end-growth').textContent = ''; document.getElementById('end-home-ratings').replaceChildren(); document.getElementById('end-away-ratings').replaceChildren(); try { renderGoalSheet(st); } catch (e) { console.error(e); }
                 document.getElementById('match-end-overlay').classList.replace('hidden', 'flex'); return;
             }
             playMatchSound('end'); finishMatchAudio(); document.getElementById('btn-tactics').style.display = 'none'; document.getElementById('btn-forfeit').style.display = 'none'; { const bs = document.getElementById('btn-shout'); if (bs) bs.style.display = 'none'; const mc = document.getElementById('moment-card'); if (mc) mc.classList.add('hidden'); closeMomentBanner(); } closeTactics(); dismissSubRec(); updateSide(st); document.getElementById('match-half').innerText = '경기 종료';
