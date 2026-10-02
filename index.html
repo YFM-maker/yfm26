@@ -176,6 +176,42 @@
         .vote-opt.win { border-color:#facc15; } .vote-opt.mine { box-shadow:inset 0 0 0 2px #38bdf8; }
         .vote-opt:hover:not([disabled]) { border-color:#facc15; }
         @media (max-width:640px) { .vote-opts { grid-template-columns:1fr; } }
+        /* ===== beta45 ===== */
+        .var-box { max-width:min(92%, 420px); }
+        .var-mon { width:min(78vw, 250px); aspect-ratio:55.6/65.3; margin:8px auto 4px; border:2px solid #1e293b; border-radius:8px; overflow:hidden; background:#052e16; box-shadow:inset 0 0 18px rgba(0,0,0,.6); position:relative; }
+        .var-mon:empty { display:none; }
+        .var-mon::after { content:'REPLAY'; position:absolute; top:4px; left:6px; font-size:9px; font-weight:900; letter-spacing:.15em; color:#f87171; }
+        .var-svg { width:100%; height:100%; display:block; }
+        .ms-banner { position:absolute; top:12px; left:50%; transform:translate(-50%, -30px); z-index:39; opacity:0; pointer-events:none; text-align:center; background:linear-gradient(135deg, #78350f, #b45309 45%, #facc15); border:2px solid #fde68a; border-radius:14px; padding:8px 18px; box-shadow:0 0 30px rgba(250,204,21,.6); transition:opacity .35s, transform .35s; }
+        .ms-banner.on { opacity:1; transform:translate(-50%, 0); }
+        .ms-banner b { display:block; font-size:20px; font-weight:1000; color:#fff; text-shadow:0 2px 0 #78350f; }
+        .ms-banner small { display:block; font-size:12px; font-weight:800; color:#fef3c7; }
+        .coach-box { background:#0f172a; border:1px solid #475569; border-left:4px solid #38bdf8; border-radius:12px; padding:8px 12px; text-align:left; }
+        .coach-h { font-size:12px; font-weight:900; color:#7dd3fc; margin-bottom:3px; }
+        .coach-l { font-size:12px; color:#e2e8f0; line-height:1.45; }
+        /* ===== beta46 ===== */
+        #wx-layer { opacity:.5; -webkit-mask-image:radial-gradient(ellipse at 50% 50%, transparent 55%, #000 95%); mask-image:radial-gradient(ellipse at 50% 50%, transparent 55%, #000 95%); }
+        #match-pitch.wx-rain #wx-layer, #match-pitch.wx-storm #wx-layer { animation-duration:.8s; }
+        #match-pitch.wx-storm #wx-layer { background-color:transparent; }
+        #match-pitch.wx-off #wx-layer { display:none; }
+        .wx-badge { cursor:pointer; } .wx-badge:hover { border-color:#fbbf24; }
+        .ref-dot { z-index:8 !important; opacity:.92; pointer-events:none; }
+        .ref-dot .md-body { background:#111827 !important; color:#facc15 !important; border:1.5px solid #facc15 !important; width:16px !important; height:16px !important; font-size:9px !important; }
+        .ref-dot .md-name { font-size:8px !important; opacity:.7; }
+        .ref-dot.protest .md-body { animation:refShake .25s ease-in-out 8; }
+        @keyframes refShake { 50% { transform:translateX(2px) rotate(8deg); } }
+        .mt-clock.slow b { color:#fb923c; } .mt-clock.slow small::after { content:' ⏳ 지연'; color:#fb923c; }
+        .gal-box { background:#0f172a; border:1px solid #334155; border-radius:14px; padding:8px 10px; }
+        .gal-head { font-weight:900; padding:2px 2px 6px; border-bottom:2px solid #3b4890; } .gal-head small { font-weight:600; color:#94a3b8; font-size:11px; margin-left:6px; }
+        .gal-row { border-bottom:1px solid #1e293b; } .gal-row summary { list-style:none; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:7px 2px; }
+        .gal-row summary::-webkit-details-marker { display:none; } .gal-row summary:hover { background:#111b30; }
+        .gal-tag { font-size:11px; color:#93c5fd; font-weight:800; flex-shrink:0; }
+        .gal-title { flex:1; min-width:180px; font-size:13px; color:#e2e8f0; } .gal-cn { color:#f87171; font-size:11px; } .gal-hot { font-style:normal; font-size:10px; background:#dc2626; color:#fff; border-radius:3px; padding:0 4px; }
+        .gal-row.best .gal-title { font-weight:800; color:#fff; }
+        .gal-meta { display:flex; gap:10px; font-size:11px; color:#64748b; } .gal-meta b { color:#fbbf24; }
+        .gal-cmts { padding:4px 8px 8px 14px; font-size:12px; color:#cbd5e1; display:flex; flex-direction:column; gap:3px; border-left:2px solid #334155; margin:0 0 6px 6px; }
+        .gal-cmts span { color:#64748b; margin-right:8px; font-size:11px; }
+        .gal-foot { font-size:10.5px; color:#475569; text-align:right; padding-top:4px; }
         .fan-box { background:#0f172a; border:1px solid #334155; border-radius:14px; padding:10px 12px; }
         .fan-head { font-weight:900; color:#e2e8f0; margin-bottom:6px; } .fan-head small { color:#64748b; font-weight:600; margin-left:6px; font-size:11px; }
         .fan-row { display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid #1e293b; font-size:13px; } .fan-nick { flex:none; width:118px; color:#93c5fd; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1051,7 +1087,7 @@
     <!-- 5. 2D 매치 화면 -->
     <div id="screen-match" class="screen flex-col bg-gray-900 relative">
         <div class="match-top">
-            <div class="mt-left"><span id="match-mode-text">사우디 모드</span><span id="samun-badge" class="hidden text-amber-300 font-black" title="서포터즈의 응원: 활동량 +8%">📣 서포터즈 응원 중</span><span id="boost-badge" class="boost-badge"></span><span id="wx-badge" class="wx-badge hidden"></span><span id="ref-badge" class="ref-badge hidden"></span></div>
+            <div class="mt-left"><span id="match-mode-text">사우디 모드</span><span id="samun-badge" class="hidden text-amber-300 font-black" title="서포터즈의 응원: 활동량 +8%">📣 서포터즈 응원 중</span><span id="boost-badge" class="boost-badge"></span><span id="wx-badge" class="wx-badge hidden" onclick="toggleWx()"></span><span id="ref-badge" class="ref-badge hidden"></span></div>
             <div class="mt-board">
                 <div class="mt-name"><img id="match-home-logo" class="club-crest hidden" alt="내 팀 엠블럼"><span class="kit" style="background:#2563eb"></span><span id="match-home-name">내 팀</span></div>
                 <div class="mt-score" id="match-score-home">0</div>
@@ -1071,8 +1107,8 @@
         <div class="match-body">
             <div class="pitch-wrap">
                 <div id="match-pitch" class="pitch-h pitch-fit">
-                    <div id="match-pitch-lines"></div><div id="match-toast" class="match-toast"></div><div id="sub-rec" class="sub-rec hidden"></div><div id="moment-card" class="moment-card hidden"></div><div id="moment-banner" class="moment-banner hidden"></div>
-                    <div id="match-engine"></div><div id="wx-layer"></div><div id="var-overlay" class="var-overlay hidden"><div class="var-box"><div class="var-tv">📺 VAR</div><div id="var-text"></div><div class="var-scan"><i></i></div></div></div>
+                    <div id="match-pitch-lines"></div><div id="match-toast" class="match-toast"></div><div id="sub-rec" class="sub-rec hidden"></div><div id="moment-card" class="moment-card hidden"></div><div id="moment-banner" class="moment-banner hidden"></div><div id="ms-banner" class="ms-banner"></div>
+                    <div id="match-engine"></div><div id="wx-layer"></div><div id="var-overlay" class="var-overlay hidden"><div class="var-box"><div class="var-tv">📺 VAR</div><div id="var-mon" class="var-mon"></div><div id="var-text"></div><div class="var-scan"><i></i></div></div></div>
                 </div>
             </div>
             <aside class="match-side">
@@ -1092,7 +1128,7 @@
             <div id="ht-title" class="text-lg font-bold text-sky-300 mb-1">전반 종료</div><div id="ht-sub" class="text-sm text-gray-300 mb-2"></div>
             <div id="ht-score" class="text-6xl font-black mb-6">0 : 0</div>
             <div id="ht-stats" class="w-full max-w-md mb-4 bg-gray-900/80 rounded-xl p-4 border border-gray-700 max-h-[42vh] overflow-y-auto custom-scrollbar"></div>
-            <div id="ht-moment" class="w-full max-w-xl mb-4"></div><div id="ht-talk" class="w-full max-w-md mb-5 text-center"></div>
+            <div id="ht-coach" class="w-full max-w-md mb-3"></div><div id="ht-moment" class="w-full max-w-xl mb-4"></div><div id="ht-talk" class="w-full max-w-md mb-5 text-center"></div>
             <div class="flex gap-3"><button onclick="openTactics()" class="mt-btn text-lg px-6 py-3">⚙️ 전술 / 교체</button><button id="ht-go" onclick="resumeFromBreak()" class="mt-btn primary text-lg px-8 py-3">▶ 후반 시작</button></div>
         </div>
 
@@ -2502,13 +2538,13 @@
             if (hat) { icon = '🎩'; title = `${hat[0]} ${hat[1].length >= 4 ? hat[1].length + '골 폭발' : '해트트릭'}! ${T}, ${opp} ${sc} ${H > Aw ? '격파' : H === Aw ? '무승부' : '패배'}`; body = pickOne([`${hat[0]}이(가) 혼자 ${hat[1].length}골을 책임졌습니다.`, `경기장은 ${hat[0]}의 이름으로 가득 찼습니다.`]); }
             else if (st.pens) { const w = st.penWinner === 'home'; icon = w ? '🎯' : '💧'; title = w ? `${T}, 승부차기 끝에 ${opp} 제압` : `${T}, 승부차기에서 ${opp}에 무릎`; body = w ? '120분의 혈투, 마지막에 웃은 쪽은 우리였습니다.' : '120분을 버텼지만 마지막 한 끗이 모자랐습니다.'; }
             else if (H > Aw) {
-                if (last && last.home && last.time >= 85 && last.homeBefore === last.awayBefore) { icon = '⏱️'; title = `${last.time}분 극장골! ${last.scorer}, ${T} 구했다`; body = `무승부로 끝나는 듯하던 ${opp}전, 마지막 순간 ${last.scorer}이(가) 결승골을 터뜨렸습니다.`; }
+                if (last && last.home && last.time >= 85 && last.homeBefore === last.awayBefore) { icon = '⏱️'; title = `${last.lab || last.time}분 극장골! ${last.scorer}, ${T} 구했다`; body = `무승부로 끝나는 듯하던 ${opp}전, 마지막 순간 ${last.scorer}이(가) 결승골을 터뜨렸습니다.`; }
                 else if (firstBad) { icon = '🔄'; title = `${T}, ${opp}에 ${sc} 역전승`; body = `선제골을 내주고도 흔들리지 않았습니다.${lastMy ? ` ${lastMy.scorer}의 ${lastMy.time}분 골이 승부를 뒤집었습니다.` : ''}`; }
                 else if (H - Aw >= 4) { icon = '💥'; title = `${T}, ${opp} ${sc} 대파`; body = pickOne(['경기장이 축제 분위기로 물들었습니다.', `${opp} 감독은 "할 말이 없다"며 고개를 숙였습니다.`, '압도적인 경기력이었습니다.']); }
                 else if (Aw === 0) { icon = '🧱'; title = `${T}, ${opp} 상대 ${sc} 무실점 승리`; body = pickOne(['수비진이 단 한 골도 허락하지 않았습니다.', '골키퍼와 수비 라인이 끝까지 집중력을 잃지 않았습니다.']); }
                 else { icon = '✅'; title = `${T}, ${opp} ${sc} 승리`; body = pickOne(['중요한 승점 3점을 챙겼습니다.', '팬들에게 기분 좋은 승리를 선물했습니다.', '계획대로 풀린 경기였습니다.']); }
             } else if (H === Aw) {
-                if (last && last.home && last.time >= 85) { icon = '😮'; title = `${last.time}분 동점골… ${T}, 패배 직전 기사회생`; body = `${last.scorer}이(가) 마지막 순간 팀을 구했습니다.`; }
+                if (last && last.home && last.time >= 85) { icon = '😮'; title = `${last.lab || last.time}분 동점골… ${T}, 패배 직전 기사회생`; body = `${last.scorer}이(가) 마지막 순간 팀을 구했습니다.`; }
                 else if (H === 0) { icon = '🤝'; title = `${T}–${opp} 0:0, 골문은 끝내 열리지 않았다`; body = pickOne(['양 팀 모두 결정력이 아쉬운 경기였습니다.', '팽팽한 수비 싸움이 이어졌습니다.']); }
                 else { icon = '🤝'; title = `${T}, ${opp}와 ${sc} 무승부`; body = pickOne(['승점 1점씩 나눠 가졌습니다.', '주고받는 공방 끝에 균형이 맞춰졌습니다.']); }
             } else {
@@ -4183,6 +4219,7 @@
             else if (p.role === 'DF' && conceded === 0) rating += 0.4;
             if (p.cards === 1) rating -= 0.5;
             if (p.isRedCarded) rating -= 2;
+            rating += (q.bonus || 0) - (q.errPts || 0);
             return Math.max(3, Math.min(10, rating)).toFixed(1);
         }
 
@@ -4199,11 +4236,11 @@
             if (st.mode === 'career' && rewardText.includes('🏆')) S.titles++;
             if (st.mode === 'career' || st.mode === 'europa' || st.mode === 'worldcup') { try { cupTrack(st); } catch (e) { console.error(e); } }
             if(!st.forfeit){achCheckSquads();if(tokens>=20000)achSet('richTokens',1)}
-            const ups = [];
+            const ups = [], msBefore = {};
             if (!sandboxMode(st.mode)) [...st.homePlayers, ...st.homeOut].forEach(hp => {
                 const ps = st.playerStats[hp.id] || {};
                 const r = S.pl[hp.id] = S.pl[hp.id] || { name: hp.name, app: 0, sub: 0, g: 0, a: 0, yc: 0, rc: 0, mg: 0, ma: 0, tw: 0, po: 0 };
-                r.name = hp.name; if (hp.subIn) r.sub++; else r.app++;
+                msBefore[hp.id] = { app: (r.app || 0) + (r.sub || 0), a: r.a || 0, cs: r.cs || 0 }; r.name = hp.name; if (hp.subIn) r.sub++; else r.app++; if (!st.forfeit) { r.gs = (ps.goals || 0) > 0 ? (r.gs || 0) + 1 : 0; if (hp.role === 'GK' && !hp.subIn && ga === 0) r.cs = (r.cs || 0) + 1; }
                 r.g += ps.goals || 0; r.a += ps.assists || 0; r.yc += ps.yc || 0; r.rc += ps.rc || 0; r.tw += ps.tackleWon || 0; r.po += ps.passOk || 0;
                 r.mg = Math.max(r.mg, ps.goals || 0); r.ma = Math.max(r.ma, ps.assists || 0);
                 { const rtv = parseFloat((st.ratings || {})[hp.id]) || 0; if (rtv && !st.forfeit) { r.rs = (r.rs || 0) * 0.8 + rtv; r.rn = (r.rn || 0) * 0.8 + 1; r.ratingSum = (r.ratingSum || 0) + rtv; r.ratingCount = (r.ratingCount || 0) + 1; } }
@@ -4233,6 +4270,7 @@
               document.getElementById('end-potm').innerHTML = best ? `<div class="bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/60 rounded-xl px-4 py-3 mb-3 flex items-center gap-3"><span class="text-3xl">⭐</span><div><div class="text-xs text-yellow-300 font-bold">오늘의 선수</div><div class="text-lg font-black">${best.p.name} <span class="text-sm ${best.h ? 'text-blue-400' : 'text-red-400'}">${best.h ? teamName : st.enemy.name}</span></div></div><span class="ml-auto text-3xl font-black text-yellow-400">${best.r.toFixed(1)}</span></div>` : ''; }
             try { renderFanReactions(st); } catch (e) { console.error(e); }
             try { buildMatchSocial(st); renderMomVote(st); } catch (e) { console.error(e); }
+            try { if (!sandboxMode(st.mode) && !st.forfeit) postMatchMilestones(st, msBefore); } catch (e) { console.error(e); }
             localStorage.setItem('fm_stats', JSON.stringify(S)); saveData();
         }
 
@@ -4652,7 +4690,7 @@
             document.getElementById('ht-go').innerText = kind === 'et' ? '▶ 연장 시작' : '▶ 연장 후반';
             comm(st, kind === 'et' ? '⏱ 정규시간 종료! 연장전에 들어갑니다' : '⏸ 연장 전반 종료', 'info');
             document.getElementById('ht-score').innerText = `${st.scoreHome} : ${st.scoreAway}`;
-            document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st); renderClMoment(st); { const ab = document.getElementById('match-added'); if (ab) ab.classList.add('hidden'); }
+            document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st); renderClMoment(st); renderCoach(st); { const ab = document.getElementById('match-added'); if (ab) ab.classList.add('hidden'); }
             document.getElementById('match-ht-overlay').classList.replace('hidden', 'flex');
         }
         function resumeFromBreak() {
@@ -4753,9 +4791,9 @@
         function pickSub(id) { openTactics(); tacSel = id; renderTactics(); }
         function toggleSpeed() { matchSpeed = matchSpeed === 1 ? 2 : 1; document.getElementById('btn-speed').innerText = `배속 x${matchSpeed}`; }
         function updateClock(st, a) {
-            const tt = Math.min(st.maxTime || (st.htDone ? 90 + (st.added || 0) : 45 + (st.added1 || 0)), st.time + (a || 0) * MIN_PER_TICK), sec = Math.floor(tt * 60);
+            const tt = Math.min((st.maxTime || (st.htDone ? 90 + (st.added || 0) : 45 + (st.added1 || 0))) + 2, st.time + (a || 0) * MIN_PER_TICK), sec = Math.floor(tt * 60);
             document.getElementById('match-time').innerText = `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-            document.getElementById('match-half').innerText = st.ended ? '경기 종료' : st.pens ? '승부차기' : st.etHT ? '연장 후반' : st.maxTime ? '연장 전반' : st.htDone ? (st.added && st.time >= 90 ? `후반 +${st.added}'` : '후반') : (st.added1 && st.time >= 45 ? `전반 +${st.added1}'` : '전반');
+            document.getElementById('match-half').innerText = st.ended ? '경기 종료' : st.pens ? '승부차기' : st.etHT ? '연장 후반' : st.maxTime ? '연장 전반' : st.htDone ? (!st.secondHalfStarted && st.isPaused && !st.online ? '하프타임' : st.added && st.time >= 90 ? `후반 +${st.added}'` : '후반') : (st.added1 && st.time >= 45 ? `전반 +${st.added1}'` : '전반');
         }
 
         function saveSnap(st) { allOf(st).forEach(p => { p.px = p.x; p.py = p.y; }); st.ball.px = st.ball.x; st.ball.py = st.ball.y; }
@@ -4813,6 +4851,7 @@
                 const condBar = el.querySelector('.orb-condition i');
                 if (condBar) { const v = p.stam ?? 100; condBar.style.width = v + '%'; condBar.style.background = stamColor(v); const label = el.querySelector('.orb-condition-value'); if (label) label.textContent = Math.round(v) + '%'; }
             });
+            { const rf = matchElements.ref, r = st.refP; if (rf && r) { if (r.rx === undefined) { r.rx = r.x; r.ry = r.y; } r.rx += (r.x - r.rx) * k; r.ry += (r.y - r.ry) * k; rf.style.left = r.rx + '%'; rf.style.top = r.ry + '%'; } }
             const b = st.ball, own = b.ownerId && !b.fl ? allOf(st).find(p => p.id === b.ownerId) : null;
             let bx, by; const carry = glideOn && st.glideBall ? allOf(st).find(p => p.id === st.glideBall) : null;
             if (carry && carry.rx !== undefined) { bx = carry.rx + (carry.isHome ? -0.9 : 0.9); by = carry.ry + 0.9; }
@@ -4881,7 +4920,7 @@
         }
         function commitFoul(st, fouler, victim, all) {
             const dir = victim.isHome ? 1 : -1, gx = victim.isHome ? 97 : 3, inBox = inBoxOf(victim.isHome, victim.x, victim.y);
-            if (inBox && Math.random() < 0.25) { addStat(st, fouler, 'tackleWon'); st.ball.ownerId = fouler.id; st.lastPoss = fouler.isHome; return; } // 박스 안은 명백한 접촉만 PK
+            if (inBox && !st.forcePen && Math.random() < 0.25) { addStat(st, fouler, 'tackleWon'); st.ball.ownerId = fouler.id; st.lastPoss = fouler.isHome; if (canVar(st) && Math.random() < 0.22) { comm(st, `🙋 ${victim.name}, 박스 안에서 넘어진 뒤 손을 들어 PK를 외칩니다`, 'warn'); varIncident(st, { kind: 'nopen', fouler, victim }); } return; } // 박스 안은 명백한 접촉만 PK
             addStat(st, fouler, 'foul'); lastAssistId = null;
             // 명백한 득점 기회 저지(DOGSO): 파울한 선수 말고는 골문 쪽에 수비가 없음
             const cover = all.filter(e => e.isHome === fouler.isHome && e.role !== 'GK' && e !== fouler && !e.isRedCarded && (e.x - victim.x) * dir > 0 && Math.abs(e.y - victim.y) < 20);
@@ -4892,13 +4931,13 @@
             if (Math.random() < 0.04 * (tr(victim, 'glass') ? 2.5 : 1)) injure(st, victim);
             st.ball.fl = null; st.ball.ownerId = null;
             const spot = inBox ? { x: gx - dir * 9.85, y: 50 } : { x: victim.x, y: victim.y };
+            if (inBox) addErr(st, fouler, 0.6, 'PK 허용');
             st.sp = { kind: inBox ? 'pen' : 'fk', team: victim.isHome, x: spot.x, y: spot.y, t: 0, victim: victim.id, fresh: true };
             playMatchSound('foul');
             comm(st, inBox ? `⚠️ 페널티킥! ${fouler.name}가 박스 안에서 ${victim.name}에게 파울` : `⚠️ ${fouler.name}의 파울 (${victim.name})`, 'card');
             toast(inBox ? '🎯 페널티킥!' : '⚠️ 파울 — 프리킥');
             if (inBox && !st.online && Math.random() < 0.55) comm(st, pick([`🗣️ ${fouler.isHome ? teamName : st.enemy.name} 선수들이 주심에게 달려가 "공을 먼저 건드렸다!"며 항의합니다`, `🙅 ${fouler.name}, 두 손을 들어 올리며 억울함을 호소합니다`, `🗣️ 주장이 주심을 둘러싼 동료들을 떼어냅니다`]), 'warn');
-            if (card) triggerCard(fouler, card, Math.floor(st.time));
-            else { st.isPaused = true; setTimeout(() => { if (currentMatchState === st) st.isPaused = false; }, inBox ? 900 : 550); }
+            afterFoul(st, fouler, victim, inBox, card);
         }
         function runSetPiece(st, all) {
             const sp = st.sp; sp.t++;
@@ -4990,7 +5029,7 @@
                 const q = Math.min(0.93, 0.76 * Math.exp((A(tk, 'sho') - gkv) / 60) * (tk.trait === 'finisher' ? 1.04 : 1) * (tr(tk, 'pk') ? 1.1 : 1) * (tr(gk, 'penSaver') ? 0.82 : 1)) * damp; shotStat(q);
                 comm(st, `🎯 ${tk.name}, 페널티킥을 찹니다...`);
                 if (Math.random() < q) { st.playerStats[tk.id].goals++; launchShot(st, tk, 'goal', gk, null, 'pk'); }
-                else { const r = Math.random(); launchShot(st, tk, r < 0.7 ? 'save' : r < 0.8 ? 'post' : 'wide', gk); if (st.ball.fl) st.ball.fl.txt = '🎯 페널티킥 실축! ' + st.ball.fl.txt; }
+                else { addErr(st, tk, 0.6, 'PK 실축'); const r = Math.random(); launchShot(st, tk, r < 0.7 ? 'save' : r < 0.8 ? 'post' : 'wide', gk); if (st.ball.fl) st.ball.fl.txt = '🎯 페널티킥 실축! ' + st.ball.fl.txt; }
                 return;
             }
             if (sp.kind === 'fk') {
@@ -5013,7 +5052,7 @@
             p.injured = n; p.injLabel = n <= 1 ? '경미' : n <= 3 ? '보통' : '심각';
             if (p.attr) Object.keys(p.attr).forEach(k => p.attr[k] = Math.round(p.attr[k] * 0.85)); p.ovr = Math.round(p.ovr * 0.85);
             comm(st, `🚑 ${p.name} 부상! (${p.injLabel}, 약 ${n}경기 결장 예상)${p.isHome ? ' — 교체가 필요합니다' : ''}`, 'warn'); toast(`🚑 ${p.name} 부상`);
-            if (st.ex) st.ex.inj++; if (!st.online && Math.random() < 0.5) setTimeout(() => { if (currentMatchState === st) comm(st, `🤝 ${p.isHome ? st.enemy.name : teamName} 선수가 공을 밖으로 걷어내 줍니다 — 페어플레이에 관중석 박수`, 'info'); }, 0);
+            if (st.ex) { st.ex.inj++; st.ex.delay = (st.ex.delay || 0) + 0.4; } st.slowUntil = Math.max(st.slowUntil || 0, st.time + 0.8); if (!st.online && Math.random() < 0.5) setTimeout(() => { if (currentMatchState === st) comm(st, `🤝 ${p.isHome ? st.enemy.name : teamName} 선수가 공을 밖으로 걷어내 줍니다 — 페어플레이에 관중석 박수`, 'info'); }, 0);
         }
 
         // ================= 컨디션(경기 간 체력)·부상 관리 =================
@@ -5191,6 +5230,7 @@
         }
 
         function launchShot(st, sh, res, gk, assist, how) {
+            if (res === 'block' && !st.noHand && canVar(st) && Math.random() < 0.09) { const bl0 = allOf(st).filter(p => p.isHome !== sh.isHome && p.role !== 'GK' && !p.isRedCarded).reduce((b, p) => !b || getDistance(p, sh) < getDistance(b, sh) ? p : b, null); if (bl0 && inBoxOf(sh.isHome, bl0.x, bl0.y)) { comm(st, `✋ ${sh.name}의 슈팅이 ${bl0.name}의 팔에 맞은 것 같습니다! 선수들이 핸드볼을 외칩니다`, 'warn'); varIncident(st, { kind: 'hand', fouler: bl0, victim: sh, gk }); return; } }
             if (res === 'save' && gk) addStat(st, gk, 'saves');
             const foes = allOf(st).filter(p => p.isHome !== sh.isHome && p.role !== 'GK' && !p.isRedCarded);
             const bl = res === 'block' ? foes.reduce((b, p) => !b || getDistance(p, sh) < getDistance(b, sh) ? p : b, null) : null;
@@ -5737,7 +5777,7 @@
             const st = currentMatchState; st.isPaused = true; st.breakKind = null; playMatchSound('end'); pauseMatchCrowd(); comm(st, '⏸ 전반 종료', 'info');
             document.getElementById('ht-title').innerText = '전반 종료'; document.getElementById('ht-sub').innerText = ''; document.getElementById('ht-go').innerText = '▶ 후반 시작';
             document.getElementById('ht-score').innerText = `${st.scoreHome} : ${st.scoreAway}`;
-            document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st); renderClMoment(st); { const ab = document.getElementById('match-added'); if (ab) ab.classList.add('hidden'); }
+            document.getElementById('ht-stats').innerHTML = statBars(st); renderTalk(st); renderClMoment(st); renderCoach(st); { const ab = document.getElementById('match-added'); if (ab) ab.classList.add('hidden'); }
             document.getElementById('match-ht-overlay').classList.replace('hidden', 'flex');
         }
         function startSecondHalf() {
@@ -6401,7 +6441,7 @@
             const st = currentMatchState, engine = document.getElementById('match-engine'); engine.innerHTML = ''; matchElements = {};
             document.getElementById('match-pitch-lines').innerHTML = PITCH_H;
             const sh = document.createElement('div'); sh.id = 'match-ball-shadow'; engine.appendChild(sh); matchElements.shadow = sh;
-            allOf(st).forEach(p => { p.stam = p.isHome ? matchStartStam(players.find(q => q.id === p.id) || {}, st.mode) : (st.mode === 'rogue' && st.enemy.rogue && st.enemy.rogue.trait === 'tired' ? 80 : 100); p.stam0 = p.stam; psychInit(p); makeDot(p); });
+            allOf(st).forEach(p => { p.stam = p.isHome ? matchStartStam(players.find(q => q.id === p.id) || {}, st.mode) : (st.mode === 'rogue' && st.enemy.rogue && st.enemy.rogue.trait === 'tired' ? 80 : 100); p.stam0 = p.stam; psychInit(p); makeDot(p); }); if (!st.online) { const rf = document.createElement('div'); rf.className = 'md ref-dot'; rf.innerHTML = '<div class="md-body">R</div><div class="md-name">주심</div>'; engine.appendChild(rf); matchElements.ref = rf; st.refP = { x: 50, y: 38 }; }
             const ballEl = document.createElement('div'); ballEl.id = 'match-ball'; engine.appendChild(ballEl); matchElements.ball = ballEl;
             ['l', 'r'].forEach(sd => { const n = document.createElement('div'); n.className = 'goal-net goal-net-' + sd; n.id = 'goal-net-' + sd; engine.appendChild(n); });
             const spm = document.createElement('div'); spm.className = 'sp-marker'; engine.appendChild(spm); matchElements.spm = spm;
@@ -6515,12 +6555,12 @@
                 if (!st.isPaused && !st.userPaused) {
                     st.acc += dt;
                     while (st.acc >= step) {
-                        st.acc -= step; saveSnap(st); st.time += MIN_PER_TICK * (st.mode === 'saudi' ? SAUDI_TIME : 1) * (st.wasteUntil && st.time < st.wasteUntil ? 1.2 : 1);
-                        if (!st.htDone && st.time >= 45 + (st.added1 || 0)) { st.time = 45; st.htDone = true; st.acc = 0; halfTime(); break; }
-                        if (st.maxTime === 120 && !st.etHT && st.time >= 105) { st.time = 105; st.etHT = true; st.acc = 0; matchBreak(st, 'ethalf'); break; }
+                        st.acc -= step; saveSnap(st); st.time += MIN_PER_TICK * (st.mode === 'saudi' ? SAUDI_TIME : 1) * (st.slowUntil && st.time < st.slowUntil ? 0.35 : 1);
+                        if (!st.htDone && st.time >= 45 + (st.added1 || 0) && !holdWhistle(st, 45 + (st.added1 || 0))) { st.time = 45; st.htDone = true; st.acc = 0; halfTime(); break; }
+                        if (st.maxTime === 120 && !st.etHT && st.time >= 105 && !holdWhistle(st, 105)) { st.time = 105; st.etHT = true; st.acc = 0; matchBreak(st, 'ethalf'); break; }
                         const endT = st.maxTime || (90 + (st.added || 0));
-                        if (st.time >= endT) {
-                            st.time = endT; st.acc = 0;
+                        if (st.time >= endT && !holdWhistle(st, endT)) {
+                            st.acc = 0;
                             if (!st.maxTime && needExtra(st)) { matchBreak(st, 'et'); break; }
                             if (st.maxTime === 120 && needExtra(st)) { startShootout(st); break; }
                             st.ended = true; updateClock(st, 0); comm(st, '🏁 경기 종료', 'info'); if (st.online?.isHost) sendOnlineSnapshot(st); finishMatch(); return;
@@ -6652,7 +6692,7 @@
                         const ast = lastAssistId && lastAssistId !== owner.id ? allPlayers.find(x => x.id === lastAssistId) : null;
                         if (ast && ast.isHome === owner.isHome && st.playerStats[ast.id]) addStat(st, ast, 'assists');
                         launchShot(st, owner, 'goal', gk, ast && ast.isHome === owner.isHome ? ast.name : null, '1v1');
-                    } else { { const r = Math.random(); launchShot(st, owner, r < 0.74 ? 'save' : r < 0.88 ? 'post' : 'wide', gk); } if (st.ball.fl) st.ball.fl.txt = '⚡ 1대1 찬스! ' + st.ball.fl.txt; if (!st.online && Math.random() < 0.5) setTimeout(() => { if (currentMatchState === st && !st.ended) comm(st, pick([`😫 ${owner.name}, 머리를 감싸 쥡니다`, `😩 ${JO(owner.name,'이','가')} 잔디를 주먹으로 내리칩니다`, `🙏 ${owner.name}, 동료에게 손을 들어 미안하다는 신호를 보냅니다`])); }, 1300); }
+                    } else { { const r = Math.random(); launchShot(st, owner, r < 0.74 ? 'save' : r < 0.88 ? 'post' : 'wide', gk); } if (st.ball.fl) st.ball.fl.txt = '⚡ 1대1 찬스! ' + st.ball.fl.txt; addErr(st, owner, 0.25, '1대1 무산'); if (!st.online && Math.random() < 0.5) setTimeout(() => { if (currentMatchState === st && !st.ended) comm(st, pick([`😫 ${owner.name}, 머리를 감싸 쥡니다`, `😩 ${JO(owner.name,'이','가')} 잔디를 주먹으로 내리칩니다`, `🙏 ${owner.name}, 동료에게 손을 들어 미안하다는 신호를 보냅니다`])); }, 1300); }
                     return;
                 }
             }
@@ -6744,7 +6784,7 @@
             if (isRedOut) { player.isRedCarded = true; if (player.role === 'GK') replaceExpelledKeeper(st, player); queueMoment(st, player.isHome ? 'redUs' : 'redThem'); }
             psychAdjust(player,{nervousness:isRedOut?12:7,frustration:isRedOut?13:7,focus:-3});
             comm(st, isRedOut ? `🟥 ${player.name} 퇴장!` : `🟨 ${player.name} 경고`, 'card');
-            if (isRedOut && !st.online && Math.random() < 0.6) comm(st, pick([`🗣️ ${player.isHome ? teamName : st.enemy.name} 선수들이 주심을 둘러싸고 거세게 항의합니다`, `😤 ${player.name}, 고개를 저으며 한참 동안 그라운드를 떠나지 않습니다`, `👏 ${JO(player.name,'이','가')} 나가며 관중석에 박수를 보냅니다… 팬들이 이름을 연호합니다`]), 'warn');
+            if (isRedOut && !st.online) protest(st, player.isHome, '퇴장');
             addStat(st, player, type === 'yellow' ? 'yc' : 'rc'); if (isRedOut && type === 'yellow') addStat(st, player, 'rc');
 
             const overlay = document.getElementById('match-card-overlay');
@@ -6795,6 +6835,9 @@
             if ((st.varNo || []).length) add(`VAR로 ${st.varNo[0].scorer} 골 취소된 거 아직도 이해 안 됨 📺 ${st.varNo[0].reason}이라고?`, 4);
             if (gl.some(g => g.home && g.how === 'empty')) add('상대 골키퍼 올라온 거 보고 빈 골대 노린 판단 미쳤다 🥅', 4);
             if (win && gl.some(g => g.home && g.time > 90)) add(`추가시간에 골 ㅋㅋㅋ 대기심 사랑합니다 ⏱️`, 4);
+            if (st.theatre) { add((st.theatre.home ? pick(THEATRE_FAN) : pick(THEATRE_SAD))(st.theatre), 7); add((st.theatre.home ? pick(THEATRE_FAN) : pick(THEATRE_SAD))(st.theatre), 4); }
+            (st.milestones || []).forEach(m => add(`${m.n} ${m.k.replace(/^\S+\s/, '')} 축하한다!! 기념 유니폼 나오면 산다 🎉`, 5));
+            if (mine.some(p => (st.playerStats[p.id] || {}).superSub)) add('교체 타이밍 완벽했다. 감독 용병술 인정 🔄', 3);
             if (st.wx === 'rain' || st.wx === 'storm') add(pick(['비 맞으면서 직관한 보람 있다 ☔', '빗속 경기 선수들 고생했다 진짜']), 2);
             if (st.wx === 'snow') add('눈 오는 날 주황 공 감성 미쳤다 ❄️🟠', 2);
             if (st.wx === 'heat') add('폭염에 90분 뛴 선수들 존경… 교체 타이밍이 승부였다', 2);
@@ -6802,11 +6845,12 @@
             if ((st.ex || {}).waste >= 3 && lose) add('상대 골키퍼 시간 끄는 거 보고 혈압 올라서 약 먹음', 3);
             if (st.clHtRes && !st.clHtRes.bad && win) add('하프타임에 뭔 얘기했길래 후반에 저렇게 달라지냐 ㄷㄷ', 3);
             if (st.leaguePlayoff) add(win ? '승격이다아아아아 ⬆️ 다음 시즌 기대된다' : '승격 결정전 패배… 내년엔 1위로 직행하자', 5);
+            { const G = win ? ['오늘 경기 평점 매겨봄 (스압)', '이 정도면 이번 시즌 기대해도 되냐?', '중립기어 박았던 사람들 다 어디감 ㅋㅋ', '감독 전술 오늘은 진짜 인정한다', `${en} 팬들 반응 보러 다녀옴 ㅋㅋ`, '직관 후기) 분위기 미쳤다 [사진]'] : lose ? ['오늘 경기 3줄 요약.txt', '라인업 발표 때부터 불안했던 사람?', '감독 경질 얘기는 아직 이르다 (진지)', '하… 오늘은 하이라이트도 안 본다', '다음 경기 선발 이렇게 가자 (뇌피셜)', `${en}한테 이렇게 지는 게 맞냐`] : ['무승부 평가 ㄱㄱ', '이길 수 있었던 경기 같은데 나만 그럼?', '승점 1점 vs 승점 2점 날림 투표', '오늘 경기력 자체는 괜찮았다고 봄']; G.sort(() => Math.random() - 0.5).slice(0, 3).forEach(t => add(t, 1)); }
             const out = [], pool = [...L];
-            while (out.length < 4 && pool.length) { const tot = pool.reduce((a, x) => a + x.w, 0); let r = Math.random() * tot, i = 0; while ((r -= pool[i].w) > 0) i++; out.push(pool.splice(i, 1)[0]); }
+            while (out.length < 6 && pool.length) { const tot = pool.reduce((a, x) => a + x.w, 0); let r = Math.random() * tot, i = 0; while ((r -= pool[i].w) > 0) i++; out.push(pool.splice(i, 1)[0]); }
             return out.map((c, i) => ({ n: FAN_NICKS[Math.floor(Math.random() * FAN_NICKS.length)], t: c.t, like: Math.round((c.w * 40 + Math.random() * 120) * (i === 0 ? 2.2 : 1)) })).sort((a, b) => b.like - a.like);
         }
-        function renderFanReactions(st) {
+        function renderFanReactionsOld(st) {
             const el = document.getElementById('end-fans'); if (!el) return;
             if (st.forfeit) { el.innerHTML = ''; return; }
             const L = fanReactions(st);
@@ -6833,7 +6877,7 @@
             st.ex = { goals2: 0, inj: 0, waste: 0, cards: 0, var: 0 }; st.added = 0; st.added1 = 0;
             const pitch = document.getElementById('match-pitch'), wb = document.getElementById('wx-badge'), rb = document.getElementById('ref-badge'), ab = document.getElementById('match-added');
             if (ab) ab.classList.add('hidden');
-            if (pitch) Object.keys(WEATHER).forEach(k => pitch.classList.remove('wx-' + k));
+            if (pitch) { Object.keys(WEATHER).forEach(k => pitch.classList.remove('wx-' + k)); let off = false; try { off = localStorage.getItem('fm_wxfx') === 'off'; } catch (e) {} pitch.classList.toggle('wx-off', off); }
             if (st.online) { st.wx = 'clear'; st.ref = null; if (wb) wb.classList.add('hidden'); if (rb) rb.classList.add('hidden'); return; }
             const keys = Object.keys(WEATHER); let r = Math.random() * keys.reduce((a, k) => a + WEATHER[k].w, 0);
             st.wx = keys.find(k => (r -= WEATHER[k].w) <= 0) || 'clear';
@@ -6848,11 +6892,13 @@
         // ---- 매 틱: 추가시간 · 올레 · 막판 분위기 · 진통제 투혼 후유증 ----
         function tickExtras(st) {
             if (!st.ex || (st.online && !st.online.isHost)) return;
+            recHist(st); trackTurnover(st);
+            moveRef(st); { const slow = st.slowUntil && st.time < st.slowUntil; if (slow !== !!st.slowShown) { st.slowShown = slow; const c = document.querySelector('.mt-clock'); if (c) c.classList.toggle('slow', slow); } }
             const ex = st.ex, H = st.scoreHome, A_ = st.scoreAway;
             if (!st.htDone && !st.added1 && st.time >= 44) { st.added1 = 1 + (Math.random() < 0.45 ? 1 : 0) + (ex.inj ? 1 : 0); comm(st, `⏱️ 전반 추가시간 +${st.added1}분`, 'info'); showAddedBoard(st, st.added1); }
             if (!st.maxTime && !st.addedSet && st.htDone && st.time >= 89) {
                 st.addedSet = true;
-                const subs = Math.max(0, 5 - (st.subsLeft ?? 5)), a = 1 + ex.goals2 * 0.5 + subs * 0.25 + ex.inj * 0.8 + ex.waste * 0.45 + ex.cards * 0.2 + ex.var * 0.8 + Math.random() * 1.2;
+                const subs = Math.max(0, 5 - (st.subsLeft ?? 5)), a = 1 + ex.goals2 * 0.5 + subs * 0.25 + ex.inj * 0.8 + ex.waste * 0.45 + ex.cards * 0.2 + ex.var * 0.8 + Math.min(2.5, ex.delay || 0) + Math.random() * 1.2;
                 st.added = Math.max(1, Math.min(8, Math.round(a)));
                 comm(st, `⏱️ 대기심이 추가시간 보드를 듭니다 — +${st.added}분${ex.waste >= 2 ? ' (시간 끌기가 반영됐습니다)' : ''}`, 'info'); toast(`⏱️ 추가시간 +${st.added}분`); showAddedBoard(st, st.added);
             }
@@ -6873,7 +6919,7 @@
         }
         // ---- 골키퍼 시간 끌기 (이기고 있는 팀 · 78분 이후) ----
         function wasteTime(st, gk) {
-            if (!st.ex) return; st.ex.waste++;
+            if (!st.ex) return; st.ex.waste++; st.ex.delay = (st.ex.delay || 0) + 0.25; st.slowUntil = Math.max(st.slowUntil || 0, st.time + 0.5);
             if (st.time - (st.wasteSaid ?? -99) >= 5) { st.wasteSaid = st.time; comm(st, pick([`⏳ ${gk.name}, 골킥을 느긋하게 준비합니다… 관중석 야유`, `⏳ ${JO(gk.name,'이','가')} 공을 한참 동안 안고 있습니다. 주심이 시계를 가리킵니다`, `⏳ ${gk.name}, 신발끈을 다시 묶습니다 — 시간 끌기!`]), 'warn'); }
             if (st.ex.waste >= 3 && !gk.cards && !gk.wasteCard && Math.random() < 0.3 * ((st.ref && st.ref.s) || 1)) {
                 gk.wasteCard = true; comm(st, `🧑‍⚖️ 주심이 참지 않습니다 — ${gk.name} 지연 행위로 경고!`, 'card'); triggerCard(gk, 'yellow', Math.floor(st.time)); st.ball.ownerId = gk.id; st.ball.x = gk.x; st.ball.y = gk.y;
@@ -6886,24 +6932,59 @@
             return d === -1 && st.time >= endT - 3.5 && (!st.maxTime || !!st.etHT);
         }
 
-        // ---- VAR: 일부 득점은 판독 (가끔 취소) ----
+        // ---- VAR: 일부 득점은 판독 — 판독실 모니터로 리플레이를 보여주고(오프사이드는 실제 위치로 판정) 결과 발표 ----
         const VAR_REASONS = ['오프사이드', '핸드볼', '공격자 파울'];
+        function recHist(st) {   // 최근 30틱의 선수·공 위치 (VAR 리플레이용)
+            const f = { p: {}, b: [st.ball.x, st.ball.y] };
+            allOf(st).forEach(p => { if (!p.isRedCarded) f.p[p.id] = [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, p.isHome ? 1 : 0]; });
+            (st.hist ||= []).push(f); if (st.hist.length > 30) st.hist.shift();
+        }
         function triggerGoal(isHome, scorer, time, assist, how) {
             const st = currentMatchState;
-            if (st && !st.online && st.mode !== 'onlineFriendly' && how !== 'pk' && how !== 'empty' && Math.random() < 0.1) {
-                st.isPaused = true; st.ex && st.ex.var++;
-                const no = Math.random() < 0.25, reason = pick(VAR_REASONS), ov = document.getElementById('var-overlay'), tx = document.getElementById('var-text');
-                comm(st, `📺 VAR이 ${scorer}의 득점 장면을 확인하고 있습니다…`, 'info');
-                if (ov) { tx.innerHTML = `${isHome ? teamName : st.enemy.name} 득점 장면 확인 중<br><small>${reason} 여부 체크</small>`; ov.className = 'var-overlay'; }
-                SFX.playTone(520, 'square', 0.12, 0.06);
-                setTimeout(() => {
-                    if (currentMatchState !== st) return;
-                    if (ov) { ov.className = 'var-overlay ' + (no ? 'no' : 'ok'); tx.innerHTML = no ? `❌ NO GOAL<br><small>${reason}</small>` : '✅ GOAL 인정'; }
-                    setTimeout(() => { if (ov) ov.className = 'var-overlay hidden'; if (currentMatchState !== st) return; if (no) cancelGoal(st, isHome, scorer, assist, reason); else { comm(st, '📺 VAR 확인 완료 — 골 인정!', 'goal'); goalNow(isHome, scorer, time, assist, how); } }, 750);
-                }, 1700);
-                return;
-            }
+            if (st && canVar(st) && how !== 'pk' && how !== 'empty' && Math.random() < 0.13) { st.varN = (st.varN || 0) + 1; varReview(st, isHome, scorer, time, assist, how); return; }
             goalNow(isHome, scorer, time, assist, how);
+        }
+        function varSvg(f, isHome, o) {
+            const X = x => isHome ? x : 100 - x, E = (x, y, c, w, sc) => `<ellipse cx="${X(x)}" cy="${y}" rx="${0.95 * (w || 1)}" ry="${1.45 * (w || 1)}" fill="${c}" stroke="${sc || '#0b1220'}" stroke-width="${sc ? 0.55 : 0.25}"/>`;
+            let g = `<rect x="3" y="4" width="94" height="92" fill="#14532d"/><g fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".3"><rect x="3" y="4" width="94" height="92"/><line x1="50" y1="4" x2="50" y2="96"/><rect x="81.3" y="20.4" width="15.7" height="59.2"/><rect x="91.8" y="36.5" width="5.2" height="27"/><rect x="97" y="44.6" width="1.4" height="10.8"/></g>`;
+            if (o.line) { g += `<line x1="${X(o.line.x)}" y1="4" x2="${X(o.line.x)}" y2="96" stroke="#facc15" stroke-width=".4"/><line x1="${X(o.line.sx)}" y1="4" x2="${X(o.line.sx)}" y2="96" stroke="${o.no ? '#f87171' : '#38bdf8'}" stroke-width=".4" stroke-dasharray="1.2 .8"/>`; }
+            Object.entries(f.p).forEach(([id, q]) => { g += E(q[0], q[1], q[2] ? '#3b82f6' : '#ef4444', id === o.hl ? 1.25 : 1, id === o.hl ? '#facc15' : null); });
+            g += `<circle cx="${X(f.b[0])}" cy="${f.b[1]}" r=".75" fill="#fff" stroke="#000" stroke-width=".2"/>`;
+            if (o.ring) { const q = f.p[o.hl]; if (q) g += `<ellipse cx="${X(q[0])}" cy="${q[1]}" rx="4" ry="6" fill="none" stroke="#facc15" stroke-width=".4" stroke-dasharray="1 .7"/>`; }
+            return `<svg viewBox="47 2 53 96" preserveAspectRatio="none" class="var-svg">${g}</svg>`;
+        }
+        function varReview(st, isHome, scorer, time, assist, how) {
+            st.isPaused = true; if (st.ex) st.ex.var++;
+            const side = isHome ? st.homePlayers.concat(st.homeOut || []) : st.awayPlayers, sp = side.find(p => p.name === scorer), ap = assist ? side.find(p => p.name === assist) : null;
+            const Hs = (st.hist || []).slice(-28); if (!Hs.length) { goalNow(isHome, scorer, time, assist, how); return; }
+            let k = -1; if (ap) for (let i = Hs.length - 1; i >= 0; i--) { const f = Hs[i], q = f.p[ap.id]; if (q && Math.hypot(q[0] - f.b[0], q[1] - f.b[1]) < 2.5) { k = i; break; } }
+            const reason = k >= 0 && Math.random() < 0.75 ? '오프사이드' : pick(['핸드볼', '공격자 파울']);
+            let no, line = null, gap = 0; const hid = sp ? String(sp.id) : '';
+            if (reason === '오프사이드') {
+                const f = Hs[k], dir = isHome ? 1 : -1, s = f.p[hid];
+                const defs = Object.values(f.p).filter(q => q[2] !== (isHome ? 1 : 0)).map(q => q[0]).sort((a, b) => dir > 0 ? b - a : a - b);
+                const lx = defs[1] ?? 50; line = { x: lx, sx: s ? s[0] : lx };
+                gap = s ? (s[0] - lx) * dir : -1;
+                no = !!s && gap > 0.25 && (s[0] - 50) * dir > 0 && (s[0] - f.b[0]) * dir > 0;
+            } else no = Math.random() < 0.25;
+            const ov = document.getElementById('var-overlay'), tx = document.getElementById('var-text'), mon = document.getElementById('var-mon');
+            comm(st, `📺 VAR이 ${scorer}의 득점 장면을 확인합니다 — ${reason} 여부 체크`, 'info');
+            SFX.playTone(520, 'square', 0.12, 0.06);
+            if (!ov) { (no ? cancelGoal : (a, b, c, d, e) => goalNow(b, c, time, d, how))(st, isHome, scorer, assist, reason); return; }
+            ov.className = 'var-overlay'; tx.innerHTML = `판독실 · ${isHome ? teamName : st.enemy.name} 득점 장면<br><small>${reason} 여부 확인 중…</small>`;
+            const freeze = reason === '오프사이드' ? k : Hs.length - 1, frames = Hs.slice(Math.max(0, freeze - 18), freeze + 1);
+            let i = 0; clearInterval(varReview.h);
+            varReview.h = setInterval(() => { if (currentMatchState !== st) { clearInterval(varReview.h); return; } mon.innerHTML = varSvg(frames[i % frames.length], isHome, { hl: hid }); i++; if (i >= frames.length * 2) { clearInterval(varReview.h); mon.innerHTML = varSvg(frames[frames.length - 1], isHome, { hl: hid, line, no: false, ring: reason !== '오프사이드' }); tx.innerHTML = reason === '오프사이드' ? `오프사이드 라인 확인 중…<br><small>노란선 = 최종 수비수 · 점선 = 득점자</small>` : `${reason} 장면 정밀 확인 중…<br><small>주심이 모니터 앞으로 갑니다</small>`; } }, 110);
+            const decideAt = 110 * frames.length * 2 + 1500;
+            setTimeout(() => {
+                if (currentMatchState !== st) return;
+                const cmN = Math.round(Math.abs(gap) * 105), cm = cmN >= 100 ? (cmN / 100).toFixed(1).replace('.0', '') + 'm' : cmN + 'cm';
+                if (line) mon.innerHTML = varSvg(frames[frames.length - 1], isHome, { hl: hid, line, no });
+                ov.className = 'var-overlay ' + (no ? 'no' : 'ok');
+                tx.innerHTML = no ? `❌ NO GOAL<br><small>${reason}${line ? ` · ${cm} 차이` : ''}</small>` : `✅ GOAL 인정<br><small>${line ? (gap > 0 ? `간발의 차 온사이드 판정` : `온사이드 · ${cm} 여유`) : '반칙 없음'}</small>`;
+                if (line) comm(st, no ? `📏 오프사이드 라인 판독: ${scorer}, ${cm} 앞서 있었습니다` : `📏 오프사이드 라인 판독: ${gap > 0 ? '간발의 차로' : cm + ' 차이로'} 온사이드!`, 'info');
+                setTimeout(() => { ov.className = 'var-overlay hidden'; mon.innerHTML = ''; if (currentMatchState !== st) return; if (no) cancelGoal(st, isHome, scorer, assist, reason); else { comm(st, '📺 VAR 확인 완료 — 골 인정!', 'goal'); goalNow(isHome, scorer, time, assist, how); } }, 1500);
+            }, decideAt);
         }
         function cancelGoal(st, isHome, scorer, assist, reason) {
             const side = isHome ? st.homePlayers.concat(st.homeOut || []) : st.awayPlayers, sp = side.find(p => p.name === scorer);
@@ -6933,7 +7014,8 @@
             const sp = allOf(st).find(p => p.name === scorer && p.isHome === isHome);
             if (sp && sp.ace) setTimeout(() => comm(st, `⭐ 에이스 ${scorer}, 해결사다운 한 방!`, 'goal'), 0);
             SFX.goal();
-            st.goalLog ||= []; st.goalLog.push({ home: isHome, time: Number(time) || 0, homeBefore: st.scoreHome, awayBefore: st.scoreAway, scorer, how });
+            const lab = minuteLabel(st);
+            st.goalLog ||= []; st.goalLog.push({ home: isHome, time: Number(time) || 0, lab, et: !!st.maxTime, homeBefore: st.scoreHome, awayBefore: st.scoreAway, scorer, how });
             if (isHome) { st.scoreHome++; document.getElementById('match-score-home').innerText = st.scoreHome; }
             else { st.scoreAway++; document.getElementById('match-score-away').innerText = st.scoreAway; }
             if (st.ex && st.htDone) st.ex.goals2++;
@@ -6948,11 +7030,13 @@
             else if (before >= 2) celeb = pick(MODEST)(scorer);
             else if (before < 0) celeb = pick(BRIEF)(scorer);
             else celeb = how === 'long' ? `🚀 원더골! ${scorer}의 중거리포가 골망 상단을 찢어버립니다! ${pick(CELEB)}` : how === 'empty' ? `🥅 ${scorer}, 텅 빈 골문에 공을 굴려 넣고 관중석으로 달려갑니다!` : `🎉 ${scorer}, ${pick(CELEB)}`;
+            const theatre = !st.maxTime && st.htDone && st.time >= 88 && before <= 0;
+            if (theatre) { st.theatre = { home: isHome, scorer, lab, win: before === 0 }; if (!grab) celeb = pick(WILD)(scorer); }
             comm(st, `⚽ ${how ? HOW[how] + '! ' : '골! '}${scorer} (${isHome ? teamName : st.enemy.name})${assist ? ' · 도움 ' + assist : ''} — ${st.scoreHome} : ${st.scoreAway}`, 'goal');
-            setTimeout(() => { if (currentMatchState === st) comm(st, celeb, 'goal'); }, 0);
+            setTimeout(() => { if (currentMatchState !== st) return; comm(st, celeb, 'goal'); if (theatre) comm(st, pick(THEATRE)(scorer, lab, before === 0, isHome ? teamName : st.enemy.name), 'goal'); goalExtras(st, sp, isHome, how, before); }, 0);
             if (!st.online && Math.random() < 0.45) { const ct = isHome ? st.enemy.name : teamName, cg = (isHome ? st.awayPlayers : st.homePlayers).find(p => p.role === 'GK' && !p.isRedCarded); setTimeout(() => { if (currentMatchState === st) comm(st, pick(CONCEDE)(ct, cg && cg.name)); }, 0); }
             const overlay = document.getElementById('match-goal-overlay'), info = document.getElementById('match-goal-info');
-            info.innerHTML = `${how ? '<span class="text-yellow-300">' + HOW[how] + '!</span><br>' : ''}⚽ ${scorer} (${time}') <br> <span class="text-lg text-gray-400">${assist ? '도움: ' + assist : ''}</span>${grab ? '<br><span class="text-base text-sky-300">🏃 세리머니는 나중에! 공부터 챙긴다</span>' : ''}`;
+            info.innerHTML = `${how ? '<span class="text-yellow-300">' + HOW[how] + '!</span><br>' : ''}⚽ ${scorer} (${lab}') <br>${theatre ? '<span class="text-amber-300 text-xl">🎭 극장골!!!</span><br>' : ''} <span class="text-lg text-gray-400">${assist ? '도움: ' + assist : ''}</span>${grab ? '<br><span class="text-base text-sky-300">🏃 세리머니는 나중에! 공부터 챙긴다</span>' : ''}`;
             overlay.style.display = 'flex';
             const reset = () => { [...st.homePlayers, ...st.awayPlayers].forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; }); kickoff(st, !isHome); };
             if (grab) {   // 공을 들고 센터서클로: 짧게 멈췄다가 선수들이 뛰어서 제자리로 (스코어한 선수가 공을 운반)
@@ -7064,6 +7148,7 @@
             if (gl.some(g => g.how === 'empty')) P('meme', pick(MEME_ACC), '밈 계정', '골키퍼까지 올라왔다가 빈 골대에 먹히는 거 = 축구에서 제일 웃긴 장면 🥅🏃‍♂️', 1.4);
             if (st.mode === 'career') P('media', pick(['UCL on YFM', 'Champions Night']), '매체', win ? `⭐ CHAMPIONS NIGHT | ${T}, ${ctx}에서 ${O} 격파!` : lose ? `⭐ ${ctx} | ${O}, ${T}에 ${A}–${H} 승리` : `⭐ ${ctx} | ${T}–${O}, 승부는 다음으로`, 1.6);
             if (st.leaguePlayoff) P('media', 'YFM Sports', '매체', win ? `⬆️ PROMOTED | ${T}, 승격 결정전 승리! 다음 시즌 ${LG[Math.min(LG.length - 1, leagueState.li + 1)].n}에서 만난다` : `${T}, 승격 결정전에서 고배… 다음 시즌을 기약`, 3);
+            if (st.theatre) { const th = st.theatre; if (th.home) { P('club', `${T} 공식`, '공식 계정 ✔', `🎭 ${th.lab}' ${th.scorer.toUpperCase()}!!!!!!!!\n${th.win ? '이게 우리 팀입니다' : '포기는 없다'} 💙🔥`, 4, pick(['심장 떨어질 뻔', '소리 질렀다 진짜', '평생 기억할 장면'])); P('meme', pick(MEME_ACC), '밈 계정', `${th.lab}분 전 팬들: 😐📱 / ${th.lab}분 후 팬들: 🤯🤯🔥🔥`, 3, 'ㅋㅋㅋㅋ 나네'); const f = pick(FOREIGN); P('foreign', f[0], `해외 반응 ${f[1]}`, `${th.scorer} in the ${th.lab}' — absolute cinema 🎬`, 2); } else P('opp', pick(OPP_FANS), `${O} 팬`, `${th.lab}분 ${th.scorer}!!! 너희 표정 보고 싶다 ㅋㅋㅋ`, 2.5); }
             const out = posts.map((p, i) => ({ t: now - i * 47000, name: p.name, role: p.role, type: p.type, text: p.text, reply: p.reply, match, tag, likes: Math.round(p.w * (40 + Math.random() * 260) * (win ? 1.3 : 1)), reposts: Math.round(p.w * (3 + Math.random() * 40)) }));
             S.social = [...out, ...(S.social || [])].slice(0, 36);
         }
@@ -7123,6 +7208,197 @@
                 <p class="league-muted mb-3">정규리그 1위 ${leagueEsc(leagueName(l.po.a))} vs 2위 ${leagueEsc(leagueName(l.po.b))} · 비기면 연장전·승부차기<br>이기면 <b class="text-white">${LG[l.li + 1].n}</b> 승격! · 상대 OVR ${oc ? oc.ovr : '-'} · ${home ? '1위 어드밴티지: 홈 경기' : '원정 경기'}${orow ? ` · 상대 최근 ${orow.form.slice(-5).join(' ')}` : ''}<br>경기 보상 ${LG[l.li].m} T</p><button class="league-button" onclick="playLeaguePlayoff()">⚔️ 승격 결정전 시작</button>`;
         }
 
+        // ===================== beta45: 경기 종료 휘슬 · 실수 평점 · 기록 축하 · 극장골 · 수석코치 =====================
+        function minuteLabel(st) { const t = Math.floor(st.time); if (st.maxTime) return String(t); if (!st.htDone && t >= 45) return `45+${t - 44}`; if (st.htDone && t >= 90) return `90+${t - 89}`; return String(t + 1 > 90 ? 90 : Math.max(1, t)); }
+        // 주심은 마지막 공격·날아가는 공·페널티킥이 끝날 때까지 휘슬을 기다린다
+        function holdWhistle(st, endT) {
+            if (st.online && !st.online.isHost) return false;
+            if (st.varOn) return true;
+            let hold = false; const cap = st.time < endT + 1.5;
+            if (st.sp && st.sp.kind === 'pen') hold = true;                                                          // PK는 반드시 차고 끝
+            else if (st.ball.fl) { const f = st.ball.fl; hold = f.kind === 'shot' || f.kind === 'goal' || (f.next && f.next.kind === 'goal') || f.fin || st.time < endT + 1.5; }   // 슈팅은 끝까지 · 크로스·패스는 최대 +1.5분
+            else if (st.sp) hold = cap && (st.sp.kind === 'corner' || (st.sp.team ? st.sp.x > 50 : st.sp.x < 50));     // 코너킥 · 상대 진영 프리킥
+            else if (st.cornerHold) hold = cap;
+            else { const o = st.ball.ownerId && allOf(st).find(p => p.id === st.ball.ownerId); if (o && o.role !== 'GK' && (o.isHome ? o.x > 50 : o.x < 50)) hold = cap; }   // 하프라인 넘어 공격 중
+            if (hold && !st.holdSaid) { st.holdSaid = true; comm(st, st.sp && st.sp.kind === 'pen' ? '⏱️ 시간은 다 됐지만 페널티킥은 차고 끝납니다' : st.sp && st.sp.kind === 'corner' ? '⏱️ 마지막 코너킥! 주심이 휘슬을 입에 문 채 지켜봅니다' : '⏱️ 시간이 다 됐지만 주심이 마지막 공격까지 지켜봅니다', 'info'); }
+            if (!hold) st.holdSaid = false;
+            return hold;
+        }
+        // 실수 → 평점 삭감
+        function addErr(st, p, pts, why) { const q = p && st.playerStats[p.id]; if (!q) return; q.err = (q.err || 0) + 1; q.errPts = (q.errPts || 0) + pts; (q.errWhy ||= []).push(why); }
+        function trackTurnover(st) {
+            const o = st.ball.ownerId && allOf(st).find(p => p.id === st.ball.ownerId); if (!o) return;
+            if (st.poss && st.poss.team !== o.isHome && !st.sp) st.turn = { team: st.poss.team, id: st.poss.id, x: st.poss.x, tk: st.tk || 0 };
+            st.poss = { team: o.isHome, id: o.id, x: o.x };
+        }
+        const THEATRE = [
+            (n, l, w, t) => `🎭 극장골!!! ${l}분, ${n}!!! ${w ? '경기를 끝내버립니다!' : '패배 직전에 팀을 구해냅니다!'} 경기장이 폭발합니다!!`,
+            (n, l, w, t) => `🎭 각본 없는 드라마! ${l}분 ${JO(n, '이', '가')} 해냈습니다! ${t} 벤치가 전부 그라운드로 뛰쳐나옵니다!`,
+            (n, l, w, t) => `🎭 이게 축구입니다! 마지막 순간 ${n}! ${w ? '승리를 훔쳐 갑니다!' : '극적인 동점골!'}`,
+            (n, l, w, t) => `🎭 ${l}분… 모두가 끝났다고 생각한 순간 ${n}!!! 해설진도 말을 잇지 못합니다`
+        ];
+        const MS_GOALS = { 1: ['🎊 데뷔골!', n => `🎊 ${n}, 프로 데뷔골! 평생 잊지 못할 첫 골입니다 — 가족이 있는 관중석을 향해 두 팔을 벌립니다`], 50: ['🔥 통산 50호골', n => `🔥 ${n} 통산 50호골! 클럽의 새로운 득점 기계가 탄생했습니다`], 100: ['💯 통산 100호골', n => `💯 ${n} 통산 100호골!! 센추리 클럽 가입 — 관중 전원이 기립 박수를 보냅니다`], 150: ['👑 통산 150호골', n => `👑 ${n} 통산 150호골! 이제 클럽 레전드 반열입니다`], 200: ['🐐 통산 200호골', n => `🐐 ${n} 통산 200호골!!! 클럽 역사에 영원히 남을 이름입니다`] };
+        function msBanner(txt, sub) {
+            const el = document.getElementById('ms-banner'); if (!el) return;
+            el.innerHTML = `<b>${txt}</b>${sub ? `<small>${sub}</small>` : ''}`; el.className = 'ms-banner'; void el.offsetWidth; el.className = 'ms-banner on';
+            clearTimeout(msBanner.h); msBanner.h = setTimeout(() => { el.className = 'ms-banner'; }, 4200);
+        }
+        function goalExtras(st, sp, isHome, how, before) {
+            if (!sp) return; const q = st.playerStats[sp.id] || {};
+            // 실점 빌미: 자기 진영에서 공을 뺏긴 뒤 30틱 안에 실점
+            const T = st.turn; if (T && T.team === !isHome && (st.tk || 0) - T.tk <= 22 && (T.team ? T.x < 38 : T.x > 62) && Math.random() < 0.75) { const cul = allOf(st).concat(st.homeOut || []).find(p => p.id === T.id); if (cul) { addErr(st, cul, 0.6, '실점 빌미'); comm(st, `⚠️ ${cul.name}의 볼 처리 실수가 실점으로 이어졌습니다 (평점 하락)`, 'warn'); } st.turn = null; }
+            // 성향 발동
+            if (tr(sp, 'clutch') && st.time >= 75) comm(st, `🧊 [성향 발동] 해결사 ${sp.name} — 결정적인 순간에 강합니다`, 'info');
+            else if (how === 'header' && tr(sp, 'aerial')) comm(st, `🗼 [성향 발동] 제공권 장악 — ${sp.name}의 머리는 피할 수 없었습니다`, 'info');
+            else if (how === 'fk' && tr(sp, 'fk')) comm(st, `🎩 [성향 발동] 프리킥 스페셜리스트 ${sp.name}!`, 'info');
+            else if (sp.tF > 1) comm(st, `🏟️ [성향 발동] 빅매치 체질 ${sp.name}, 큰 경기에서 빛납니다`, 'info');
+            // 슈퍼 서브
+            if (sp.subIn && sp.enter !== undefined && st.time - sp.enter <= 20 && !q.superSub) { q.superSub = true; q.bonus = (q.bonus || 0) + 0.3; comm(st, `🔄 교체 투입 ${Math.max(1, Math.round(st.time - sp.enter))}분 만에 골! ${isHome ? '감독의 용병술이 적중했습니다' : '상대 감독의 교체 카드가 통했습니다'}`, 'goal'); }
+            if (!isHome || sandboxMode(st.mode) || st.online) return;
+            // 통산 기록 · 연속골
+            const rec = (S.pl || {})[sp.id] || {}, total = (rec.g || 0) + (q.goals || 0);
+            const key = (q.goals === 1 && !(rec.g || 0)) ? 1 : (MS_GOALS[total] && total >= 50 ? total : (total >= 250 && total % 50 === 0 ? total : 0));
+            if (key) { const m = MS_GOALS[key] || [`🏆 통산 ${key}호골`, n => `🏆 ${n} 통산 ${key}호골! 전설은 계속됩니다`]; comm(st, m[1](sp.name), 'goal'); msBanner(m[0], `${sp.name}${key > 1 ? ` · 통산 ${total}골` : ''}`); (st.milestones ||= []).push({ n: sp.name, k: m[0], v: total }); }
+            else if (q.goals === 1 && (rec.gs || 0) >= 2) { comm(st, `🔥 ${sp.name}, ${rec.gs + 1}경기 연속골! 멈출 줄을 모릅니다`, 'goal'); msBanner(`🔥 ${rec.gs + 1}경기 연속골`, sp.name); (st.milestones ||= []).push({ n: sp.name, k: `🔥 ${rec.gs + 1}경기 연속골`, v: rec.gs + 1 }); }
+        }
+        // 하프타임 수석코치 조언 (FM 방식)
+        function coachTips(st) {
+            const X = st.stats, tp = (X.homePos + X.awayPos) || 1, pos = X.homePos / tp * 100, d = st.scoreHome - st.scoreAway, L = [];
+            const add = (pri, t) => L.push({ pri, t });
+            if (X.homeXG - X.awayXG > 0.6 && d <= 0) add(5, `기회는 우리가 더 많아요 (xG ${X.homeXG.toFixed(1)} : ${X.awayXG.toFixed(1)}). 침착하게만 마무리하면 됩니다.`);
+            if (X.awayXG - X.homeXG > 0.6) add(5, `상대에게 좋은 기회를 너무 많이 내줬어요 (상대 xG ${X.awayXG.toFixed(1)}). 수비 간격을 좁혀야 합니다.`);
+            if (pos < 40) add(3, `점유율이 ${Math.round(pos)}%밖에 안 돼요. 템포를 늦추고 짧은 패스로 공을 지켜 보죠.`);
+            if ((X.away_cross || 0) >= 5) add(3, `상대 크로스가 벌써 ${X.away_cross}번이에요. 측면 수비에 더 신경 써야 합니다.`);
+            if ((X.home_off || 0) >= 3) add(3, `오프사이드에 ${X.home_off}번 걸렸어요. 침투 타이밍을 반 박자 늦춰야 합니다.`);
+            const bk = st.homePlayers.find(p => p.cards === 1 && !p.isRedCarded); if (bk) add(4, `${JO(bk.name, '이', '가')} 경고를 받았어요. 퇴장 위험이 있으니 교체를 고려해 보세요.`);
+            const tired = st.homePlayers.filter(p => !p.isRedCarded && p.role !== 'GK' && (p.stam ?? 100) < 58).sort((a, b) => a.stam - b.stam)[0]; if (tired) add(4, `${tired.name} 체력이 ${Math.round(tired.stam)}%예요. 후반 초반에 교체 후보입니다.`);
+            const er = st.homePlayers.find(p => (st.playerStats[p.id] || {}).err >= 1); if (er) add(2, `전반에 ${er.name}의 실수가 있었어요. 자신감을 잃지 않게 한마디 해 주세요.`);
+            try { if (matchupBase(st, true) < 1) { const c = counterPick(st.awayStyle); add(4, `지금 공격 방식은 상대 ${STYLE_NAME[st.awayStyle]}에 상성이 나빠요.${c ? ` ${STYLE_NAME[c]} 쪽을 추천합니다.` : ''}`); } } catch (e) {}
+            if (d > 0) add(2, '리드 중입니다. 후반엔 상대가 라인을 올릴 테니 역습 기회가 열릴 거예요.');
+            if (d < 0) add(2, '아직 45분 남았어요. 서두르지 말고 한 골씩 따라가면 됩니다.');
+            if (!L.length) add(1, '전반은 계획대로 흘러갔습니다. 지금 흐름을 유지하죠.');
+            return L.sort((a, b) => b.pri - a.pri).slice(0, 3).map(x => x.t);
+        }
+        function renderCoach(st) {
+            const el = document.getElementById('ht-coach'); if (!el) return;
+            if (!st || st.online || st.breakKind) { el.innerHTML = ''; return; }
+            el.innerHTML = `<div class="coach-box"><div class="coach-h">🧑‍💼 수석코치 브리핑</div>${coachTips(st).map(t => `<div class="coach-l">• ${leagueEsc(t)}</div>`).join('')}</div>`;
+        }
+        // 경기 후 통산 기록 (출장 · 도움 · 클린시트)
+        const MS_APP = [50, 100, 200, 300, 500], MS_AST = [25, 50, 100, 150], MS_CS = [10, 25, 50, 100];
+        function postMatchMilestones(st, before) {
+            const out = [];
+            Object.entries(before).forEach(([id, b]) => {
+                const r = S.pl[id]; if (!r) return; const app = (r.app || 0) + (r.sub || 0);
+                MS_APP.forEach(v => { if (b.app < v && app >= v) out.push(`🎖️ ${r.name} 통산 ${v}경기 출장!`); });
+                MS_AST.forEach(v => { if (b.a < v && (r.a || 0) >= v) out.push(`🅰️ ${r.name} 통산 ${v}도움!`); });
+                MS_CS.forEach(v => { if (b.cs < v && (r.cs || 0) >= v) out.push(`🧤 ${r.name} 통산 ${v}번째 클린시트!`); });
+            });
+            (st.milestones || []).forEach(m => out.unshift(`${m.k} — ${m.n}${m.v > 1 ? ` (통산 ${m.v})` : ''}`));
+            if (!out.length) return;
+            document.getElementById('match-end-growth').innerHTML = out.map(t => `<div class="text-amber-300 font-black">🎉 ${leagueEsc(t)}</div>`).join('') + document.getElementById('match-end-growth').innerHTML;
+            out.slice(0, 2).forEach(t => addNews('🎉', t, '구단이 기념 영상을 공개했습니다. 팬들의 축하가 이어지고 있습니다.', '팀 소식'));
+            S.social = [...out.slice(0, 3).map((t, i) => ({ t: Date.now() + 1000 - i * 1000, name: `${teamName} 공식`, role: '공식 계정 ✔', type: 'club', text: `🎉 ${t}\n축하합니다! 💙 #기록의사나이`, match: `${teamName} vs ${st.enemy.name}`, tag: '기록', likes: 300 + Math.round(Math.random() * 900), reposts: 40 + Math.round(Math.random() * 120), reply: pick(['레전드의 시작', '이 선수 평생 응원합니다', '기념 유니폼 나오면 바로 산다']) })), ...(S.social || [])].slice(0, 36);
+        }
+        const THEATRE_FAN = [t => `${t.lab}분 ${t.scorer}!!!! 나 방금 소리 질러서 경비실에서 연락 옴`, t => `극장 문 닫으려는데 ${t.scorer}가 다시 열어버림 🎭`, t => `${t.lab}분에 ${t.win ? '결승골' : '동점골'} 실화냐… 오늘 잠 다 잤다`, t => '끝난 줄 알고 TV 끈 사람 손 🙋 (나)', t => `${t.scorer} 오늘부터 우리 집 가훈`, t => '이래서 축구는 휘슬 불 때까지 보는 거다', t => `${t.lab}분 골 보고 치킨 뼈 날아감 🍗`];
+        const THEATRE_SAD = [t => `${t.lab}분에 먹히는 건 반칙 아니냐…`, t => '다 잡은 경기였는데 마지막에… 오늘 밤 못 잔다', t => '추가시간 누가 이렇게 많이 줬냐 진짜', t => `${t.scorer} 이름 당분간 듣기 싫다`];
+
+        // ===================== beta46: 애매한 판정 VAR · 퇴장 항의 · 주심 · 경기 지연 · 갤러리 반응 · 날씨 UI =====================
+        function canVar(st) { return !!st && !st.online && st.mode !== 'onlineFriendly' && !st.varOn && !st.ended && (st.varN || 0) < 4; }
+        function moveRef(st) {   // 주심: 공을 따라 비스듬히 뒤에서 움직임 (화면 표시용)
+            const b = st.ball, r = st.refP || (st.refP = { x: 50, y: 40 }), dir = st.lastPoss ? 1 : -1;
+            const tx = Math.max(8, Math.min(92, b.x - dir * 7)), ty = Math.max(10, Math.min(90, b.y + (b.y < 50 ? 9 : -9))), dx = tx - r.x, dy = ty - r.y, d = Math.hypot(dx, dy);
+            if (d > 0.3) { const m = Math.min(d, 1.15); r.x += dx / d * m; r.y += dy / d * m; }
+        }
+        function refPos(st) { return st.refP || { x: st.ball.x - 5, y: st.ball.y + 6 }; }
+        // 항의 장면: 해당 팀 선수들이 주심에게 몰려감 (화면 연출 + 경기 지연)
+        function protest(st, teamHome, why) {
+            if (st.online) return; const r = refPos(st);
+            const L = (teamHome ? st.homePlayers : st.awayPlayers).filter(p => !p.isRedCarded && p.role !== 'GK').sort((a, b) => Math.hypot(a.x - r.x, a.y - r.y) - Math.hypot(b.x - r.x, b.y - r.y)).slice(0, 4);
+            saveSnap(st); L.forEach((p, i) => { const a = i / L.length * Math.PI * 2 + 0.6; p.x = Math.max(4, Math.min(96, r.x + Math.cos(a) * 2.6)); p.y = Math.max(6, Math.min(94, r.y + Math.sin(a) * 3.8)); p.targetX = p.x; p.targetY = p.y; });
+            saveSnap(st); st.glide = performance.now() + 1500; st.glideBall = null; st.slowUntil = Math.max(st.slowUntil || 0, st.time + 0.5); if (st.ex) st.ex.delay = (st.ex.delay || 0) + 0.3;
+            const el = matchElements.ref; if (el) { el.classList.add('protest'); setTimeout(() => el.classList.remove('protest'), 2600); }
+            const T = teamHome ? teamName : st.enemy.name, cap = (teamHome ? st.homePlayers : st.awayPlayers).find(p => p.isCaptain && !p.isRedCarded);
+            comm(st, pick([`🗣️ ${T} 선수 ${L.length}명이 주심을 에워싸고 거세게 항의합니다! ${why || ''}`, `😡 ${T} 선수들이 주심에게 달려듭니다 — "이게 어떻게 ${why === '퇴장' ? '퇴장이야!' : '반칙이야!'}"`, `🗣️ ${T} 벤치까지 일어나 두 팔을 휘두르며 항의합니다`]), 'warn');
+            if (cap) setTimeout(() => { if (currentMatchState === st) comm(st, `🫡 주장 ${JO(cap.name, '이', '가')} 동료들을 떼어내며 진정시킵니다`, 'info'); }, 0);
+            if (Math.random() < 0.25 * ((st.ref && st.ref.s) || 1)) { const loud = L[0]; if (loud && !loud.cards) setTimeout(() => { if (currentMatchState !== st || st.ended || loud.isRedCarded) return; comm(st, `🟨 주심이 참지 않습니다 — ${loud.name} 항의로 경고!`, 'card'); triggerCard(loud, 'yellow', Math.floor(st.time)); }, 2300); }
+        }
+        // 파울 이후: 퇴장·PK는 애매하면 VAR → 항의
+        function afterFoul(st, fouler, victim, inBox, card) {
+            const t = Math.floor(st.time);
+            if (card === 'red' && canVar(st) && Math.random() < 0.5) { varIncident(st, { kind: 'red', fouler, victim, inBox }); return; }
+            if (card) { triggerCard(fouler, card, t); }
+            else { st.isPaused = true; setTimeout(() => { if (currentMatchState === st && !st.varOn) st.isPaused = false; }, inBox ? 900 : 550); }
+            if (inBox && card !== 'red' && !st.forcePen) { if (!st.online && Math.random() < 0.5) protest(st, fouler.isHome, 'PK'); if (canVar(st) && Math.random() < 0.3) setTimeout(() => { if (currentMatchState === st && st.sp && st.sp.kind === 'pen' && !st.sp.penSet) varIncident(st, { kind: 'pen', fouler, victim, card }); }, card ? 2150 : 950); }
+        }
+        const VAR_TXT = {
+            red: { t: '🟥 퇴장 판정 확인', chk: '태클 강도 · 발바닥 접촉 · 득점 기회 저지 여부 확인 중', p: 0.3 },
+            pen: { t: '🎯 페널티킥 판정 확인', chk: '접촉 여부 · 파울 지점 확인 중', p: 0.3 },
+            nopen: { t: '🎯 PK 미선언 장면 확인', chk: '박스 안 접촉 장면 정밀 확인 중', p: 0.45 },
+            hand: { t: '✋ 핸드볼 확인', chk: '팔 위치 · 고의성 · 몸에 먼저 맞았는지 확인 중', p: 0.4 }
+        };
+        function varIncident(st, o) {
+            const V = VAR_TXT[o.kind]; if (!V) return; st.varOn = true; st.isPaused = true; st.varN = (st.varN || 0) + 1; if (st.ex) st.ex.var++;
+            const ov = document.getElementById('var-overlay'), tx = document.getElementById('var-text'), mon = document.getElementById('var-mon');
+            const turn = Math.random() < V.p, hid = String((o.fouler || {}).id || ''), Hs = (st.hist || []).slice(-16);
+            comm(st, `📺 VAR — ${V.t.replace(/^\S+\s/, '')} 중입니다…`, 'info'); SFX.playTone(520, 'square', 0.12, 0.06);
+            const isAtt = o.victim ? o.victim.isHome : true;
+            const done = () => { st.varOn = false; if (ov) { ov.className = 'var-overlay hidden'; mon.innerHTML = ''; } if (currentMatchState !== st) return; varApply(st, o, turn); };
+            if (!ov || !Hs.length) { setTimeout(done, 600); return; }
+            ov.className = 'var-overlay'; tx.innerHTML = `${V.t}<br><small>${V.chk}</small>`;
+            let i = 0; clearInterval(varIncident.h);
+            varIncident.h = setInterval(() => { if (currentMatchState !== st) { clearInterval(varIncident.h); return; } mon.innerHTML = varSvg(Hs[i % Hs.length], isAtt, { hl: hid, ring: true }); i++; if (i >= Hs.length * 2) { clearInterval(varIncident.h); tx.innerHTML = `${V.t}<br><small>주심이 온필드 리뷰 모니터 앞으로 갑니다…</small>`; } }, 115);
+            const decideAt = 115 * Hs.length * 2 + 1400;
+            setTimeout(() => {
+                if (currentMatchState !== st) return;
+                const res = varResult(o, turn); ov.className = 'var-overlay ' + (res.bad ? 'no' : 'ok'); tx.innerHTML = `${res.h}<br><small>${res.why}</small>`;
+                comm(st, `📺 VAR 판독: ${res.h.replace(/<[^>]+>/g, '')} — ${res.why}`, res.bad ? 'card' : 'info');
+                setTimeout(done, 1600);
+            }, decideAt);
+        }
+        function varResult(o, turn) {
+            if (o.kind === 'red') return turn ? { h: '🟨 경고로 정정', why: pick(['공을 먼저 건드린 것이 확인됐습니다', '접촉이 생각보다 약했습니다', '다른 수비수가 커버 가능한 위치였습니다']) } : { h: '🟥 퇴장 유지', why: pick(['명백한 득점 기회 저지', '발바닥으로 정강이를 가격한 위험한 태클', '볼과 무관한 과도한 접촉']), bad: true };
+            if (o.kind === 'pen') { o.why = pick(['접촉 없음 · 시뮬레이션 의심', '파울 지점이 박스 밖', '수비수가 공을 먼저 건드림']); return turn ? { h: '❌ PK 취소', why: o.why, bad: true } : { h: '✅ PK 유지', why: pick(['발목 접촉 명확', '공과 무관하게 다리를 걸었습니다', '진로 방해 확인']) }; }
+            if (o.kind === 'nopen') return turn ? { h: '🎯 PK 선언!', why: '주심이 모니터를 보고 판정을 번복합니다 — 접촉 확인' } : { h: '▶ 경기 계속', why: '정당한 태클 — 공을 먼저 건드렸습니다' };
+            if (o.kind === 'hand') return turn ? { h: '✋ 핸드볼 — PK!', why: '팔을 부자연스럽게 벌려 슈팅을 막았습니다' } : { h: '▶ 핸드볼 아님', why: pick(['몸에 먼저 맞고 팔에 닿았습니다', '팔이 몸에 붙어 있었습니다']) };
+            return { h: '확인 완료', why: '' };
+        }
+        function varApply(st, o, turn) {
+            const t = Math.floor(st.time), F = o.fouler, Vc = o.victim, all = allOf(st).filter(p => !p.isRedCarded);
+            if (o.kind === 'red') { const c = turn ? 'yellow' : 'red'; triggerCard(F, c, t); if (c !== 'red') comm(st, `😮‍💨 ${F.name}, 가슴을 쓸어내립니다`, 'info'); return; }
+            if (o.kind === 'pen') {
+                if (!turn) { st.isPaused = false; return; }
+                const q = st.playerStats[F.id]; if (q && q.errPts) { q.errPts = Math.max(0, q.errPts - 0.6); q.err = Math.max(0, (q.err || 1) - 1); q.errWhy = (q.errWhy || []).filter(w => w !== 'PK 허용'); }
+                if (o.card === 'yellow' && F.cards > 0 && !F.isRedCarded) { F.cards--; const k = (F.isHome ? 'home_' : 'away_') + 'yc'; if (st.stats[k]) st.stats[k]--; if (q && q.yc) q.yc--; comm(st, `🟨 ${F.name}의 경고도 취소됩니다`, 'info'); }
+                if (/박스 밖/.test(o.why || '')) { const dir = Vc.isHome ? 1 : -1, gx = Vc.isHome ? 97 : 3; st.sp = { kind: 'fk', team: Vc.isHome, x: gx - dir * 17.5, y: Math.max(25, Math.min(75, Vc.y)), t: 0, victim: Vc.id, fresh: true }; comm(st, '↩️ 박스 밖 파울로 정정 — 프리킥으로 재개합니다', 'info'); }
+                else { st.sp = null; const gk = (F.isHome ? st.homePlayers : st.awayPlayers).find(p => p.role === 'GK' && !p.isRedCarded); if (gk) { st.ball.ownerId = gk.id; st.ball.x = gk.x; st.ball.y = gk.y; st.lastPoss = gk.isHome; st.goalKick = gk.id; gk.hold = 0; } comm(st, `↩️ PK 취소 — ${F.isHome ? teamName : st.enemy.name}의 공으로 재개합니다`, 'info'); if (/시뮬레이션/.test(o.why || '') && Math.random() < 0.5 && !Vc.cards) { comm(st, `🎭 ${Vc.name}, 시뮬레이션으로 경고!`, 'card'); triggerCard(Vc, 'yellow', t); return; } }
+                st.isPaused = false; return;
+            }
+            if (o.kind === 'nopen') { if (turn) { st.forcePen = true; commitFoul(st, F, Vc, all); st.forcePen = false; } else st.isPaused = false; return; }
+            if (o.kind === 'hand') {
+                if (turn) { const dir = Vc.isHome ? 1 : -1, gx = Vc.isHome ? 97 : 3; st.ball.fl = null; st.ball.ownerId = null; addErr(st, F, 0.6, '핸드볼 PK'); st.sp = { kind: 'pen', team: Vc.isHome, x: gx - dir * 9.85, y: 50, t: 0, victim: Vc.id, fresh: true }; toast('✋ 핸드볼 — 페널티킥!'); if (!st.online && Math.random() < 0.5) protest(st, F.isHome, 'PK'); st.isPaused = false; }
+                else { st.noHand = true; launchShot(st, Vc, 'block', o.gk); st.noHand = false; st.isPaused = false; }
+            }
+        }
+        // ---- 갤러리 스타일 팬 반응 ----
+        const GAL_NICK = () => Math.random() < 0.55 ? `ㅇㅇ(${[118, 211, 39, 175, 106, 223, 121, 58][Math.floor(Math.random() * 8)]}.${Math.floor(Math.random() * 240) + 10})` : pick(['축잘알', '직관러', '10년차팬', '눈팅러', '전술충', '새벽축구', '시즌권보유', '원정석고인물', '하이라이트만봄', 'xG신봉자', '응원가반장', '중립기어', '국밥충', '풋매니아']);
+        const GAL_CMT = {
+            win: ['ㄹㅇ 오늘은 인정', '개추', '이 맛에 축구 본다', '감독 오늘은 칭찬해준다', '평점 다들 후하게 줘라 ㅋㅋ', '다음 경기도 이대로만', '폼 미쳤다 진짜', '중립기어 박았던 놈들 다 어디감?'],
+            lose: ['하… 할 말이 없다', '라인업 보고 불안했음', '교체 타이밍 진짜 왜 그럼', '오늘은 걍 술 마신다', '다음 경기 이기면 잊혀짐 ㅇㅇ', '이건 선수 탓보다 전술 탓', '중립기어 박는다'],
+            draw: ['승점 1점이면 뭐…', '이길 수 있었는데 ㅅㅂ 아깝다', '애매하네 진짜', '결정력만 있었어도', '무승부치고 경기력은 괜찮았음'],
+            any: ['ㅇㅈ', 'ㄹㅇ', '222', '이건 맞말', '공감 박고 간다', '오늘 직관 갔는데 분위기 미쳤음', '하이라이트 언제 올라옴?', '이거 개념글 가자']
+        };
+        function galTag(t) { return /MOM|평점|평가/.test(t) ? '[평점]' : /VAR|주심|카드|판정/.test(t) ? '[판정]' : /xG|점유율|전술|교체/.test(t) ? '[분석]' : /직관|분위기|비|눈/.test(t) ? '[직관]' : /골|극장|해트트릭|원더골/.test(t) ? '[하이라이트]' : '[잡담]'; }
+        function renderFanReactions(st) {
+            const el = document.getElementById('end-fans'); if (!el) return;
+            if (st.forfeit) { el.innerHTML = ''; return; }
+            const L = fanReactions(st), H = st.scoreHome, A = st.scoreAway, mood = H > A || st.penWinner === 'home' ? 'win' : H < A || st.penWinner === 'away' ? 'lose' : 'draw';
+            const rows = L.map((c, i) => { const rec = c.like, cmts = Math.max(1, Math.round(rec / 9 + Math.random() * 12)), views = Math.round(rec * (6 + Math.random() * 10)); const C = [pick(GAL_CMT[mood]), pick(GAL_CMT.any), pick(GAL_CMT[mood])].filter((v, j, a) => a.indexOf(v) === j);
+                return `<details class="gal-row ${i === 0 ? 'best' : ''}"><summary><span class="gal-tag">${galTag(c.t)}</span><span class="gal-title">${leagueEsc(c.t)} <b class="gal-cn">[${cmts}]</b>${rec >= 300 ? ' <i class="gal-hot">개념</i>' : ''}</span><span class="gal-meta"><span>${leagueEsc(c.n)}</span><span>조회 ${views.toLocaleString()}</span><span>추천 <b>${rec}</b></span></span></summary><div class="gal-cmts">${C.map(x => `<div><span>${leagueEsc(GAL_NICK())}</span>${leagueEsc(x)}</div>`).join('')}</div></details>`; }).join('');
+            el.innerHTML = `<div class="gal-box"><div class="gal-head">💬 ${leagueEsc(teamName)} 갤러리 <small>실시간 · 경기 종료 후 새 글 ${L.length * 7 + Math.floor(Math.random() * 30)}개</small></div>${rows}<div class="gal-foot">글을 누르면 댓글이 보여요</div></div>`;
+        }
+        function toggleWx() { const p = document.getElementById('match-pitch'); if (!p) return; const off = !p.classList.contains('wx-off'); p.classList.toggle('wx-off', off); try { localStorage.setItem('fm_wxfx', off ? 'off' : 'on'); } catch (e) {} toast(off ? '🌦️ 날씨 효과 끔 (능력치 영향은 그대로)' : '🌦️ 날씨 효과 켬'); }
+
         function finishMatch() {
             let st = currentMatchState;
             if (st.resultProcessed) return;
@@ -7163,12 +7439,12 @@
             const hRatings = document.getElementById('end-home-ratings'); hRatings.innerHTML = '';
             [...st.homePlayers, ...st.homeOut].forEach(p => {
                 let r = calcRating(p); st.ratings = st.ratings || {}; st.ratings[p.id] = r; let c = p.isRedCarded ? '🟥 ' : (p.cards === 1 ? '🟨 ' : ''); let g = '⚽'.repeat(st.playerStats[p.id].goals);
-                hRatings.innerHTML += `<div class="flex justify-between items-center bg-gray-800 p-2 rounded border border-gray-700"><span>${p.name} ${c}${g}</span><span class="font-black ${r>=8?'text-yellow-400':(r>=6?'text-white':'text-gray-500')}">${r}</span></div>`;
+                hRatings.innerHTML += `<div class="flex justify-between items-center bg-gray-800 p-2 rounded border border-gray-700"><span>${p.name} ${c}${g}${st.playerStats[p.id].err ? `<span class="text-orange-300 text-xs" title="${(st.playerStats[p.id].errWhy || []).join(', ')} (평점 -${(st.playerStats[p.id].errPts || 0).toFixed(1)})"> ⚠️${(st.playerStats[p.id].errWhy || []).join('·')}</span>` : ''}${st.playerStats[p.id].superSub ? ' 🔄' : ''}</span><span class="font-black ${r>=8?'text-yellow-400':(r>=6?'text-white':'text-gray-500')}">${r}</span></div>`;
             });
             const aRatings = document.getElementById('end-away-ratings'); aRatings.innerHTML = '';
             st.awayPlayers.forEach(p => {
                 let r = calcRating(p); st.ratingsAway = st.ratingsAway || {}; st.ratingsAway[p.id] = r; let c = p.isRedCarded ? '🟥 ' : (p.cards === 1 ? '🟨 ' : ''); let g = '⚽'.repeat(st.playerStats[p.id].goals);
-                aRatings.innerHTML += `<div class="flex justify-between items-center bg-gray-800 p-2 rounded border border-gray-700"><span>${p.name} ${c}${g}</span><span class="font-black ${r>=8?'text-yellow-400':(r>=6?'text-white':'text-gray-500')}">${r}</span></div>`;
+                aRatings.innerHTML += `<div class="flex justify-between items-center bg-gray-800 p-2 rounded border border-gray-700"><span>${p.name} ${c}${g}${st.playerStats[p.id].err ? `<span class="text-orange-300 text-xs" title="${(st.playerStats[p.id].errWhy || []).join(', ')} (평점 -${(st.playerStats[p.id].errPts || 0).toFixed(1)})"> ⚠️${(st.playerStats[p.id].errWhy || []).join('·')}</span>` : ''}${st.playerStats[p.id].superSub ? ' 🔄' : ''}</span><span class="font-black ${r>=8?'text-yellow-400':(r>=6?'text-white':'text-gray-500')}">${r}</span></div>`;
             });
 
             if(st.mode === 'league') {
