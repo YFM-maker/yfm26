@@ -200,7 +200,7 @@
         .ref-dot .md-name { font-size:8px !important; opacity:.7; }
         .ref-dot.protest .md-body { animation:refShake .25s ease-in-out 8; }
         @keyframes refShake { 50% { transform:translateX(2px) rotate(8deg); } }
-        .mt-clock.slow b { color:#fb923c; } .mt-clock.slow small::after { content:' ⏳ 지연'; color:#fb923c; }
+        .mt-clock { position:relative; } .mt-clock.slow b { color:#fb923c; } .mt-clock.slow::after { content:'⏳ 지연'; position:absolute; left:50%; top:100%; transform:translateX(-50%); margin-top:2px; font-size:10px; font-weight:800; color:#fb923c; background:rgba(11,18,32,.9); border:1px solid rgba(251,146,60,.5); border-radius:6px; padding:0 6px; white-space:nowrap; pointer-events:none; z-index:5; }
         .gal-box { background:#0f172a; border:1px solid #334155; border-radius:14px; padding:8px 10px; }
         .gal-head { font-weight:900; padding:2px 2px 6px; border-bottom:2px solid #3b4890; } .gal-head small { font-weight:600; color:#94a3b8; font-size:11px; margin-left:6px; }
         .gal-row { border-bottom:1px solid #1e293b; } .gal-row summary { list-style:none; cursor:pointer; display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:7px 2px; }
@@ -6893,7 +6893,7 @@
         function tickExtras(st) {
             if (!st.ex || (st.online && !st.online.isHost)) return;
             recHist(st); trackTurnover(st);
-            moveRef(st); { const slow = st.slowUntil && st.time < st.slowUntil; if (slow !== !!st.slowShown) { st.slowShown = slow; const c = document.querySelector('.mt-clock'); if (c) c.classList.toggle('slow', slow); } }
+            moveRef(st); { const slow = !!(st.slowUntil && st.time < st.slowUntil); if (slow !== !!st.slowShown) { st.slowShown = slow; const c = document.querySelector('.mt-clock'); if (c) c.classList.toggle('slow', slow); } }
             const ex = st.ex, H = st.scoreHome, A_ = st.scoreAway;
             if (!st.htDone && !st.added1 && st.time >= 44) { st.added1 = 1 + (Math.random() < 0.45 ? 1 : 0) + (ex.inj ? 1 : 0); comm(st, `⏱️ 전반 추가시간 +${st.added1}분`, 'info'); showAddedBoard(st, st.added1); }
             if (!st.maxTime && !st.addedSet && st.htDone && st.time >= 89) {
