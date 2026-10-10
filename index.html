@@ -634,6 +634,7 @@
         /* 전 화면 공통 고정 메뉴와 보라색 테마 */
         #fm-global-side { position:fixed; inset:0 auto 0 0; width:232px; z-index:45; }
         body:not(.has-global-nav) #fm-global-side { display:none; }
+        body.online-friendly-match #fm-global-side { display:none!important; }
         #fm-global-side .fm-brand { flex:none; }
         body.has-global-nav .screen.active:not(#screen-lobby):not(#screen-match) { width:calc(100vw - 232px); height:100vh; margin-left:232px; flex:none; }
         #screen-lobby .fm-shell { grid-template-columns:232px minmax(0,1fr); }
@@ -10746,7 +10747,7 @@ const oldSecond=startSecondHalf;startSecondHalf=function(){if(currentMatchState?
 const oldPrepare=prepareMatch;prepareMatch=function(mode,...args){if(mode!=='onlineFriendly'){$('friendly-pause-timer').style.display='none';$('btn-pause-online').style.display='none';$('friendly-net-status').style.display='none';}return oldPrepare(mode,...args);};
 const oldAudio=prepareMatchAudioAndStart;prepareMatchAudioAndStart=function(st){if(!st.online)return oldAudio(st);try{startMatchAudio();}catch(_){} }; // Both loaded RPC starts the engine, never audio preload.
 const oldFinish=finishMatch;finishMatch=function(){const st=currentMatchState;if(st?.online){hidePanels();$('btn-pause-online').style.display='none';if(host())sendOnlineSnapshot(st);if(!N.endedReport&&N.room?.status==='playing'){N.endedReport=true;const score=host()?[st.scoreHome,st.scoreAway]:[st.scoreAway,st.scoreHome];rpc('report',{score}).catch(e=>{N.endedReport=false;error(e);});}}return oldFinish();};
-const oldSwitch=switchScreen;switchScreen=function(id){oldSwitch(id);if(id==='screen-online-friendly'){setMode(N.mode);refreshLobby();}if(id!=='screen-match')$('friendly-net-status').style.display='none';};
+const oldSwitch=switchScreen;switchScreen=function(id){oldSwitch(id);const onlineMatch=id==='screen-match'&&currentMatchState?.mode==='onlineFriendly';document.body.classList.toggle('online-friendly-match',onlineMatch);if(id==='screen-online-friendly'){setMode(N.mode);refreshLobby();}if(id!=='screen-match')$('friendly-net-status').style.display='none';};
 const oldSignout=signOutGameAccount;signOutGameAccount=async function(){if(N.room){if(active()&&!currentMatchState.ended)await rpc('forfeit');else if(!['finished','abandoned'].includes(N.room.status))await rpc('leave');await disconnect();}return oldSignout();};
 // Apply the visitor's full instructions to the opponent engine instead of CPU adaptation.
 const oldTick=simulateTick;simulateTick=function(st){if(st.online){const side=allOf(st).find(p=>p.id===st.ball.ownerId)?.isHome;if(side!==undefined&&N.possession!==undefined&&side!==N.possession){if(side)st.guestLost=st.tk||0;else st.exLost=st.tk||0;}if(side!==undefined)N.possession=side;st.exAceId=st.homePlayers.filter(p=>!p.isRedCarded).sort((a,b)=>b.ovr-a.ovr)[0]?.id;st.guestAceId=st.awayPlayers.filter(p=>!p.isRedCarded).sort((a,b)=>b.ovr-a.ovr)[0]?.id;st.awayM=mods({...st,homePlayers:st.awayPlayers,awayPlayers:st.homePlayers,tactic:st.awayTactic||'bal',instr:st.awayInstr,scoreHome:st.scoreAway,scoreAway:st.scoreHome});}return oldTick(st);};
