@@ -1173,9 +1173,9 @@
                 <div class="mt-name"><span id="match-enemy-name">적 팀</span><img id="match-enemy-logo" class="club-crest hidden" alt="상대 구단 엠블럼"><span class="kit" style="background:#dc2626"></span></div>
             </div>
             <div class="mt-actions"><button id="btn-pause-online" onclick="openTactics()" style="display:none;background:#6d28d9;padding:8px 12px;border-radius:9px">⏸ 정지</button><button id="btn-forfeit" class="mt-btn" onclick="forfeitMatch()" title="온라인 친선 기권">🏳️ 나가기</button><button id="btn-speed" class="mt-btn" onclick="toggleSpeed()">배속 x1</button><button id="btn-var" class="mt-btn" onclick="requestVar()" title="불리한 판정 후 5분 안에 VAR 요청 (경기당 2회)">📺 VAR <b>2</b></button><button id="btn-shout" class="mt-btn" onclick="openShouts()" title="선수 심리에 따라 다른 반응 · 경기 시간 10분 쿨타임">📣 터치라인 외침</button><button id="btn-tactics" class="mt-btn primary" onclick="openTactics()">⚙️ 전술 / 교체</button></div>
-        <div id="online-match-reaction" style="display:none;position:absolute;z-index:64;left:14px;top:78px;font-size:48px;pointer-events:none"></div>
+        <div id="online-match-reaction" aria-live="polite" style="display:none;position:absolute;z-index:64;left:14px;top:78px;width:60px;height:60px;align-items:center;justify-content:center;background:#5b21b6;border:2px solid #c4b5fd;border-radius:10px;box-shadow:0 4px 16px #12051f99;font-size:43px;pointer-events:none"></div>
         <div id="online-match-emojis" style="display:none;position:absolute;z-index:64;right:12px;top:76px;gap:8px;align-items:center">
-            <span id="friendly-emoji-self" style="display:none;font-size:26px"></span>
+            <span id="friendly-emoji-self" aria-live="polite" style="display:none;width:36px;height:36px;align-items:center;justify-content:center;background:#5b21b6;border:1.5px solid #c4b5fd;border-radius:8px;box-shadow:0 3px 12px #12051f99;font-size:24px"></span>
             <button onclick="yfmOnlineEmojiToggle()" aria-label="감정표현" style="font-size:25px;background:#241938;border:1px solid #8971b1;border-radius:12px;padding:7px 10px">💬</button>
             <div id="friendly-emoji-picker" hidden style="position:absolute;right:0;top:52px;background:#211731;border:1px solid #78608e;border-radius:12px;padding:9px;white-space:nowrap">
                 <button onclick="yfmOnlineEmoji('😝')">😝</button><button onclick="yfmOnlineEmoji('🤬')">🤬</button><button onclick="yfmOnlineEmoji('😭')">😭</button><button onclick="yfmOnlineEmoji('🤣')">🤣</button><button onclick="yfmOnlineEmoji('😎')">😎</button><button onclick="yfmOnlineEmoji('👍')">👍</button>
@@ -10685,8 +10685,8 @@ function updatePauseUI(){if(!active())return;const r=N.room,st=currentMatchState
 window.yfmOnline={pause,resume,sendTactic(){},sendSub(){},setHalf(){},forfeit:()=>guarded(()=>rpc('forfeit')),sendHostState(){}};
 // Wire format positions are kept separate from relatively infrequent metadata.
 function snapshot(st){const point=p=>[Math.round((p.rx??p.x)*100)/100,Math.round((p.ry??p.y)*100)/100];const meta=()=>({home:st.homePlayers.map(packMeta),away:st.awayPlayers.map(packMeta),stats:st.stats,goalLog:st.goalLog||[],playerStats:st.playerStats,ratings:st.ratings||{}});
- const change=allOf(st).map(p=>`${p.id}:${p.cards}:${p.isRedCarded}:${p.det}`).join('|'),now=performance.now(),details=now-(N.lastMeta||0)>900||change!==N.lastShape;
- if(details){N.lastMeta=now;N.lastShape=change;}
+ const change=allOf(st).map(p=>`${p.id}:${p.cards}:${p.isRedCarded}:${p.det}`).join('|'),goalCount=(st.goalLog||[]).length,now=performance.now(),details=now-(N.lastMeta||0)>900||change!==N.lastShape||goalCount!==N.lastGoalCount;
+ if(details){N.lastMeta=now;N.lastShape=change;N.lastGoalCount=goalCount;}
  return {type:'frame',seq:++N.seq,t:now,epoch:st.netEpoch||0,time:st.time,score:[st.scoreHome,st.scoreAway],half:N.room.half,ended:!!st.ended,pos:[...st.homePlayers.map(point),...st.awayPlayers.map(point),point(st.ball)],stam:allOf(st).map(p=>Math.round(p.stam??100)),...(details||st.ended?{meta:meta()}:{} )};}
 function packMeta(p){return {engineId:p.id,id:p.wireId||String(p.id),name:p.name,det:p.det,role:p.role,cards:p.cards||0,red:!!p.isRedCarded,ovr:p.displayOvr??p.ovr,baseX:p.baseX,baseY:p.baseY};}
 function onPacket(p){if(!p||p.room!==N.room?.id)return;N.lastPeer=performance.now();if(p.type==='emoji'){showEmoji(p.emoji,false);return;}if(p.type==='ping'){send({type:'pong',t:p.t});return;}if(p.type==='pong'){N.rtt=performance.now()-p.t;return;}if(p.type==='beat')return;
@@ -10700,7 +10700,7 @@ function receiveFrame(p){if(!active()||!Array.isArray(p.pos)||p.pos.length!==23|
  N.frames.push(p);if(N.frames.length>32)N.frames.shift();
  if(p.meta)applyMeta(st,p.meta);
  p.stam?.forEach((v,i)=>{const pl=i<11?st.homePlayers[i]:st.awayPlayers[i-11];if(pl)pl.stam=p.stam[i<11?i+11:i-11];});
- if(st.scoreHome!==p.score[1]||st.scoreAway!==p.score[0]){const first=N.gotScore;st.scoreHome=p.score[1];st.scoreAway=p.score[0];$('match-score-home').textContent=st.scoreHome;$('match-score-away').textContent=st.scoreAway;if(first&&!p.ended){$('match-goal-info').textContent=`${st.scoreHome} : ${st.scoreAway}`;$('match-goal-overlay').style.display='flex';playMatchSound('goal');setTimeout(()=>$('match-goal-overlay').style.display='none',1800);}}
+ if(st.scoreHome!==p.score[1]||st.scoreAway!==p.score[0]){const first=N.gotScore;st.scoreHome=p.score[1];st.scoreAway=p.score[0];$('match-score-home').textContent=st.scoreHome;$('match-score-away').textContent=st.scoreAway;if(first&&!p.ended){const g=(st.goalLog||[]).at(-1),scorer=String(g?.scorer||'');const scoreLabel=`${scorer?scorer+' · ':''}${st.scoreHome} : ${st.scoreAway}`;$('match-goal-info').textContent=scoreLabel;$('match-goal-overlay').style.display='flex';playMatchSound('goal');clearTimeout(st.onlineGoalOverlayTimer);st.onlineGoalOverlayTimer=setTimeout(()=>$('match-goal-overlay').style.display='none',2200);}}
  N.gotScore=true;
  if(p.ended&&!st.ended){st.ended=true;st.time=p.time;hidePanels();finishMatch();}
 }
@@ -10758,9 +10758,9 @@ const oldAv=aiV;aiV=function(st,k){if(st.online&&st.awayInstr){const m=st.awayM|
 const oldAm=awayStyleMod,oldAa=awayStyleAdd;
 awayStyleMod=function(st,k){if(st.online&&st.awayInstr)return (st.awayM||mods({...st,tactic:st.awayTactic||'bal',instr:st.awayInstr}))[k]??1;return oldAm(st,k);};
 awayStyleAdd=function(st,k){if(st.online&&st.awayInstr)return (st.awayM||mods({...st,tactic:st.awayTactic||'bal',instr:st.awayInstr}))[k]??0;return oldAa(st,k);};
-function showEmoji(emoji,self){if(!['😝','🤬','😭','🤣','😎','👍','🔥'].includes(emoji))return;const el=$(self?'friendly-emoji-self':'online-match-reaction');el.textContent=emoji;el.style.display='block';clearTimeout(el.hideTimer);el.hideTimer=setTimeout(()=>el.style.display='none',2300);$('yfm-online-emoji-feed').textContent=(self?'나: ':'상대: ')+emoji;if(!self){try{SFX.playTone(880,'sine',.13,.08);setTimeout(()=>SFX.playTone(1320,'sine',.18,.07),110);}catch(_){}}}
-window.yfmOnlineEmoji=emoji=>{if(!N.room?.guest_id||performance.now()-(N.lastEmoji||-1000)<700)return;N.lastEmoji=performance.now();send({type:'emoji',emoji});showEmoji(emoji,true);$('friendly-emoji-picker').hidden=true;};
-window.yfmOnlineEmojiToggle=()=>{$('friendly-emoji-picker').hidden=!$('friendly-emoji-picker').hidden;};
+function showEmoji(emoji,self){if(!['😝','🤬','😭','🤣','😎','👍','🔥'].includes(emoji))return;const el=$(self?'friendly-emoji-self':'online-match-reaction');if(!el)return;el.textContent=emoji;el.style.display='flex';clearTimeout(el.hideTimer);el.hideTimer=setTimeout(()=>el.style.display='none',2600);const feed=$('yfm-online-emoji-feed');if(feed)feed.textContent=(self?'나: ':'상대: ')+emoji;if(!self){try{SFX.playTone(880,'sine',.13,.08);setTimeout(()=>SFX.playTone(1320,'sine',.18,.07),110);}catch(_){}}}
+window.yfmOnlineEmoji=emoji=>{if(!N.room?.guest_id||performance.now()-(N.lastEmoji||-1000)<700)return;N.lastEmoji=performance.now();showEmoji(emoji,true);const picker=$('friendly-emoji-picker');if(picker)picker.hidden=true;guarded(()=>rpc('emoji',{emoji}));};
+window.yfmOnlineEmojiToggle=()=>{const picker=$('friendly-emoji-picker');if(picker)picker.hidden=!picker.hidden;};
 setInterval(()=>{if(!N.room||['finished','abandoned'].includes(N.room.status)||N.polling)return;N.polling=true;rpc('poll',{revision:N.room.revision}).catch(error).finally(()=>N.polling=false);},1200);
 setInterval(()=>{if(!N.room||['finished','abandoned'].includes(N.room.status))return;send({type:'beat'});if(active()){updatePauseUI();if(host()&&currentMatchState.ended)sendOnlineSnapshot(currentMatchState);if(currentMatchState.ended&&!N.endedReport)finishMatch();}},750);
 setInterval(()=>{if(N.room&&!['finished','abandoned'].includes(N.room.status))send({type:'ping',t:performance.now()});else if(document.querySelector('.screen.active')?.id==='screen-online-friendly')refreshLobby();},6000);
