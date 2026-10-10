@@ -3479,9 +3479,13 @@
             try {
                 const snapshot=accountSnapshot(), serialized=canonData(snapshot.data);
                 if (serialized===accountLastSnapshot) {accountDirty=false;return;}
-                const {error}=await getOwnerRankClient().from('game_progress').upsert({user_id:accountUser.id,save_data:snapshot},{onConflict:'user_id'});
+                const {data:saved,error}=await getOwnerRankClient().from('game_progress').upsert({user_id:accountUser.id,save_data:snapshot},{onConflict:'user_id'}).select('save_data').single();
                 if(error) throw error;
-                accountLastSnapshot=serialized;accountLastWrite=Date.now();accountDirty=false; localStorage.setItem('yfm_sync_at', snapshot.at);
+                // DB trigger returns the server-approved token value; overwrite any locally injected balance.
+                const serverTokens=Number(saved?.save_data?.data?.fm_tokens);
+                if(Number.isSafeInteger(serverTokens)&&serverTokens>=0&&serverTokens!==tokens){tokens=serverTokens;localStorage.setItem('fm_tokens',String(serverTokens));updateTokensUI();}
+                const acceptedData=saved?.save_data?.data||snapshot.data;
+                accountLastSnapshot=canonData(acceptedData);accountLastWrite=Date.now();accountDirty=canonData(accountSnapshot().data)!==accountLastSnapshot;localStorage.setItem('yfm_sync_at', saved?.save_data?.at||snapshot.at);
             } catch(error) {accountDirty=true; console.warn('클라우드 저장 실패:',error);}
             finally {accountSaving=false;}
         }
