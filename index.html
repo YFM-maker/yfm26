@@ -2461,15 +2461,15 @@
         }
         function persistLeague(reward = 0, evo = 0) {
             // 시즌 진행·토큰·진화 토큰을 함께 복구할 수 있도록 작은 저널을 남긴다
-            const tx = { state: leagueState, tokens: tokens + reward, evo: evoTokens + evo };
+            const tx = { state: leagueState, tokens: tokens + reward, reward, evo: evoTokens + evo };
             localStorage.setItem('fm_league_pending', JSON.stringify(tx));
-            tokens = tx.tokens; evoTokens = tx.evo; if(evo)achAdd('evoEarned',evo); saveData();
+            if(!accountUser)tokens = tx.tokens; else if(reward>0)awardTokens(reward,'league_reward'); evoTokens = tx.evo; if(evo)achAdd('evoEarned',evo); saveData();
             localStorage.setItem('fm_league_v2', JSON.stringify(leagueState));
             localStorage.removeItem('fm_league_pending');
         }
         function recoverLeagueSave() {
             const tx = JSON.parse(localStorage.getItem('fm_league_pending') || 'null');
-            if (tx && tx.state && tx.state.v === 2) { leagueState = tx.state; tokens = tx.tokens; if (tx.evo !== undefined) evoTokens = tx.evo; saveData(); localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); }
+            if (tx && tx.state && tx.state.v === 2) { leagueState = tx.state; if(!accountUser)tokens = tx.tokens; else if(tx.reward>0)awardTokens(tx.reward,'league_reward'); if (tx.evo !== undefined) evoTokens = tx.evo; saveData(); localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); }
             localStorage.removeItem('fm_league_pending');
             S.league ||= blankRec(); S.awards ||= []; S.leagueTitles ||= {};
         }
@@ -2795,7 +2795,7 @@
             if (st.forfeit) return;
             const side = [];
             const r = Math.random();
-            if (r < 0.06) { tokens += 30; side.push(['💰', '스폰서 보너스 +30T', '구단 스폰서가 최근 활약에 대한 보너스를 보냈습니다.']); }
+            if (r < 0.06) { awardTokens(30,'sponsor'); side.push(['💰', '스폰서 보너스 +30T', '구단 스폰서가 최근 활약에 대한 보너스를 보냈습니다.']); }
             else if (r < 0.15 && players.length) { const p = players[Math.floor(Math.random() * players.length)]; p.cond = Math.min(100, (p.cond ?? 100) + 20); side.push(['🎂', `${p.name} 생일 축하!`, '기분 좋은 하루 — 컨디션 +20']); }
             else if (r < 0.2 && S.ace) { const a = players.find(p => p.id === S.ace), bl = LG[Math.min(LG.length - 1, l.li + 2 + Math.floor(Math.random() * 4))]; if (a && bl) side.push(['📝', `이적설: ${bl.clubs[Math.floor(Math.random() * 4)].name}, ${a.name}에 관심`, '빅클럽 스카우트가 경기장을 찾았다는 소식입니다. (구단은 매각 계획이 없다고 밝혔습니다)']); }
             if (!side.length && l.myPlayed % 5 === 0 && l.status === 'playing') { const g = leagueTop('g', 1)[0], a = leagueTop('a', 1)[0]; side.push(['📊', rank === 1 ? `${L.n} ${l.myPlayed}라운드: ${teamName} 선두 질주` : `${L.n} ${l.myPlayed}라운드: ${leagueName(tb[0].id)} 선두, 우리는 ${rank}위`, rank === 1 ? (tb[1] ? `2위 ${leagueName(tb[1].id)}와 승점 ${tb[0].pts - tb[1].pts}점 차입니다.` : '') : `선두와 승점 ${tb[0].pts - tb[rank - 1].pts}점 차. ${rank <= 2 ? '승격 결정전 진출권(2위 이내)을 지키고 있습니다.' : `결정전 진출권(2위)까지 ${tb[1].pts - tb[rank - 1].pts}점.`}`, [g ? `👟 득점 1위 ${g.n}(${leagueName(g.c)}) ${g.g}골` : '', a ? `🅰️ 도움 1위 ${a.n} ${a.a}개` : ''].filter(Boolean).join('  |  ')]); }
@@ -3459,6 +3459,20 @@
                     : /timeout|fetch|network|Failed/i.test(msg) ? '서버 연결이 불안정해. 잠시 후 다시 시도해줘.' : '로그인에 실패했어. 잠시 후 다시 시도해줘.');
             } finally { button.disabled = false; }
         }
+        let tokenWalletBalance=null, tokenWalletQueue=Promise.resolve(), tokenWalletRefreshQueued=false;
+        function applyServerWallet(balance){const n=Number(balance);if(!Number.isSafeInteger(n)||n<0)throw new Error('서버 토큰 잔액이 올바르지 않아.');tokenWalletBalance=n;tokens=n;localStorage.setItem('fm_tokens',String(n));updateTokensUI();}
+        function queueWalletOperation(task){const run=tokenWalletQueue.then(task,task);tokenWalletQueue=run.catch(()=>{});return run;}
+        async function loadServerWallet(){if(!accountUser?.id)return tokens;const {data,error}=await getOwnerRankClient().rpc('yfm_wallet_get');if(error)throw error;applyServerWallet(data?.balance);return tokenWalletBalance;}
+        function awardTokens(amount,source='game_reward'){
+            const n=Math.floor(Number(amount)||0);if(n<=0)return Promise.resolve(true);
+            if(!accountUser?.id){tokens+=n;localStorage.setItem('fm_tokens',String(tokens));updateTokensUI();return Promise.resolve(true);}
+            return queueWalletOperation(async()=>{const {data,error}=await getOwnerRankClient().rpc('yfm_wallet_credit',{p_amount:n,p_source:String(source||'game_reward'),p_request_id:(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)}))});if(error)throw error;if(!data?.ok){applyServerWallet(data?.balance);if(typeof managerToast==='function')managerToast('서버 토큰 한도에 걸려 보상이 지급되지 않았어.');return false;}applyServerWallet(data.balance);accountDirty=true;saveData();return true;}).catch(async e=>{console.warn('서버 토큰 지급 실패:',e);try{await loadServerWallet();}catch(_){}return false;});
+        }
+        function spendTokens(amount,source='purchase'){
+            const n=Math.floor(Number(amount)||0);if(n<=0)return Promise.resolve(true);
+            if(!accountUser?.id){if(tokens<n){alert(`토큰이 부족합니다 (${n}T 필요)`);return Promise.resolve(false);}tokens-=n;localStorage.setItem('fm_tokens',String(tokens));updateTokensUI();return Promise.resolve(true);}
+            return queueWalletOperation(async()=>{const {data,error}=await getOwnerRankClient().rpc('yfm_wallet_debit',{p_amount:n,p_source:String(source||'purchase'),p_request_id:(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)}))});if(error)throw error;applyServerWallet(data?.balance);if(!data?.ok){alert(data?.reason==='insufficient'?'서버 잔액이 부족해. 토큰 잔액을 새로고침했어.':'토큰 결제를 서버에서 확인하지 못했어.');return false;}accountDirty=true;saveData();return true;}).catch(async e=>{console.warn('서버 토큰 결제 실패:',e);try{await loadServerWallet();}catch(_){}alert('서버에서 토큰 결제를 확인하지 못했어. 다시 시도해줘.');return false;});
+        }
         function accountSnapshot() {
             const data = {};
             for (let i=0;i<localStorage.length;i++) {
@@ -3483,7 +3497,7 @@
                 if(error) throw error;
                 // DB trigger returns the server-approved token value; overwrite any locally injected balance.
                 const serverTokens=Number(saved?.save_data?.data?.fm_tokens);
-                if(Number.isSafeInteger(serverTokens)&&serverTokens>=0&&serverTokens!==tokens){tokens=serverTokens;localStorage.setItem('fm_tokens',String(serverTokens));updateTokensUI();}
+                if(Number.isSafeInteger(serverTokens)&&serverTokens>=0){tokenWalletBalance=serverTokens;if(serverTokens!==tokens){tokens=serverTokens;localStorage.setItem('fm_tokens',String(serverTokens));updateTokensUI();}}
                 const acceptedData=saved?.save_data?.data||snapshot.data;
                 accountLastSnapshot=canonData(acceptedData);accountLastWrite=Date.now();accountDirty=canonData(accountSnapshot().data)!==accountLastSnapshot;localStorage.setItem('yfm_sync_at', saved?.save_data?.at||snapshot.at);
             } catch(error) {accountDirty=true; console.warn('클라우드 저장 실패:',error);}
@@ -3522,7 +3536,9 @@
                 if (accountDirty) throw new Error('첫 클라우드 저장에 실패했어.');
             }
             localStorage.setItem(accountDeviceKey,user.id);
-            accountUser=user;window.yfmAccountReady=true;
+            accountUser=user;
+            await loadServerWallet();
+            window.yfmAccountReady=true;
             finishAccountResume();
             document.getElementById('account-gate').style.display='none';
             renderAccountProfile();
@@ -3540,7 +3556,7 @@
             await uploadAccountSnapshot(true);
             await getOwnerRankClient().auth.signOut();
             sessionStorage.removeItem('yfm_restored_account');
-            accountUser=null;window.yfmAccountReady=false;
+            accountUser=null;tokenWalletBalance=null;window.yfmAccountReady=false;
             ownerRankRegistered=false;ownerRankLastSent='';
             socialFriendId=null;socialFriends=[];
             document.getElementById('social-search-result').replaceChildren();
@@ -3592,6 +3608,7 @@
             updateTokensUI(); 
             queueOwnerRankSync();
             accountDirty = true;
+            if(accountUser?.id && tokenWalletBalance!==null && Number(tokens)!==tokenWalletBalance && !tokenWalletRefreshQueued){tokenWalletRefreshQueued=true;queueWalletOperation(async()=>{try{await loadServerWallet();}finally{tokenWalletRefreshQueued=false;}});}
             updateTeamNameUI();
         }
 
@@ -4066,7 +4083,7 @@
         }
         function startCupMatch(){const s=activeCup==='europa'?europaState:worldCupState,e=s&&s.currentEnemy;if(e)openPrematch(activeCup,{id:e.code||e.name,name:e.name,ovr:e.ovr,logo:e.logo||(e.code?cupFlag(e.code):clubLogoUrl(e.name))||'',logoFallback:e.logoFallback,cupRound:s.round});}
         function simulateCupScore(a,b){const d=(a-b)/25;return [Math.max(0,Math.min(5,Math.floor(Math.random()*2.2+1+d*.35))),Math.max(0,Math.min(5,Math.floor(Math.random()*2.2+1-d*.35)))];}
-        function finishEuropaMatch(st){const s=europaState;s.aggUser+=st.scoreHome;s.aggEnemy+=st.scoreAway;if(s.round!==2&&s.leg===1){s.leg=2;return '1차전 종료 · 2차전을 진행하세요.';}const won=s.round===2?(st.scoreHome>st.scoreAway||(st.scoreHome===st.scoreAway&&st.penWinner==='home')):(s.aggUser>s.aggEnemy||(s.aggUser===s.aggEnemy&&st.penWinner==='home'));if(!won){s.status='finished';return `합산 ${s.aggUser}:${s.aggEnemy} · 유로파 대회가 종료되었습니다.`;}if(s.round===2){s.status='finished';s.champion=true;tokens+=700;evoTokens+=5;achAdd('evoEarned',5);achAdd('europeTitles');st.evoGain=5;saveCupState();updateTokensUI();saveData();return '🏆 유로파 리그 우승! +700 토큰 · 🧬 진화 토큰 +5';}const award=s.round===16?150:s.round===8?250:400;tokens+=award;s.round/=2;s.leg=1;s.aggUser=0;s.aggEnemy=0;const pool=s.field.filter(t=>!t.user&&!s.used.includes(t.name));s.currentEnemy=shuffleCup(pool)[0]||shuffleCup(europaTeams)[0];s.used.push(s.currentEnemy.name);saveCupState();updateTokensUI();saveData();return `합산 승리! ${s.round===2?'결승전':`${s.round}강`} 진출 · +${award} 토큰`;}
+        function finishEuropaMatch(st){const s=europaState;s.aggUser+=st.scoreHome;s.aggEnemy+=st.scoreAway;if(s.round!==2&&s.leg===1){s.leg=2;return '1차전 종료 · 2차전을 진행하세요.';}const won=s.round===2?(st.scoreHome>st.scoreAway||(st.scoreHome===st.scoreAway&&st.penWinner==='home')):(s.aggUser>s.aggEnemy||(s.aggUser===s.aggEnemy&&st.penWinner==='home'));if(!won){s.status='finished';return `합산 ${s.aggUser}:${s.aggEnemy} · 유로파 대회가 종료되었습니다.`;}if(s.round===2){s.status='finished';s.champion=true;awardTokens(700,'competition_reward');evoTokens+=5;achAdd('evoEarned',5);achAdd('europeTitles');st.evoGain=5;saveCupState();updateTokensUI();saveData();return '🏆 유로파 리그 우승! +700 토큰 · 🧬 진화 토큰 +5';}const award=s.round===16?150:s.round===8?250:400;awardTokens(award,'competition_reward');s.round/=2;s.leg=1;s.aggUser=0;s.aggEnemy=0;const pool=s.field.filter(t=>!t.user&&!s.used.includes(t.name));s.currentEnemy=shuffleCup(pool)[0]||shuffleCup(europaTeams)[0];s.used.push(s.currentEnemy.name);saveCupState();updateTokensUI();saveData();return `합산 승리! ${s.round===2?'결승전':`${s.round}강`} 진출 · +${award} 토큰`;}
         function wcGroupTable(s,g){const teams=s.groups[g],rows=teams.map(team=>({team,p:0,mp:0,w:0,d:0,l:0,gf:0,ga:0}));for(let i=0;i<4;i++)for(let j=i+1;j<4;j++){const a=teams[i],b=teams[j],key=[a.name,b.name].sort().join('|');let score=s.results[key];if(!score)continue;const flip=a.name!==key.split('|')[0],h=flip?score[1]:score[0],v=flip?score[0]:score[1],ra=rows[i],rb=rows[j];ra.mp++;rb.mp++;ra.gf+=h;ra.ga+=v;rb.gf+=v;rb.ga+=h;if(h>v){ra.w++;rb.l++;ra.p+=3;}else if(h<v){rb.w++;ra.l++;rb.p+=3;}else{ra.d++;rb.d++;ra.p++;rb.p++;}}return rows.sort((a,b)=>b.p-a.p||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf);}
         function wcPrepareKnockout(s, entrants, avoidGroup=false){let pairs=[];for(let n=0;n<40;n++){const draw=shuffleCup(entrants);pairs=Array.from({length:draw.length/2},(_,i)=>[draw[i*2],draw[i*2+1]]);if(!avoidGroup||pairs.every(([a,b])=>!a.group||!b.group||a.group!==b.group))break;}s.bracketWinners=[];let userPair=null;pairs.forEach(([a,b])=>{if(a.user||b.user)userPair=[a,b];else{const [x,y]=simulateCupScore(a.ovr,b.ovr);s.bracketWinners.push(x===y?(Math.random()<a.ovr/(a.ovr+b.ovr)?a:b):x>y?a:b);}});s.currentEnemy=userPair&&userPair.find(t=>!t.user);}
         function finishWorldCupMatch(st){
@@ -4075,20 +4092,20 @@
                 const key=[teamName,e.name].sort().join('|'),flip=teamName!==key.split('|')[0];
                 s.results[key]=flip?[st.scoreAway,st.scoreHome]:[st.scoreHome,st.scoreAway];
                 const groupReward=st.scoreHome>st.scoreAway?100:st.scoreHome===st.scoreAway?50:0;
-                s.groupStageReward=(s.groupStageReward||0)+groupReward;if(groupReward)tokens+=groupReward;
+                s.groupStageReward=(s.groupStageReward||0)+groupReward;if(groupReward)awardTokens(groupReward,'competition_reward');
                 s.groupMatch++;
                 if(s.groupMatch<3){s.currentEnemy=s.groups[s.group].filter(t=>!t.user)[s.groupMatch];saveCupState();updateTokensUI();saveData();return `조별리그 ${s.groupMatch}/3경기 종료 · 경기 보상 +${groupReward} 토큰`;}
                 const all=Object.keys(s.groups).map(g=>({g,table:wcGroupTable(s,g)})),thirdRows=all.map(x=>({...x.table[2],g:x.g})).sort((a,b)=>b.p-a.p||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf).slice(0,8),thirds=thirdRows.map(x=>x.team.name),my=wcGroupTable(s,s.group),rank=my.findIndex(x=>x.team.user),qualified=rank<2||(rank===2&&thirds.includes(teamName));
                 if(!qualified){s.status='finished';saveCupState();updateTokensUI();saveData();return `${s.group}조 ${rank+1}위 · 조별리그 종료 · 경기 보상 +${groupReward} 토큰`;}
-                const groupBonus=s.groupBonusPaid?0:Math.max(0,500-(s.groupStageReward||0));s.groupBonusPaid=true;tokens+=groupBonus;s.status='knockout';s.round='32강';
+                const groupBonus=s.groupBonusPaid?0:Math.max(0,500-(s.groupStageReward||0));s.groupBonusPaid=true;awardTokens(groupBonus,'competition_reward');s.status='knockout';s.round='32강';
                 const qualifiedTeams=all.flatMap(x=>x.table.slice(0,2).map(r=>r.team)).concat(thirdRows.map(r=>r.team));wcPrepareKnockout(s,qualifiedTeams,true);saveCupState();updateTokensUI();saveData();
                 return `${s.group}조 ${rank+1}위로 32강 진출! 조별리그 보상 합계 500 토큰 (+${groupReward+groupBonus}개)`;
             }
             const won=st.scoreHome>st.scoreAway||(st.scoreHome===st.scoreAway&&st.penWinner==='home');
             if(!won){s.status='finished';saveCupState();return `${s.round}에서 탈락했습니다.`;}
-            if(s.round==='결승'){s.status='finished';s.champion=true;tokens+=3000;evoTokens+=10;achAdd('evoEarned',10);st.evoGain=10;saveCupState();updateTokensUI();saveData();return '🏆 월드컵 우승! +3000 토큰 · 🧬 진화 토큰 +10';}
+            if(s.round==='결승'){s.status='finished';s.champion=true;awardTokens(3000,'competition_reward');evoTokens+=10;achAdd('evoEarned',10);st.evoGain=10;saveCupState();updateTokensUI();saveData();return '🏆 월드컵 우승! +3000 토큰 · 🧬 진화 토큰 +10';}
             const round=s.round,next=({'32강':'16강','16강':'8강','8강':'4강','4강':'결승'})[round],award=({'32강':500,'16강':600,'8강':700,'4강':700})[round]||0;
-            tokens+=award;s.round=next;const user=Object.values(s.groups).flat().find(t=>t.user);wcPrepareKnockout(s,[...s.bracketWinners,user]);saveCupState();updateTokensUI();saveData();
+            awardTokens(award,'competition_reward');s.round=next;const user=Object.values(s.groups).flat().find(t=>t.user);wcPrepareKnockout(s,[...s.bracketWinners,user]);saveCupState();updateTokensUI();saveData();
             return `${s.round} 진출! +${award} 토큰`;
         }
 
@@ -6113,7 +6130,7 @@
                 else if (id === 'e_life') st.lives++;
                 if (!c.now || id === 'e_life') st.perks.push(id);
                 managerToast(`🃏 ${c.n} 획득!`);
-            } else if (!id) { tokens += 50; st.earned += 50; updateTokensUI(); saveData(); managerToast('카드를 건너뛰고 +50T'); }
+            } else if (!id) { awardTokens(50,'rogue_reward'); st.earned += 50; updateTokensUI(); saveData(); managerToast('카드를 건너뛰고 +50T'); }
             st.pick = null; st.pickStart = false; saveRogue(); renderRogue();
         }
         function rogueRest() {
@@ -6171,8 +6188,8 @@
             if (won) {
                 R.wins++;
                 let rw = Math.round((40 + node.stage * 18) * (node.elite ? 1.6 : 1) * (1 + 0.3 * rogueCount('c_money')) * (rogueHas('e_deal') ? 2 : 1));
-                tokens += rw; R.earned += rw; txt = `🎲 스테이지 ${node.stage} 돌파! +${rw} T`;
-                if (node.boss) { tokens += 600; evoTokens += 3; R.earned += 600; st.evoGain = 3; txt += ` · 👑 원정 완주! 보너스 +600 T · 🧬 +3`; rogueEnd(true, '8스테이지 완주!'); addNews('🎲', `${teamName}, 로그라이크 원정 완주!`, `${R.wins}승 · 총 ${R.earned} T 획득`, '로그라이크'); }
+                awardTokens(rw,'rogue_reward'); R.earned += rw; txt = `🎲 스테이지 ${node.stage} 돌파! +${rw} T`;
+                if (node.boss) { awardTokens(600,'rogue_reward'); evoTokens += 3; R.earned += 600; st.evoGain = 3; txt += ` · 👑 원정 완주! 보너스 +600 T · 🧬 +3`; rogueEnd(true, '8스테이지 완주!'); addNews('🎲', `${teamName}, 로그라이크 원정 완주!`, `${R.wins}승 · 총 ${R.earned} T 획득`, '로그라이크'); }
                 else { R.stage++; R.pick = rogueRollCards(node.elite); rogueGenNodes(); txt += ' · 🃏 카드를 고르세요'; }
             } else {
                 R.lives--;
@@ -7695,10 +7712,10 @@
                 <div id="iv-result"></div><button onclick="showPlayerInfo('${p.id}')" class="mt-btn">← 선수 정보로</button>`;
             document.getElementById('player-modal').classList.replace('hidden', 'flex');
         }
-        function doInterview(id, topic, k) {
+        async function doInterview(id, topic, k) {
             const p = players.find(x => x.id === id); if (!p || (p.talkCd || 0) > 0) return;
             const r = ivResult(p, topic, k);
-            if (r.cost) { if (tokens < r.cost) return alert(`토큰이 부족합니다 (${r.cost}T 필요)`); tokens -= r.cost; }
+            if (r.cost && !await spendTokens(r.cost,'interview')) return;
             if (r.clearMove) delete p.wantMove; if (r.moveOk && p.wantMove) p.wantMove.ok = 1;
             bumpMorale(p, r.m); p.trust = Math.max(0, Math.min(100, (p.trust ?? 60) + (r.trust ?? (r.m >= 5 ? 4 : r.m < 0 ? -4 : 0)))); p.talkCd = 3;
             if (r.promise) p.promise = { type: 'start', left: 3 };
@@ -7770,7 +7787,7 @@
             const st = currentMatchState; if (!st || st.pressDone) return; st.pressDone = 1;
             const E = { ref: [2, '선수들은 감독이 대신 싸워줬다며 고마워합니다 · ⚠️ 협회가 발언 경위를 조사한다는 소식', 'press'], own: [1, '성숙한 태도라는 평가 — 팬들의 지지가 올라갑니다', 'fan'], skip: [0, '기자들이 아쉬워하지만 별일 없이 지나갑니다', ''], team: [3, '선수단 전체가 뿌듯해합니다', ''], star: [1, '에이스는 기뻐하지만 몇몇 선수는 서운한 눈치입니다', 'star'], next: [1, '차분한 리더십이라는 평가를 받습니다', ''], shield: [4, '"감독님이 우리를 지켜줬다" — 선수단 신뢰가 올라갑니다', 'trust'], blame: [-4, '선수들의 표정이 굳었습니다… 라커룸에 냉기가 흐릅니다', 'blame'], ok: [1, '무난한 답변입니다', ''], demand: [2, '선수들이 자극을 받았습니다', ''] }[k] || [0, '', ''];
             players.forEach(p => { let d = E[0]; if (E[2] === 'star') d = S.ace === p.id ? 6 : -1; if (E[2] === 'blame' && personaOf(p).k === 'pro') d = -1; bumpMorale(p, d); if (E[2] === 'trust') p.trust = Math.min(100, (p.trust ?? 60) + 3); });
-            if (E[2] === 'press') { S.refFine = (S.refFine || 0) + 1; if (S.refFine >= 2 && typeof tokens === 'number') { tokens = Math.max(0, tokens - 100); addNews('⚖️', '심판 비판 발언으로 벌금 100 T', '협회 징계위원회가 반복된 판정 비판에 벌금을 부과했습니다.', '구단'); } }
+            if (E[2] === 'press') { S.refFine = (S.refFine || 0) + 1; if (S.refFine >= 2 && typeof tokens === 'number') { void spendTokens(100,'disciplinary_fine'); addNews('⚖️', '심판 비판 발언으로 벌금 100 T', '협회 징계위원회가 반복된 판정 비판에 벌금을 부과했습니다.', '구단'); } }
             saveData(); const r = document.getElementById('press-res'); if (r) r.innerHTML = `📰 ${E[1]} <span class="${E[0] >= 0 ? 'text-emerald-300' : 'text-red-300'}">(선수단 사기 ${E[0] >= 0 ? '+' : ''}${E[0]})</span>`;
             document.querySelectorAll('#press-opts button').forEach(b => b.disabled = true);
         }
@@ -8581,7 +8598,7 @@
                 rewardText = rogueAfterMatch(st);
             } else if(st.mode === 'saudi') {
                 document.getElementById('match-end-title').innerText = "사우디 친선경기 종료";
-                if(userWon) { tokens += st.enemy.reward + gdBonus; updateTokensUI(); saveData(); rewardText = `승리! +${st.enemy.reward} 토큰 + 득실차 보너스 +${gdBonus} 토큰 (총 +${st.enemy.reward + gdBonus})`; } 
+                if(userWon) { awardTokens(st.enemy.reward + gdBonus,'match_reward'); updateTokensUI(); saveData(); rewardText = `승리! +${st.enemy.reward} 토큰 + 득실차 보너스 +${gdBonus} 토큰 (총 +${st.enemy.reward + gdBonus})`; } 
                 else if(draw) { rewardText = "무승부! 보상 없음"; } else { rewardText = "패배! 보상 없음"; }
             } else if(st.mode === 'europa') {
                 matchReport(st, '유로파리그');
@@ -8598,10 +8615,10 @@
                 matchReport(st, '챔피언스리그');
                 careerState.aggUser += st.scoreHome; careerState.aggEnemy += st.scoreAway;
                 if (careerState.round === 2) {
-                    if(userWon) { rewardText = "🏆 챔피언스리그 우승! +2000 토큰 · 🧬 진화 토큰 +10 🏆"; tokens += 2000; evoTokens += 10; achAdd('evoEarned',10); st.evoGain = 10; careerState.status = 'finished'; }
+                    if(userWon) { rewardText = "🏆 챔피언스리그 우승! +2000 토큰 · 🧬 진화 토큰 +10 🏆"; awardTokens(2000,'competition_reward'); evoTokens += 10; achAdd('evoEarned',10); st.evoGain = 10; careerState.status = 'finished'; }
                     else if(draw) {
                         let avgMyOvr = getTeamOvr() || 80; let pkChance = avgMyOvr / (avgMyOvr + st.enemy.ovr);
-                        if(st.penWinner ? st.penWinner === 'home' : Math.random() < pkChance) { rewardText = "🏆 승부차기 승리! 우승! +2000 토큰 · 🧬 진화 토큰 +10 🏆"; tokens += 2000; evoTokens += 10; achAdd('evoEarned',10); st.evoGain = 10; }
+                        if(st.penWinner ? st.penWinner === 'home' : Math.random() < pkChance) { rewardText = "🏆 승부차기 승리! 우승! +2000 토큰 · 🧬 진화 토큰 +10 🏆"; awardTokens(2000,'competition_reward'); evoTokens += 10; achAdd('evoEarned',10); st.evoGain = 10; }
                         else { rewardText = "승부차기 패배... 준우승"; }
                         careerState.status = 'finished';
                     }
@@ -8617,7 +8634,7 @@
                         }
                         if(finalAggU > finalAggE) {
                             let roundReward = careerState.round === 16 ? 300 : (careerState.round === 8 ? 500 : 1000);
-                            tokens += roundReward;
+                            awardTokens(roundReward,'competition_reward');
                             careerState.round = careerState.round / 2; careerState.leg = 1; careerState.aggUser = 0; careerState.aggEnemy = 0;
                             let enemies = [...careerTeamsList].sort(() => Math.random() - 0.5);
                             careerState.currentEnemy = { name: enemies[0], ovr: getCareerEnemyOvr(careerState.round, enemies[0]) };
@@ -8629,7 +8646,7 @@
                 if (st.pens) rewardText += ` (승부차기 ${st.pens.h.filter(Boolean).length}:${st.pens.a.filter(Boolean).length})`; else if (st.maxTime === 120) rewardText += ' (연장 승부)';
                 localStorage.setItem('fm_career', JSON.stringify(careerState)); updateTokensUI(); saveData();
             }
-            if (st.mode === 'career' && gdBonus > 0) { tokens += gdBonus; rewardText += ` (+득실차 보너스 ${gdBonus}T)`; saveData(); }
+            if (st.mode === 'career' && gdBonus > 0) { awardTokens(gdBonus,'match_reward'); rewardText += ` (+득실차 보너스 ${gdBonus}T)`; saveData(); }
             if (['career', 'europa', 'worldcup'].includes(st.mode)) { const c = cupStateOf(st.mode), r = c.seasonRecord || (c.seasonRecord = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 }); r.p++; r.gf += st.scoreHome; r.ga += st.scoreAway; if (st.scoreHome > st.scoreAway || (draw && st.penWinner === 'home')) r.w++; else if (draw && !st.penWinner) r.d++; else r.l++; if (st.mode === 'career') localStorage.setItem('fm_career', JSON.stringify(c)); else saveCupState(); }
             if (!st.forfeit) { const fv = famGain(st.formBase, styleOf(st, true)); rewardText += ` · 📚 전술 숙련도 ${STYLE_NAME[styleOf(st, true)]} ${fv}`; }
             recordMatch(st, rewardText); if (st.gap >= 10) { const hw = st.scoreHome > st.scoreAway, aw = st.scoreAway > st.scoreHome, dr = !hw && !aw; if (st.fav === 'away' && (hw || dr)) { document.getElementById('match-end-title').innerText = hw ? '🌟 기적의 승리!' : '🌟 기적의 무승부!'; } else if (st.fav === 'home' && (aw || dr)) { document.getElementById('match-end-title').innerText = aw ? '💔 충격의 이변...' : '😮 뜻밖의 무승부'; } }
@@ -8826,7 +8843,7 @@
 
             if (confirm(`선택한 ${sellSelection.length}명의 선수를 판매하고 총 ${sellTokens} 토큰을 얻으시겠습니까?\n(선발 명단 선수가 포함되어 있다면 라인업이 재조정됩니다.)`)) {
                 players = players.filter(p => !sellSelection.includes(p.id));
-                tokens += sellTokens; sellSelection = [];
+                awardTokens(sellTokens,'sale'); sellSelection = [];
                 autoAssignStarters(); saveData(); renderSellList();
                 alert(`판매 완료! (+${sellTokens} T)`);
             }
@@ -8881,7 +8898,7 @@
             else if (tier===2) { cost=300; minOvr=70; maxOvr=79; weight=2.5; animClass='anim-shake-medium'; animDuration=2500; boxIcon='🔮'; glowColor='#3B82F6'; } 
             else if (tier===3) { cost=3000; minOvr=80; maxOvr=99; weight=3.5; animClass='anim-shake-extreme'; animDuration=5500; boxIcon='👑'; glowColor='#EAB308'; }
             
-            if (tokens < cost) { alert("토큰이 부족합니다!"); return; } tokens -= cost; updateTokensUI();
+            if (!await spendTokens(cost,'recruitment')) return;
             if (tier === 3) dailyOnRecruit3(); achAdd('recruits'); achAdd('recruitSpend', cost); if (tier === 3) achSet('topRecruit',1);
             
             SFX.gachaOpen(); 
@@ -8969,8 +8986,8 @@
             const p = players.find(x => x.id === selectedEnhancePlayerId);
             if (!p || p.level >= 10) return;
             const rule = enhanceRule(p);
-            if (tokens < rule.cost) { alert('토큰이 부족합니다!'); return; }
             enhancementBusy = true; enhancementReady = false;
+            if(!await spendTokens(rule.cost,'enhancement')){enhancementBusy=false;enhancementReady=true;return;}
             const startLevel = p.level, success = Math.random() * 100 < rule.rate;
             const critical = success && startLevel <= 8 && Math.random() < 0.04;
             const penalty = !success && Math.random() * 100 < enhanceDrop(startLevel);
@@ -8981,8 +8998,8 @@
             const desc = document.getElementById('enhance-result-desc'), confirmButton = document.getElementById('enhance-confirm');
             const box = document.getElementById('enhance-anim-box');
             confirmButton.disabled = true; confirmButton.tabIndex = -1; document.activeElement?.blur?.();
-            // 모든 보상과 페널티를 연출 전에 딱 한 번 확정하고 저장한다.
-            tokens -= rule.cost; achAdd('enhanceAttempts'); p.level = finalLevel;
+            // 서버 결제를 확인한 뒤 보상과 페널티를 한 번 확정한다.
+            achAdd('enhanceAttempts'); p.level = finalLevel;
             if (success) {
                 const afterFail = !!ach.stats.lastEnhanceFailed;
                 if (rule.rate <= 20) achSet('lowChanceSuccess',1);
@@ -9174,7 +9191,7 @@
         try { daily = JSON.parse(localStorage.getItem('fm_daily') || 'null'); } catch (e) { daily = null; }
         if (!daily || typeof daily !== 'object') daily = newDaily();
         function saveDaily() { localStorage.setItem('fm_daily', JSON.stringify(daily)); }
-        function ensureDaily() { if (daily.date !== dailyToday()) { daily = newDaily(); saveDaily(); tokens += 30; saveData(); if (typeof addNews === 'function') addNews('🎁', '출석 보상 +30T', '오늘도 구단을 찾아주셔서 감사합니다!', '이벤트'); } }
+        function ensureDaily() { if (daily.date !== dailyToday()) { daily = newDaily(); saveDaily(); awardTokens(30,'attendance'); saveData(); if (typeof addNews === 'function') addNews('🎁', '출석 보상 +30T', '오늘도 구단을 찾아주셔서 감사합니다!', '이벤트'); } }
         function dailyOnGoal(k) { ensureDaily(); daily[k] = (daily[k] || 0) + 1; saveDaily(); updateMissionIcon(); }
         function missionDone(m) { return m.get(daily) >= m.goal; }
         function missionClaimable(m) { return missionDone(m) && !daily.claimed[m.id]; }
@@ -9221,7 +9238,7 @@
         function achCheckBalance(){if(tokens>=20000)achSet('richTokens',1)}
         function achievementClaimable(a){return !!ach.unlocked[a.id]&&!ach.claimed[a.id]}
         function showRewardNotice(title,reward){const parts=[];if(reward.tokens)parts.push(`🪙 토큰 ${reward.tokens.toLocaleString()}개`);if(reward.evo)parts.push(`🧬 진화 토큰 ${reward.evo}개`);alert(`${title} 보상 수령!\n${parts.join(' · ')||'보상 없음'}`)}
-        function grantRewards(reward){tokens+=reward.tokens||0;evoTokens+=reward.evo||0;if(reward.evo)achAdd('evoEarned',reward.evo);saveData();achCheckBalance();}
+        function grantRewards(reward){if(reward.tokens)awardTokens(reward.tokens,'mission_reward');evoTokens+=reward.evo||0;if(reward.evo)achAdd('evoEarned',reward.evo);saveData();achCheckBalance();}
         function setMissionTab(tab){missionTab=tab;renderMissions()}
         function setAchievementTier(tier){achievementTier=tier;renderMissions()}
         function renderMissions(){ensureDaily();const list=document.getElementById('mission-list'), subtitle=document.getElementById('mission-subtitle'), dailyMode=missionTab==='daily', couponMode=missionTab==='coupon';
@@ -9234,7 +9251,7 @@
         const MISSION_COUPONS={THANKYOUFORYOURSERVICE:3000,EUGENE:10000};
         function setMissionCouponStatus(message,isError=false){const el=document.getElementById('mission-coupon-status');if(el){el.textContent=message;el.className=`mt-3 min-h-5 text-sm ${isError?'text-red-300':'text-gray-300'}`}}
         async function loadMissionCouponStatus(){if(!accountUser?.id||!window.yfmAccountReady){setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);return;}try{const {data,error}=await getOwnerRankClient().from('coupon_redemptions').select('code').eq('user_id',accountUser.id);if(error)throw error;const codes=(data||[]).map(r=>r.code);if(codes.length)setMissionCouponStatus(`이미 사용한 쿠폰: ${codes.join(', ')}`);}catch(e){console.warn('쿠폰 사용 기록을 불러오지 못했습니다.',e);setMissionCouponStatus('쿠폰 사용 기록을 불러오지 못했습니다. Supabase 쿠폰 SQL을 먼저 적용해 주세요.',true)}}
-        async function redeemMissionCoupon(event){event.preventDefault();const input=document.getElementById('mission-coupon-code'),button=document.getElementById('mission-coupon-submit'),code=String(input?.value||'').trim().toUpperCase(),reward=MISSION_COUPONS[code];if(!code)return setMissionCouponStatus('쿠폰 코드를 입력해 주세요.',true);if(!reward)return setMissionCouponStatus('사용할 수 없는 쿠폰 코드입니다.',true);if(!accountUser?.id||!window.yfmAccountReady)return setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);button.disabled=true;button.classList.add('opacity-50');try{const {error}=await getOwnerRankClient().from('coupon_redemptions').insert({user_id:accountUser.id,code});if(error){if(error.code==='23505')return setMissionCouponStatus('이미 사용한 쿠폰입니다.',true);throw error;}tokens+=reward;updateTokensUI();saveData();input.value='';setMissionCouponStatus(`쿠폰이 적용되었습니다! 토큰 ${reward.toLocaleString()}개를 받았습니다.`); }catch(e){console.error('쿠폰 적용 실패',e);setMissionCouponStatus('쿠폰을 적용하지 못했습니다. Supabase 쿠폰 SQL이 적용되었는지 확인해 주세요.',true)}finally{if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50')}}}
+        async function redeemMissionCoupon(event){event.preventDefault();const input=document.getElementById('mission-coupon-code'),button=document.getElementById('mission-coupon-submit'),code=String(input?.value||'').trim().toUpperCase(),reward=MISSION_COUPONS[code];if(!code)return setMissionCouponStatus('쿠폰 코드를 입력해 주세요.',true);if(!reward)return setMissionCouponStatus('사용할 수 없는 쿠폰 코드입니다.',true);if(!accountUser?.id||!window.yfmAccountReady)return setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);button.disabled=true;button.classList.add('opacity-50');try{const {error}=await getOwnerRankClient().from('coupon_redemptions').insert({user_id:accountUser.id,code});if(error){if(error.code==='23505')return setMissionCouponStatus('이미 사용한 쿠폰입니다.',true);throw error;}await awardTokens(reward,'coupon');updateTokensUI();saveData();input.value='';setMissionCouponStatus(`쿠폰이 적용되었습니다! 토큰 ${reward.toLocaleString()}개를 받았습니다.`); }catch(e){console.error('쿠폰 적용 실패',e);setMissionCouponStatus('쿠폰을 적용하지 못했습니다. Supabase 쿠폰 SQL이 적용되었는지 확인해 주세요.',true)}finally{if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50')}}}
         function claimMission(id){ensureDaily();const m=DAILY_MISSIONS.find(x=>x.id===id);if(!m||!missionClaimable(m))return renderMissions();daily.claimed[id]=true;const rw={tokens:m.reward};grantRewards(rw);saveDaily();renderMissions();showRewardNotice(m.name,rw)}
         function claimAchievement(id){const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a||!achievementClaimable(a))return renderMissions();ach.claimed[id]=true;const rw={tokens:a.tokens,evo:a.evo};grantRewards(rw);saveAch();renderMissions();showRewardNotice(a.name,rw)}
         function claimAllMissions(){ensureDaily();const rw={tokens:0,evo:0},names=[];if(missionTab==='daily'){DAILY_MISSIONS.forEach(m=>{if(!missionClaimable(m))return;daily.claimed[m.id]=true;rw.tokens+=m.reward;names.push(m.name)});saveDaily()}else{ACHIEVEMENTS.forEach(a=>{if(!achievementClaimable(a))return;ach.claimed[a.id]=true;rw.tokens+=a.tokens;rw.evo+=a.evo;names.push(a.name)});saveAch()}if(!names.length)return;grantRewards(rw);renderMissions();showRewardNotice(`${names.length}개 미션 모두 받기`,rw)}
@@ -9529,7 +9546,7 @@
             if (!sand) {
                 notes = exApplyAnswer(a);
                 if (a.ply) exAddNext({ ply: a.ply });
-                if (a.ref) { S.refFine = (S.refFine || 0) + 1; if (S.refFine >= 2 && typeof tokens === 'number') { tokens = Math.max(0, tokens - 100); updateTokensUI(); notes.push('⚖️ 반복된 심판 비판으로 벌금 100T'); addNews('⚖️', '심판 비판 발언으로 벌금 100 T', '협회 징계위원회가 반복된 판정 비판에 벌금을 부과했습니다.', '협회'); } }
+                if (a.ref) { S.refFine = (S.refFine || 0) + 1; if (S.refFine >= 2 && typeof tokens === 'number') { void spendTokens(100,'disciplinary_fine'); updateTokensUI(); notes.push('⚖️ 반복된 심판 비판으로 벌금 100T'); addNews('⚖️', '심판 비판 발언으로 벌금 100 T', '협회 징계위원회가 반복된 판정 비판에 벌금을 부과했습니다.', '협회'); } }
                 saveData(); exSave();
             }
             P.log.push({ q: q.q, a: a.t, r: notes.join(' · ') || (sand ? '친선 모드 — 기록에 반영되지 않음' : '변화 없음') }); P.i++;
@@ -9663,9 +9680,9 @@
             const x = exSocialIndex[key], box = document.getElementById('ex-rep-' + key); if (!x || !box) return;
             box.innerHTML = `<div class="flex flex-wrap gap-1 mt-2">${exReplyOptions(x).map((o, i) => `<button onclick="exReply('${key}',${i})" class="px-2 py-1 rounded-lg bg-violet-700/50 hover:bg-violet-600 text-xs">${exEsc(o.t)}${o.cost ? ` (${o.cost}T)` : ''}</button>`).join('')}</div>`;
         }
-        function exReply(key, i) {
+        async function exReply(key, i) {
             const x = exSocialIndex[key], o = x && exReplyOptions(x)[i], E = EX(); if (!o || E.replied[key]) return;
-            if (o.cost) { if (tokens < o.cost) return alert(`토큰이 부족합니다 (${o.cost}T)`); tokens -= o.cost; updateTokensUI(); }
+            if (o.cost && !await spendTokens(o.cost,'social_action')) return;
             if (o.fan) exBump('fan', o.fan); if (o.media) exBump('media', o.media); if (o.chem) exBump('chem', o.chem);
             if (o.mor && x.type === 'player') { const p = players.find(q => q.name === x.name); if (p) bumpMorale(p, o.mor); }
             if (o.motiv) exAddNext({ motiv: o.motiv });
@@ -9852,9 +9869,9 @@
             el.innerHTML = `<div class="w-full max-w-lg rounded-2xl border border-emerald-500/50 bg-gray-900 p-5 shadow-2xl"><div class="text-xs font-black tracking-widest text-emerald-300 mb-1">🚪 라커룸 소식</div><div class="text-2xl font-black mb-2">${v.icon} ${exEsc(v.title)}</div><div class="text-sm text-gray-300 mb-4">${exEsc(v.body)}</div><div class="flex flex-col gap-2" id="ex-room-opts">${v.opts.map((o, i) => `<button onclick="exEventPick(${i})" class="text-left rounded-xl border border-gray-700 bg-gray-800 hover:border-emerald-400 px-4 py-3 font-bold">${exEsc(o.t)}</button>`).join('')}</div><div id="ex-room-res" class="mt-3"></div></div>`;
             el.classList.remove('hidden'); el.classList.add('flex'); return true;
         }
-        function exEventPick(i) {
+        async function exEventPick(i) {
             const E = EX(), ev = E.evQueue, v = ev && exEventView(ev), o = v && v.opts[i]; if (!o) return;
-            if (o.cost) { if (tokens < o.cost) return alert(`토큰이 부족합니다 (${o.cost}T)`); tokens -= o.cost; updateTokensUI(); }
+            if (o.cost && !await spendTokens(o.cost,'team_event')) return;
             const res = o.fx(); E.evQueue = null; saveData(); exSave(); addNews(v.icon, v.title, `${o.t.replace(/^[^ ]+ /, '')} → ${res}`, '라커룸');
             document.getElementById('ex-room-opts').innerHTML = '';
             document.getElementById('ex-room-res').innerHTML = `<div class="rounded-xl bg-gray-800 p-3 text-sm mb-3">${exEsc(res)}</div>${exMeters(true)}<button onclick="exCloseEvent()" class="mt-3 w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 py-2.5 font-black">확인</button>`;
@@ -10112,7 +10129,7 @@
             ];
             document.getElementById('end-extra').innerHTML = `<div class="rounded-xl bg-gray-800/80 border border-amber-500/40 p-3 text-xs text-gray-200"><div class="font-black text-sm mb-2 text-amber-300">🎓 이제 실전에서 만날 기능들</div>${tips.map(([h, b]) => `<div class="mb-2"><b>${h}</b><br>${b}</div>`).join('')}</div>`;
             document.getElementById('match-end-reward').innerText = '튜토리얼 완료! 🎁 첫 완료 보상 +300T · 결과는 기록에 남지 않습니다';
-            const E = EX(); if (!E.tutDone) { E.tutDone = 1; tokens += 300; updateTokensUI(); saveData(); } E.tutRun = 0; exSave();
+            const E = EX(); if (!E.tutDone) { E.tutDone = 1; awardTokens(300,'tutorial_reward'); updateTokensUI(); saveData(); } E.tutRun = 0; exSave();
             ov.classList.replace('hidden', 'flex');
         }
         const _exEndMatchFlow2 = endMatchFlow;
@@ -10190,7 +10207,7 @@
     function hubLog(icon, t) { const E = hubE(); E.log = [{ mc: E.mc, icon, t, at: Date.now() }, ...E.log].slice(0, 30); }
     function hubShort(n) { const s = String(n || ''); const parts = s.split(' '); return parts.length > 1 && s.length > 6 ? parts[parts.length - 1] : s; }
     function hubAvgRt(p) { const r = (p.rts || []).slice(-3); return r.length ? r.reduce((a, b) => a + b, 0) / r.length : null; }
-    function hubSpend(c) { if (!c) return true; if (tokens < c) { alert(`토큰이 부족합니다 (${c}T)`); return false; } tokens -= c; updateTokensUI(); return true; }
+    async function hubSpend(c) { return !c || await spendTokens(c,'hub_action'); }
     function hubCaptain() { return teamRoles && teamRoles.captain ? exPlayer(teamRoles.captain) : null; }
     function hubUnhappy() {
         return players.map(p => {
@@ -10279,7 +10296,7 @@
         praise: (p, k) => { const d = { soft: 7, amb: 6, loyal: 5, hot: 4, pro: 2 }[k]; bumpMorale(p, d); p.trust = Math.min(100, (p.trust ?? 60) + 2);
             const jealous = exRelations(players).find(r => r.k === 'rival' && (r.a === p || r.b === p)); if (jealous) { const o = jealous.a === p ? jealous.b : jealous.a; bumpMorale(o, -2); return `${p.name} 사기 +${d}. 라이벌 ${o.name}${jo(o.name,'는')} 살짝 못마땅한 표정 (−2)`; }
             return `${p.name}: "감사합니다! 더 잘하겠습니다" (사기 +${d})`; },
-        meal: (p, k) => { if (!hubSpend(30)) return null; bumpMorale(p, 4); p.trust = Math.min(100, (p.trust ?? 60) + 5); const fr = exRelations(players).find(r => r.k === 'friend' && (r.a === p || r.b === p)); if (fr) { const o = fr.a === p ? fr.b : fr.a; bumpMorale(o, 2); return `${p.name}${jo(p.name,'가')} 절친 ${o.name}도 데려왔습니다. 둘 다 기분이 좋아졌어요 (신뢰 +5)`; } return `조용한 저녁 식사. ${p.name}${jo(p.name,'가')} 속마음을 털어놨습니다 (사기 +4 · 신뢰 +5)`; },
+        meal: async (p, k) => { if (!await hubSpend(30)) return null; bumpMorale(p, 4); p.trust = Math.min(100, (p.trust ?? 60) + 5); const fr = exRelations(players).find(r => r.k === 'friend' && (r.a === p || r.b === p)); if (fr) { const o = fr.a === p ? fr.b : fr.a; bumpMorale(o, 2); return `${p.name}${jo(p.name,'가')} 절친 ${o.name}도 데려왔습니다. 둘 다 기분이 좋아졌어요 (신뢰 +5)`; } return `조용한 저녁 식사. ${p.name}${jo(p.name,'가')} 속마음을 털어놨습니다 (사기 +4 · 신뢰 +5)`; },
         scold: (p, k) => {
             if (k === 'hot') { if (Math.random() < 0.5) { bumpMorale(p, -8); p.trust = Math.max(0, (p.trust ?? 60) - 6); exBump('chem', -1); return `${p.name}${jo(p.name,'가')} 문을 쾅 닫고 나갔습니다 (사기 −8 · 신뢰 −6)`; } exAddNext({ ply: { [p.id]: { motivation: 10 } } }, `${p.name} 자극 성공`); return `${p.name}: "보여드리겠습니다." 눈빛이 달라졌습니다 (다음 경기 투지 ↑↑)`; }
             if (k === 'soft') { bumpMorale(p, -7); exAddNext({ ply: { [p.id]: { nervousness: 6 } } }); return `${p.name}${jo(p.name,'가')} 위축됐습니다 (사기 −7 · 다음 경기 긴장 ↑)`; }
@@ -10289,9 +10306,9 @@
             S.social = [{ t: Date.now(), name: `${teamName} 공식`, role: '구단 공식 계정 ✔', type: 'club', text: `📸 이번 주의 주인공은 ${p.name}! 훈련장 비하인드 공개 🎬`, tag: '구단 SNS', likes: 300 + Math.floor(Math.random() * 1500), reposts: 40 + Math.floor(Math.random() * 200), thread: hubFanComments(p, 2) }, ...(S.social || [])].slice(0, 40);
             return `구단 SNS에 ${p.name} 특집이 올라갔습니다 (사기 +${d} · 팬 +1.5)`; }
     };
-    function hubQuick(id, k) {
+    async function hubQuick(id, k) {
         const p = exPlayer(id), E = hubE(); if (!p || E.qi[p.id] === E.mc) return;
-        const res = HUB_Q[k](p, personaOf(p).k); if (res == null) return;
+        const res = await HUB_Q[k](p, personaOf(p).k); if (res == null) return;
         E.qi[p.id] = E.mc; hubLog({ praise: '👏', meal: '🍽️', scold: '📣', sns: '📱' }[k], res); saveData(); exSave(); hubRender();
         const box = document.getElementById('hub-res'); if (box) box.innerHTML = `<div class="rounded-xl bg-gray-800 p-2 text-sm">${exEsc(res)}</div>`;
     }
@@ -10303,13 +10320,13 @@
         if (r && r.k === 'rival') opts.push(['peace', '🕊️ 화해 자리 마련 (50T)', '성공하면 관계 크게 회복']);
         return `<div class="mt-3 rounded-xl border border-fuchsia-500/50 bg-fuchsia-900/20 p-3"><div class="font-black text-sm mb-1">🔗 ${exEsc(a.name)} × ${exEsc(b.name)}</div><div class="text-xs text-gray-300 mb-2">현재 관계: ${r ? `${REL_NAME[r.k]} (${r.v > 0 ? '+' : ''}${Math.round(r.v)})` : '평범한 동료'}</div>${used ? '<div class="text-xs text-amber-300">이번 경기엔 이미 둘을 묶었어요.</div>' : `<div class="flex flex-col gap-1.5">${opts.map(([k, t, d]) => `<button onclick="hubPairDo('${k}')" class="text-left px-3 py-2 rounded-lg bg-gray-800 hover:bg-fuchsia-700 text-xs"><b>${t}</b><div class="text-gray-400">${d}</div></button>`).join('')}</div>`}<button onclick="hubPair=null;hubRender()" class="mt-2 text-xs text-gray-400 underline">닫기</button></div>`;
     }
-    function hubPairDo(k) {
+    async function hubPairDo(k) {
         const a = exPlayer(hubSel), b = exPlayer(hubPair), E = hubE(); if (!a || !b) return; const key = exPairKey(a, b); if (E.pairMc[key] === E.mc) return;
         const r = exRel(a, b), rival = r && r.k === 'rival'; let res;
         if (k === 'room') { if (rival && Math.random() < 0.45) { exRelAdjust(a, b, -10); exBump('chem', -1); res = `한 방에서 하룻밤… 서로 등 돌리고 잤습니다 (관계 −10)`; } else { const d = rival ? 22 : 12; exRelAdjust(a, b, d); bumpMorale(a, 1); bumpMorale(b, 1); res = rival ? `밤새 게임하다 친해졌습니다! 앙금이 풀렸어요 (관계 +${d})` : `룸메이트 케미 굿 (관계 +${d})`; } }
         else if (k === 'duel') { const d = rival ? -5 : 4; exRelAdjust(a, b, d); exAddNext({ ply: { [a.id]: { motivation: rival ? 9 : 5 }, [b.id]: { motivation: rival ? 9 : 5 } } }); const w = Math.random() < 0.5 ? a : b; bumpMorale(w, 2); res = `${w.name} 승리! ${rival ? '불꽃 튀는 대결 — 둘 다 투지 ↑↑' : '웃으며 끝난 대결 — 둘 다 투지 ↑'}`; }
         else if (k === 'mentor') { const [s, j] = getCalculatedOvr(a) >= getCalculatedOvr(b) ? [a, b] : [b, a]; exRelAdjust(a, b, 10); bumpMorale(j, 3); exAddNext({ ply: { [j.id]: { focus: 5, nervousness: -4 } } }); if (Math.random() < 0.2) { j.ovr = (j.ovr || 60) + 1; res = `${s.name}의 특급 과외! ${j.name} 성장 (OVR +1)`; } else res = `${s.name}${jo(s.name,'가')} ${j.name}에게 노하우 전수 (관계 +10 · 집중력 ↑)`; }
-        else if (k === 'peace') { if (!hubSpend(50)) return; if (Math.random() < 0.65) { exRelAdjust(a, b, 35); exBump('chem', 3); res = '고기 굽다가 화해했습니다! 라커룸이 한결 가벼워졌어요 (관계 +35)'; } else { exRelAdjust(a, b, -5); res = '어색한 침묵만 흘렀습니다… (관계 −5)'; } }
+        else if (k === 'peace') { if (!await hubSpend(50)) return; if (Math.random() < 0.65) { exRelAdjust(a, b, 35); exBump('chem', 3); res = '고기 굽다가 화해했습니다! 라커룸이 한결 가벼워졌어요 (관계 +35)'; } else { exRelAdjust(a, b, -5); res = '어색한 침묵만 흘렀습니다… (관계 −5)'; } }
         E.pairMc[key] = E.mc; hubLog('🔗', `${a.name} × ${b.name}: ${res}`); saveData(); exSave(); hubPair = null; hubRender();
         const box = document.getElementById('hub-res'); if (box) box.innerHTML = `<div class="rounded-xl bg-gray-800 p-2 text-sm">${exEsc(res)}</div>`;
     }
@@ -10370,12 +10387,12 @@
         return `<div class="text-xs text-gray-400 mb-2">선수에게 온 팬 메시지를 어떻게 처리할지 정하세요. 선수 성격에 따라 답장이 달라지고, 팬 지지도·선수 사기에 반영됩니다.</div><div class="grid gap-2 md:grid-cols-2">${E.mail.map(m => { const p = exPlayer(m.pid); if (!p) return ''; const hate = m.kind === 'hate';
             return `<div class="hub-card"><div class="text-xs text-gray-400">${exEsc(m.from)} → <b class="text-white">${exEsc(p.name)}</b> ${hate ? '<span class="text-rose-300">· 악플</span>' : ''}</div><div class="text-sm mt-1 mb-2">"${exEsc(m.text)}"</div>${m.done ? `<div class="text-xs text-emerald-300">✔ ${exEsc(m.res || '')}</div>${m.reply ? `<div class="text-xs mt-1 pl-2 border-l-2 border-gray-600">💬 ${exEsc(p.name)}: "${exEsc(m.reply)}"</div>` : ''}` : `<div class="flex flex-wrap gap-1.5">${(hate ? [['shield', '🛡️ 구단이 공개 보호'], ['ignore', '🙈 선수에게 숨긴다'], ['show', '📨 그대로 전달 (자극)']] : [['deliver', '📨 선수에게 전달'], ['reply', '✍️ 선수에게 답장 권유'], ...(m.kind === 'kid' || m.kind === 'cheer' ? [['gift', '🎁 사인 유니폼 선물 (50T)']] : [])]).map(([k, t]) => `<button onclick="hubMail('${m.id}','${k}')" class="px-2 py-1.5 rounded-lg text-xs font-bold bg-gray-800 hover:bg-violet-700">${t}</button>`).join('')}</div>`}</div>`; }).join('')}</div>`;
     }
-    function hubMail(id, k) {
+    async function hubMail(id, k) {
         const E = hubE(), m = E.mail.find(x => x.id === id), p = m && exPlayer(m.pid); if (!m || m.done || !p) return; const per = personaOf(p).k; let res = '';
         if (k === 'deliver') { const d = per === 'soft' || per === 'loyal' ? 5 : 3; bumpMorale(p, d); res = `${p.name} 사기 +${d}`; }
         else if (k === 'reply') { m.reply = hubPlayerReply(p, m.kind); const d = per === 'pro' ? 1 : 3; bumpMorale(p, 2); exBump('fan', d); res = `선수가 직접 답장 — 팬 +${d}`;
             S.social = [{ t: Date.now(), name: p.name, role: `${teamName} 선수 ✔`, type: 'player', text: `💌 팬분께 답장: "${m.reply}"`, tag: '팬 소통', pid: p.id, likes: 500 + Math.floor(Math.random() * 3000), reposts: 50 + Math.floor(Math.random() * 300), thread: hubFanComments(p, 2) }, ...(S.social || [])].slice(0, 40); }
-        else if (k === 'gift') { if (!hubSpend(50)) return; m.reply = hubPlayerReply(p, m.kind); bumpMorale(p, 3); exBump('fan', 4); exBump('media', 1); res = '사인 유니폼 선물 — 팬 +4 · 미담 기사'; addNews('🎁', `${p.name}, 어린 팬에게 사인 유니폼 선물`, `"${m.reply}"`, '팬 소통'); }
+        else if (k === 'gift') { if (!await hubSpend(50)) return; m.reply = hubPlayerReply(p, m.kind); bumpMorale(p, 3); exBump('fan', 4); exBump('media', 1); res = '사인 유니폼 선물 — 팬 +4 · 미담 기사'; addNews('🎁', `${p.name}, 어린 팬에게 사인 유니폼 선물`, `"${m.reply}"`, '팬 소통'); }
         else if (k === 'shield') { exBump('fan', 1); exBump('media', 1); p.trust = Math.min(100, (p.trust ?? 60) + 4); res = `구단이 악플에 공개 대응 — ${p.name} 신뢰 +4`; }
         else if (k === 'ignore') { res = '조용히 넘어갔습니다'; }
         else if (k === 'show') { if (per === 'hot' || per === 'amb') { exAddNext({ ply: { [p.id]: { motivation: 9 } } }); m.reply = hubPlayerReply(p, 'hate'); res = `${p.name}${jo(p.name,'가')} 이를 갈고 있습니다 (다음 경기 투지 ↑↑)`; } else { bumpMorale(p, per === 'soft' ? -8 : -3); m.reply = hubPlayerReply(p, 'hate'); res = `${p.name}${jo(p.name,'가')} 상처받았습니다 (사기 −${per === 'soft' ? 8 : 3})`; } }
@@ -10397,8 +10414,8 @@
         return `<div class="text-xs text-gray-400 mb-2">팀 활동은 종류별로 경기마다 한 번씩 할 수 있어요.</div><div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">${HUB_ACT.map(a => { const used = E.actMc[a.k] === E.mc;
             return `<div class="hub-card"><div class="text-2xl">${a.icon}</div><div class="font-black">${a.n} ${a.c ? `<span class="text-yellow-300 text-sm">${a.c}T</span>` : ''}</div><div class="text-xs text-gray-400 mb-2">${a.d}</div><button ${used ? 'disabled' : `onclick="hubAct('${a.k}')"`} class="w-full py-2 rounded-xl font-black text-sm ${used ? 'bg-gray-800 text-gray-500' : 'bg-violet-700 hover:bg-violet-600'}">${used ? '이번 경기엔 완료' : '진행'}</button></div>`; }).join('')}</div><div id="hub-res" class="mt-3"></div>`;
     }
-    function hubAct(k) {
-        const E = hubE(), a = HUB_ACT.find(x => x.k === k); if (!a || E.actMc[k] === E.mc) return; if (!hubSpend(a.c)) return;
+    async function hubAct(k) {
+        const E = hubE(), a = HUB_ACT.find(x => x.k === k); if (!a || E.actMc[k] === E.mc) return; if (!await hubSpend(a.c)) return;
         const res = a.fx(); E.actMc[k] = E.mc; hubLog(a.icon, `${a.n}: ${res}`); addNews(a.icon, `${teamName} ${a.n}`, res, '라커룸'); saveData(); exSave(); hubRender();
         const box = document.getElementById('hub-res'); if (box) box.innerHTML = `<div class="rounded-xl bg-gray-800 p-3 text-sm">${a.icon} ${exEsc(res)}</div>`;
     }
