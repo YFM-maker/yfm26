@@ -3547,7 +3547,9 @@
             if (typeof renderLobby==='function') renderLobby();
             ensureDaily();
             if (typeof showStarPick==='function') showStarPick();
-            startLobbyBgmIfReady();maybeStartTutorial();
+            startLobbyBgmIfReady();
+            if(localStorage.getItem('fm_need_star')!=='1'&&restoreSavedMatch())return;
+            maybeStartTutorial();
         }
         setInterval(()=>uploadAccountSnapshot(true),60000);
         document.addEventListener('visibilitychange',()=>{if(document.hidden)uploadAccountSnapshot(true);});
@@ -4008,7 +4010,36 @@
 
         const careerTeamsList = ['파리생제르맹', '바이에른 뮌헨', '바르셀로나', '맨체스터 유나이티드', '맨시티', '아스톤 빌라', '도르트문트', '리버풀', '레알 마드리드', '아스널', 'AS 로마', '비야레알', '아틀레티코 마드리드', '인테르', '나폴리'];
         let careerState = JSON.parse(localStorage.getItem('fm_career')) || null;
-        let currentMatchState = null; 
+        let currentMatchState = null;
+        const ACTIVE_MATCH_KEY='fm_active_match_v1';
+        function matchOwnerKey(){return localStorage.getItem('yfm_cloud_owner')||'guest';}
+        function saveActiveMatchCheckpoint(st,goal=false){
+            if(!st||st.online||st.mode==='onlineFriendly'||st.ended||st.resultProcessed)return false;
+            try{
+                const skip=new Set(['online','engineInterval','last','lastUi','alpha','_raf','_timer','onlineGoalOverlayTimer','onlineRoster','onlineHomeRoster','onlinePauseBase']);
+                const packed=JSON.stringify(st,(key,value)=>{if(skip.has(key)||typeof value==='function')return undefined;if(value instanceof Set)return {$yfmType:'Set',values:[...value]};if(value instanceof Map)return {$yfmType:'Map',entries:[...value]};return value;});
+                if(!packed)return false;
+                localStorage.setItem(ACTIVE_MATCH_KEY,JSON.stringify({v:1,owner:matchOwnerKey(),mode:st.mode,time:Number(st.time)||0,scoreHome:st.scoreHome||0,scoreAway:st.scoreAway||0,goal:!!goal,savedAt:Date.now(),state:packed}));
+                return true;
+            }catch(e){console.warn('경기 이어하기 저장 실패:',e);return false;}
+        }
+        function reviveMatchValue(value){if(Array.isArray(value))return value.map(reviveMatchValue);if(!value||typeof value!=='object')return value;if(value.$yfmType==='Set')return new Set(value.values||[]);if(value.$yfmType==='Map')return new Map((value.entries||[]).map(([k,v])=>[reviveMatchValue(k),reviveMatchValue(v)]));Object.keys(value).forEach(k=>value[k]=reviveMatchValue(value[k]));return value;}
+        function restoreSavedMatch(){
+            let saved;try{saved=JSON.parse(localStorage.getItem(ACTIVE_MATCH_KEY)||'null');}catch(_){localStorage.removeItem(ACTIVE_MATCH_KEY);return false;}
+            if(!saved||saved.v!==1||saved.owner!==matchOwnerKey())return false;
+            if(saved.owner!=='guest'&&!window.yfmAccountReady)return false;
+            try{
+                const st=reviveMatchValue(JSON.parse(saved.state));
+                if(!st||st.mode==='onlineFriendly'||st.ended||st.resultProcessed||!st.homePlayers?.length||!st.awayPlayers?.length)throw new Error('저장된 경기 데이터가 올바르지 않아.');
+                currentMatchState=st;st.online=null;st.ended=false;st.resultProcessed=false;st.isPaused=false;st.userPaused=false;st.varOn=false;st.acc=0;st.last=performance.now();st.lastUi=0;st.engineInterval=null;st._checkpointAt=Math.floor((Number(st.time)||0)/5)*5;
+                document.getElementById('match-mode-text').innerText=st.mode==='league'?leagueMatchLabel(st.enemy):st.mode==='saudi'?'사우디 모드':st.mode==='rogue'?prematchLabel('rogue',st.enemy):st.mode==='europa'?`유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}`:st.mode==='worldcup'?`월드컵 ${worldCupState.round}`:st.mode==='tutorial'?'🎓 튜토리얼 친선전 · 선발 vs 비선발':!careerState?'친선 경기':careerState.round===2?'결승전':`${careerState.round}강 ${careerState.leg}차전`;
+                document.getElementById('match-enemy-name').innerText=st.enemy.name;const logo=st.enemy.logo||clubLogoUrl(st.enemy.id||st.enemy.name),logoEl=document.getElementById('match-enemy-logo');logoEl.src=logo||'';logoEl.classList.toggle('hidden',!logo);
+                document.getElementById('match-end-overlay').classList.replace('flex','hidden');document.getElementById('match-end-overlay').classList.add('hidden');document.getElementById('btn-tactics').style.display='block';document.getElementById('btn-forfeit').style.display='block';
+                initEngineUI(true);document.getElementById('match-score-home').innerText=st.scoreHome;document.getElementById('match-score-away').innerText=st.scoreAway;updateClock(st,0);render(st,16,1);updateSide(st);
+                switchScreen('screen-match');
+                prepareMatchAudioAndStart(st);if(typeof toast==='function')toast(`저장된 경기 이어하기 · ${Math.floor(st.time)}분 · ${st.scoreHome}:${st.scoreAway}`);return true;
+            }catch(e){console.warn('저장된 경기 복원 실패:',e);localStorage.removeItem(ACTIVE_MATCH_KEY);currentMatchState=null;return false;}
+        }
 
         function getCareerEnemyOvr(round, name) { const R = { 16: [100, 105], 8: [107, 115], 4: [110, 130], 2: [130, 135] }[round] || [100, 105];
             // 실제 구단 전력 반영: 같은 라운드라도 뮌헨·바르사·아스널은 더 강하고, 로마·비야레알은 상대적으로 약하다
@@ -6890,16 +6921,16 @@
             updateTeamNameUI();
             
             document.getElementById('btn-tactics').style.display = 'block'; document.getElementById('btn-forfeit').style.display = 'block'; { const bs = document.getElementById('btn-shout'), speed = document.getElementById('btn-speed'); if (bs) bs.style.display = mode === 'onlineFriendly' ? 'none' : ''; if (speed) speed.style.display = mode === 'onlineFriendly' ? 'none' : ''; } closeTactics();
-            switchScreen('screen-match'); initEngineUI(); prepareMatchAudioAndStart(currentMatchState);
+            switchScreen('screen-match'); initEngineUI(); currentMatchState._checkpointAt=0;saveActiveMatchCheckpoint(currentMatchState);prepareMatchAudioAndStart(currentMatchState);
             { const eb = document.getElementById('online-match-emojis'); if (eb) eb.style.display = mode === 'onlineFriendly' ? 'flex' : 'none'; }
         }
 
         let matchElements = {}; 
-        function initEngineUI() {
+        function initEngineUI(resume = false) {
             const st = currentMatchState, engine = document.getElementById('match-engine'); engine.innerHTML = ''; matchElements = {};
             document.getElementById('match-pitch-lines').innerHTML = PITCH_H;
             const sh = document.createElement('div'); sh.id = 'match-ball-shadow'; engine.appendChild(sh); matchElements.shadow = sh;
-            allOf(st).forEach(p => { p.stam = p.isHome ? matchStartStam(players.find(q => q.id === p.id) || {}, st.mode) : (st.mode === 'rogue' && st.enemy.rogue && st.enemy.rogue.trait === 'tired' ? 80 : 100); p.stam0 = p.stam; psychInit(p); makeDot(p); }); if (!st.online) { const rf = document.createElement('div'); rf.className = 'md ref-dot'; rf.innerHTML = '<div class="md-body">R</div><div class="md-name">주심</div>'; engine.appendChild(rf); matchElements.ref = rf; st.refP = { x: 50, y: 38 }; }
+            allOf(st).forEach(p => { if(!resume){p.stam = p.isHome ? matchStartStam(players.find(q => q.id === p.id) || {}, st.mode) : (st.mode === 'rogue' && st.enemy.rogue && st.enemy.rogue.trait === 'tired' ? 80 : 100); p.stam0 = p.stam; psychInit(p);} makeDot(p); }); if (!st.online) { const rf = document.createElement('div'); rf.className = 'md ref-dot'; rf.innerHTML = '<div class="md-body">R</div><div class="md-name">주심</div>'; engine.appendChild(rf); matchElements.ref = rf; if(!resume||!st.refP)st.refP = { x: 50, y: 38 }; }
             const ballEl = document.createElement('div'); ballEl.id = 'match-ball'; engine.appendChild(ballEl); matchElements.ball = ballEl;
             ['l', 'r'].forEach(sd => { const n = document.createElement('div'); n.className = 'goal-net goal-net-' + sd; n.id = 'goal-net-' + sd; engine.appendChild(n); });
             const spm = document.createElement('div'); spm.className = 'sp-marker'; engine.appendChild(spm); matchElements.spm = spm;
@@ -6907,6 +6938,7 @@
             document.getElementById('match-half').innerText = '전반';
             document.getElementById('match-comm').innerHTML = '';
             document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden'); dismissSubRec(); { const mc = document.getElementById('moment-card'); if (mc) mc.classList.add('hidden'); closeMomentBanner(); } updateShoutBtn(st);
+            if(resume){updateClock(st,0);render(st,16,1);updateSide(st);return;}
             kickoff(st, true); snapAll(st); render(st, 16, 1); updateSide(st);
             setTimeout(() => { const F = st.forms; if (!F) return; comm(st, `${VENUE[st.venue].i} ${VENUE[st.venue].n} · 오늘의 폼 — ${teamName} ${FORMS[F.h].n} / ${st.enemy.name} ${FORMS[F.a].n}`, 'info'); }, 0);
             comm(st, `🏁 킥오프! ${teamName} vs ${st.enemy.name}`, 'info');
@@ -6945,6 +6977,7 @@
                             st.ended = true; updateClock(st, 0); comm(st, '🏁 경기 종료', 'info'); if (st.online?.isHost) sendOnlineSnapshot(st); finishMatch(); return;
                         }
                         simulateTick(st);
+                        if(!st.online&&st.time>=((st._checkpointAt||0)+5)){st._checkpointAt=Math.floor(st.time/5)*5;saveActiveMatchCheckpoint(st);}
                         if (st.isPaused || st.userPaused) { st.acc = 0; break; }
                     }
                     st.alpha = st.isPaused ? 1 : Math.min(1, st.acc / step);
@@ -7923,6 +7956,7 @@
             info.innerHTML = `${how ? '<span class="text-yellow-300">' + HOW[how] + '!</span><br>' : ''}⚽ ${scorer} (${lab}') <br>${theatre ? `<span class="text-amber-300 text-xl">🎭 ${before === 0 ? '결승' : '동점'} 극장골!!!</span><br>` : ''} <span class="text-lg text-gray-400">${assist ? '도움: ' + assist : ''}</span>${grab ? '<br><span class="text-base text-sky-300">🏃 세리머니는 나중에! 공부터 챙긴다</span>' : ''}`;
             overlay.style.display = 'flex';
             const reset = () => { [...st.homePlayers, ...st.awayPlayers].forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; }); kickoff(st, !isHome); };
+            reset(); snapAll(st); saveActiveMatchCheckpoint(st,true);
             if (grab) {   // 공을 들고 센터서클로: 짧게 멈췄다가 선수들이 뛰어서 제자리로 (스코어한 선수가 공을 운반)
                 if (isHome) addBoost(st, { src: 'grab', h: 1.04, until: st.time + 8 }); else addBoost(st, { src: 'grab', a: 1.04, until: st.time + 8 });
                 setTimeout(() => {
@@ -7932,7 +7966,6 @@
                 }, 800);
                 setTimeout(() => { if (currentMatchState !== st) return; st.glideBall = null; st.isPaused = false; }, 1900);
             } else {
-                reset(); snapAll(st);
                 setTimeout(() => { overlay.style.display = 'none'; st.isPaused = false; }, 2000);
                 if (before === 0 && late && sp && !sp.cards && !st.online && Math.random() < 0.12) setTimeout(() => { if (currentMatchState !== st || st.ended) return; comm(st, `👕 ${scorer}, 유니폼을 벗어 던지는 세리머니… 주심이 카드를 꺼냅니다`, 'card'); triggerCard(sp, 'yellow', Math.floor(st.time)); }, 2150);
             }
@@ -8546,6 +8579,7 @@
             let st = currentMatchState;
             if (st.resultProcessed) return;
             st.resultProcessed = true;
+            if(!st.online)localStorage.removeItem(ACTIVE_MATCH_KEY);
             clearInterval(st.engineInterval);
             if (st.online) {
                 playMatchSound('end'); finishMatchAudio(); document.getElementById('btn-tactics').style.display = 'none'; document.getElementById('btn-forfeit').style.display = 'none'; document.getElementById('online-match-emojis').style.display = 'none';
