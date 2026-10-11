@@ -1457,18 +1457,16 @@
     <div id="save-modal" class="fixed inset-0 bg-black/80 z-[90] hidden items-center justify-center p-6" onclick="if(event.target===this)closeSave()">
         <div class="bg-gray-800 rounded-2xl p-4 sm:p-6 w-full max-w-lg max-h-[92vh] max-h-[92dvh] overflow-y-auto custom-scrollbar border border-gray-600">
             <div class="flex justify-between items-center mb-3"><h2 class="text-2xl font-black">💾 저장 관리</h2><button onclick="closeSave()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
-            <p class="text-sm text-gray-300 mb-4">새 HTML 파일로 업데이트할 때는 이전 파일의 [저장 파일 내보내기]를 먼저 누르고 새 파일에서 [저장 파일 불러오기]를 누르세요. 리그 경기·순위·시즌 진행도, 선수와 대회 기록까지 함께 옮겨집니다. 브라우저는 로컬 HTML 파일마다 저장 공간을 따로 둘 수 있습니다.</p>
-            <button onclick="exportSave()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-black py-3 rounded-xl mb-2">📤 저장 파일 내보내기</button>
-            <label class="block w-full bg-sky-700 hover:bg-sky-600 font-black py-3 rounded-xl text-center cursor-pointer">📥 저장 파일 불러오기<input type="file" accept=".json,application/json,text/plain" class="hidden" onchange="importSaveFile(this)"></label>
-            <details class="mt-4"><summary class="cursor-pointer text-sm text-gray-300 font-bold">파일 대신 코드로 옮기기</summary>
-                <textarea id="save-code" class="w-full h-24 mt-2 bg-gray-900 text-xs p-2 rounded-lg border border-gray-700" placeholder="여기에 저장 코드를 붙여넣고 [코드 불러오기]를 누르세요"></textarea>
-                <div class="flex gap-2 mt-2"><button onclick="makeSaveCode()" class="flex-1 bg-gray-700 hover:bg-gray-600 font-bold py-2 rounded-lg text-sm">코드 만들기 · 복사</button><button onclick="importSaveCode()" class="flex-1 bg-gray-700 hover:bg-gray-600 font-bold py-2 rounded-lg text-sm">코드 불러오기</button></div>
-            </details>
+            <p class="text-sm text-gray-300 mb-4">게임 진행 상황은 이 브라우저와 로그인 계정에 자동 저장됩니다.</p>
             <div class="mt-5 pt-4 border-t border-red-900/70">
-                <p class="text-xs text-gray-400 mb-2">새 파일을 만들면 현재 진행 기록을 JSON 파일로 내려받은 뒤, 처음 시작하는 새 스토리로 전환합니다.</p>
+                <p class="text-xs text-gray-400 mb-2">현재 기기의 진행 기록을 초기화하고 처음부터 시작합니다.</p>
                 <button onclick="createNewStory()" class="w-full bg-red-800 hover:bg-red-700 border border-red-500 text-white font-black py-3 rounded-xl">🆕 새 파일 만들기</button>
-                <button onclick="replayTutorial()" class="w-full mt-2 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2.5 rounded-xl">📖 튜토리얼 다시 보기</button>
+                <button onclick="replayTutorial()" class="w-full mt-2 bg-gray-700 text-white font-bold py-2.5 rounded-xl">📖 튜토리얼 다시 보기</button>
             </div>
+            <button onclick="signOutGameAccount()" class="w-full mt-3 bg-gray-700 text-white font-bold py-2 rounded-lg">계정 로그아웃</button>
+            <p id="save-msg" class="text-sm mt-3 font-bold text-emerald-400"></p>
+        </div>
+    </div>
             <button onclick="signOutGameAccount()" class="w-full mt-3 bg-gray-700 text-white font-bold py-2 rounded-lg">계정 로그아웃</button>
             <p id="save-msg" class="text-sm mt-3 font-bold text-emerald-400"></p>
         </div>
@@ -9136,69 +9134,15 @@
         function openSave() { document.getElementById('save-msg').innerText = ''; document.getElementById('save-modal').classList.replace('hidden', 'flex'); }
         function closeSave() { document.getElementById('save-modal').classList.replace('flex', 'hidden'); }
         function saveMsg(t, bad) { const m = document.getElementById('save-msg'); m.innerText = t; m.className = 'text-sm mt-3 font-bold ' + (bad ? 'text-red-400' : 'text-emerald-400'); }
-        function collectSave() {
-            saveData(); if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_stats', JSON.stringify(S));
-            const o = { app: 'YFM', v: 22, at: new Date().toISOString(), data: {} };
-            for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('fm_') && k !== 'fm_items') o.data[k] = localStorage.getItem(k); }
-            return o;
-        }
-        function exportSave() {
-            const o = collectSave(), d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: 'application/json' }));
-            a.download = `yfm_save_${teamName.replace(/[^\w가-힣]/g, '')}_${stamp}.json`; document.body.appendChild(a); a.click(); a.remove();
-            saveMsg('저장 파일을 내려받았습니다. 새 버전에서 [저장 파일 불러오기]로 여세요.');
-        }
         function createNewStory() {
-            if (!confirm('새 파일을 만들까요? 현재 스토리는 초기화되고 복구할 수 없습니다. 진행 기록을 JSON 파일로 먼저 내려받습니다. 새 파일을 만들기 전에 저장 파일 다운로드가 시작되는지 확인하세요.')) return;
-            let backupUrl = '';
+            if (!confirm('새 파일을 만들까요? 현재 기기의 스토리 진행 상황은 초기화되고 복구할 수 없습니다.')) return;
             try {
-                const backup = collectSave();
-                const d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
-                const safeTeam = (teamName || '내팀').replace(/[^\w가-힣]/g, '') || '내팀';
-                const link = document.createElement('a');
-                backupUrl = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
-                link.href = backupUrl; link.download = `yfm_archive_${safeTeam}_${stamp}.json`;
-                document.body.appendChild(link); link.click(); link.remove();
-                setTimeout(() => URL.revokeObjectURL(backupUrl), 30000);
                 const keys = []; for (let i = 0; i < localStorage.length; i++) { const key = localStorage.key(i); if (key && key.startsWith('fm_')) keys.push(key); }
                 keys.forEach(k => localStorage.removeItem(k));
                 localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
-                localStorage.setItem('fm_tutorial_pending_v1', '1');                        // 새 스토리는 항상 튜토리얼부터
-                window.__wiping = true; setTimeout(() => location.reload(), 700);
-            } catch (e) {
-                if (backupUrl) URL.revokeObjectURL(backupUrl);
-                saveMsg('백업 파일을 만들거나 새 파일로 전환하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도하세요.', true);
-            }
-        }
-        function applySave(o) {
-            try {
-                if (!o || o.app !== 'YFM' || !o.data || !Array.isArray(JSON.parse(o.data.fm_players || 'null'))) throw 0;
-                if (Number(o.v) < 22 || o.data.fm_beta_test_save_version !== BETA_TEST_SAVE_VERSION) { saveMsg('이전 베타 버전의 저장 파일은 정식 베타 테스트에 불러올 수 없어.', true); return; }
-                if (o.data.fm_league_v2) { const l = JSON.parse(o.data.fm_league_v2); if (l && l.v === 2 && !Array.isArray(l.schedule)) throw 0; }
-            } catch (e) { return saveMsg('올바른 저장 데이터가 아닙니다.', true); }
-            const n = JSON.parse(o.data.fm_players).length;
-            if (!confirm(`저장 데이터를 불러올까요? (선수 ${n}명, ${o.at ? o.at.slice(0, 10) : ''})\n지금 기기의 진행상황은 덮어씌워집니다.`)) return;
-            Object.keys(localStorage).filter(k => k.startsWith('fm_')).forEach(k => localStorage.removeItem(k));
-            Object.entries(o.data).forEach(([k, v]) => { if (k.startsWith('fm_') && k !== 'fm_items') localStorage.setItem(k, v); });
-            localStorage.setItem('fm_has_reset_tokens_v29', 'true');
-            localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
-            accountDirty=true;
-            location.reload();
-        }
-        function importSaveFile(inp) {
-            const f = inp.files && inp.files[0]; if (!f) return;
-            const r = new FileReader(); r.onload = () => { try { applySave(JSON.parse(r.result)); } catch (e) { saveMsg('파일을 읽을 수 없습니다.', true); } inp.value = ''; }; r.readAsText(f);
-        }
-        function makeSaveCode() {
-            const code = 'YFM1:' + btoa(unescape(encodeURIComponent(JSON.stringify(collectSave())))), ta = document.getElementById('save-code');
-            ta.value = code; ta.select();
-            const done = () => saveMsg(`코드를 복사했습니다 (${code.length.toLocaleString()}자). 새 파일의 코드 칸에 붙여넣으세요.`);
-            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, () => { document.execCommand('copy'); done(); });
-            else { document.execCommand('copy'); done(); }
-        }
-        function importSaveCode() {
-            const v = document.getElementById('save-code').value.trim();
-            try { applySave(JSON.parse(decodeURIComponent(escape(atob(v.replace(/^YFM1:/, '')))))); } catch (e) { saveMsg('코드가 올바르지 않습니다. 끝까지 복사됐는지 확인하세요.', true); }
+                localStorage.setItem('fm_tutorial_pending_v1', '1');
+                window.__wiping = true; setTimeout(() => location.reload(), 100);
+            } catch (e) { saveMsg('새 파일로 전환하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도하세요.', true); }
         }
         function closeEnhanceEffect() { if (!enhancementBusy || !enhancementReady) return; enhancementReady = false; enhancementBusy = false; const button = document.getElementById('enhance-confirm'); button.disabled = true; button.tabIndex = -1; document.getElementById('enhance-effect-overlay').classList.replace('flex','hidden'); }
 
@@ -9278,14 +9222,14 @@
         function renderMissions(){ensureDaily();const list=document.getElementById('mission-list'), subtitle=document.getElementById('mission-subtitle'), dailyMode=missionTab==='daily', couponMode=missionTab==='coupon';
           document.getElementById('mission-tab-daily').className=`rounded-lg py-2 font-bold text-sm ${dailyMode?'bg-sky-600 text-white':'bg-gray-800 text-gray-400'}`;document.getElementById('mission-tab-ach').className=`rounded-lg py-2 font-bold text-sm ${missionTab==='ach'?'bg-purple-600 text-white':'bg-gray-800 text-gray-400'}`;document.getElementById('mission-tab-coupon').className=`rounded-lg py-2 font-bold text-sm ${couponMode?'bg-emerald-600 text-white':'bg-gray-800 text-gray-400'}`;
           document.getElementById('achievement-tier-tabs').classList.toggle('hidden',dailyMode||couponMode);document.getElementById('mission-remain-wrap').classList.toggle('hidden',!dailyMode);document.getElementById('mission-footer').classList.toggle('hidden',couponMode);
-          if(couponMode){subtitle.textContent='쿠폰 코드를 입력하고 보상을 받아요';list.innerHTML=`<form id="coupon-form" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 sm:p-6" onsubmit="redeemMissionCoupon(event)"><label for="mission-coupon-code" class="block font-bold mb-2">쿠폰 코드</label><div class="flex gap-2"><input id="mission-coupon-code" autocomplete="off" autocapitalize="characters" maxlength="40" class="min-w-0 flex-1 rounded-lg bg-gray-950 border border-gray-600 px-3 py-3 text-white uppercase" placeholder="쿠폰 코드를 입력하세요" aria-label="쿠폰 코드"><button id="mission-coupon-submit" type="submit" class="shrink-0 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 font-black">사용</button></div><p id="mission-coupon-status" role="status" aria-live="polite" class="mt-3 min-h-5 text-sm text-gray-300">쿠폰은 계정당 코드별로 한 번만 사용할 수 있습니다.</p></form>`;loadMissionCouponStatus();return;}
+          if(couponMode){subtitle.textContent='KICKOFF2026 · 2026년 10월 31일까지 · 토큰 1,000개 + 진화 토큰 1개';list.innerHTML=`<form id="coupon-form" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 sm:p-6" onsubmit="redeemMissionCoupon(event)"><label for="mission-coupon-code" class="block font-bold mb-2">쿠폰 코드</label><div class="flex gap-2"><input id="mission-coupon-code" autocomplete="off" autocapitalize="characters" maxlength="40" class="min-w-0 flex-1 rounded-lg bg-gray-950 border border-gray-600 px-3 py-3 text-white uppercase" placeholder="쿠폰 코드를 입력하세요" aria-label="쿠폰 코드"><button id="mission-coupon-submit" type="submit" class="shrink-0 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 font-black">사용</button></div><p id="mission-coupon-status" role="status" aria-live="polite" class="mt-3 min-h-5 text-sm text-gray-300">쿠폰은 계정당 코드별로 한 번만 사용할 수 있습니다.</p></form>`;loadMissionCouponStatus();return;}
           if(dailyMode){subtitle.textContent='매일 도전하고 오늘의 보상을 받아요';list.innerHTML='';[...DAILY_MISSIONS].sort((a,b)=>Number(!!daily.claimed[a.id])-Number(!!daily.claimed[b.id])).forEach(m=>{const cur=Math.min(m.get(daily),m.goal),done=missionDone(m),claimed=!!daily.claimed[m.id],btn=claimed?'<button disabled class="bg-gray-700 text-gray-400 font-bold py-2 px-3 rounded-full text-xs">수령 완료</button>':done?`<button onclick="claimMission('${m.id}')" class="bg-amber-500 text-black font-black py-2 px-3 rounded-full text-xs">받기</button>`:'<button disabled class="bg-gray-800 text-gray-500 font-bold py-2 px-3 rounded-full text-xs">진행 중</button>';list.innerHTML+=`<div class="flex items-center gap-3 bg-gray-800 p-3 rounded-xl border ${done&&!claimed?'border-yellow-400':'border-gray-700'}"><div class="flex-1 min-w-0"><div class="font-black text-sm">${m.name}</div><div class="text-xs text-gray-400 mt-1">${cur}/${m.goal} · 보상 <b class="text-yellow-400">${[m.reward?`🪙 ${m.reward}T`:null,null].filter(Boolean).join(' · ')}</b></div><div class="h-1.5 bg-gray-700 rounded mt-2"><div class="h-full ${done?'bg-green-500':'bg-sky-500'} rounded" style="width:${cur/m.goal*100}%"></div></div></div>${btn}</div>`});document.getElementById('mission-remain').textContent=missionRemainText();
           }else{const tier=achievementTier;const labels={general:'일반 업적',hero:'영웅 업적',legend:'전설 업적'};subtitle.textContent=`${labels[tier]} · 달성한 업적은 보상을 받을 수 있어요`;['general','hero','legend'].forEach(t=>{const el=document.querySelector(`#achievement-tier-tabs button[onclick="setAchievementTier('${t}')"]`);if(el)el.className=`rounded-lg py-2 text-xs sm:text-sm font-bold ${t===tier?'bg-amber-500 text-black':'bg-gray-800 text-gray-400'}`});list.innerHTML='';ACHIEVEMENTS.filter(a=>a.tier===tier).sort((a,b)=>Number(!!ach.claimed[a.id])-Number(!!ach.claimed[b.id])).forEach(a=>{const cur=Math.min(Number(ach.p[a.key]||0),a.goal),done=!!ach.unlocked[a.id],claimed=!!ach.claimed[a.id],reward=[a.tokens?`🪙 ${a.tokens}T`:null,a.evo?`🧬 ${a.evo}`:null,null].filter(Boolean).join(' · ');const button=claimed?'<button disabled class="bg-gray-700 text-gray-400 font-bold py-2 px-3 rounded-full text-xs shrink-0">수령 완료</button>':done?`<button onclick="claimAchievement(${a.id})" class="bg-amber-500 text-black font-black py-2 px-3 rounded-full text-xs shrink-0">받기</button>`:'<span class="text-xs text-gray-500 shrink-0">미달성</span>';list.innerHTML+=`<div class="flex items-center gap-3 bg-gray-800 p-3 rounded-xl border ${done&&!claimed?'border-amber-400':'border-gray-700'}"><div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center font-black text-amber-300 shrink-0">${a.id}</div><div class="flex-1 min-w-0"><div class="font-black text-sm">${a.name}</div><div class="text-xs text-gray-400 mt-0.5">${a.condition}</div><div class="text-xs text-amber-300 mt-1">보상 ${reward}</div><div class="text-[11px] text-gray-500 mt-1">진행 ${cur}/${a.goal}</div></div>${button}</div>`})}
           const anyDaily=DAILY_MISSIONS.some(missionClaimable),anyAch=ACHIEVEMENTS.some(achievementClaimable);const all=document.getElementById('mission-claim-all');all.disabled=dailyMode?!anyDaily:!anyAch;all.classList.toggle('opacity-40',all.disabled);all.classList.toggle('cursor-not-allowed',all.disabled);updateMissionIcon();}
-        const MISSION_COUPONS={THANKYOUFORYOURSERVICE:3000,EUGENE:10000};
+        const MISSION_COUPONS={KICKOFF2026:{tokens:1000,evo:1,expires:'2026-10-31'}};
         function setMissionCouponStatus(message,isError=false){const el=document.getElementById('mission-coupon-status');if(el){el.textContent=message;el.className=`mt-3 min-h-5 text-sm ${isError?'text-red-300':'text-gray-300'}`}}
-        async function loadMissionCouponStatus(){if(!accountUser?.id||!window.yfmAccountReady){setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);return;}try{const {data,error}=await getOwnerRankClient().from('coupon_redemptions').select('code').eq('user_id',accountUser.id);if(error)throw error;const codes=(data||[]).map(r=>r.code);if(codes.length)setMissionCouponStatus(`이미 사용한 쿠폰: ${codes.join(', ')}`);}catch(e){console.warn('쿠폰 사용 기록을 불러오지 못했습니다.',e);setMissionCouponStatus('쿠폰 사용 기록을 불러오지 못했습니다. Supabase 쿠폰 SQL을 먼저 적용해 주세요.',true)}}
-        async function redeemMissionCoupon(event){event.preventDefault();const input=document.getElementById('mission-coupon-code'),button=document.getElementById('mission-coupon-submit'),code=String(input?.value||'').trim().toUpperCase(),reward=MISSION_COUPONS[code];if(!code)return setMissionCouponStatus('쿠폰 코드를 입력해 주세요.',true);if(!reward)return setMissionCouponStatus('사용할 수 없는 쿠폰 코드입니다.',true);if(!accountUser?.id||!window.yfmAccountReady)return setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);button.disabled=true;button.classList.add('opacity-50');try{const {error}=await getOwnerRankClient().from('coupon_redemptions').insert({user_id:accountUser.id,code});if(error){if(error.code==='23505')return setMissionCouponStatus('이미 사용한 쿠폰입니다.',true);throw error;}await awardTokens(reward,'coupon');updateTokensUI();saveData();input.value='';setMissionCouponStatus(`쿠폰이 적용되었습니다! 토큰 ${reward.toLocaleString()}개를 받았습니다.`); }catch(e){console.error('쿠폰 적용 실패',e);setMissionCouponStatus('쿠폰을 적용하지 못했습니다. Supabase 쿠폰 SQL이 적용되었는지 확인해 주세요.',true)}finally{if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50')}}}
+        async function loadMissionCouponStatus(){if(!accountUser?.id||!window.yfmAccountReady){setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);return;}try{const {data,error}=await getOwnerRankClient().rpc('yfm_kickoff_coupon_status');if(error)throw error;if(data?.redeemed)setMissionCouponStatus('KICKOFF2026 쿠폰을 이미 사용했습니다.');else if(data?.expired)setMissionCouponStatus('쿠폰 사용 기간이 종료되었습니다.',true);}catch(e){console.warn('쿠폰 사용 기록을 불러오지 못했습니다.',e);setMissionCouponStatus('쿠폰 상태를 확인하지 못했습니다. Supabase 출시 초기화 SQL을 먼저 적용해 주세요.',true)}}
+        async function redeemMissionCoupon(event){event.preventDefault();const input=document.getElementById('mission-coupon-code'),button=document.getElementById('mission-coupon-submit'),code=String(input?.value||'').trim().toUpperCase(),reward=MISSION_COUPONS[code];if(!code)return setMissionCouponStatus('쿠폰 코드를 입력해 주세요.',true);if(!reward)return setMissionCouponStatus('사용할 수 없는 쿠폰 코드입니다.',true);if(!accountUser?.id||!window.yfmAccountReady)return setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);button.disabled=true;button.classList.add('opacity-50');try{const {data,error}=await getOwnerRankClient().rpc('yfm_redeem_kickoff_coupon');if(error){if(error.code==='23505'||String(error.message||'').includes('ALREADY_REDEEMED'))return setMissionCouponStatus('이미 사용한 쿠폰입니다.',true);if(String(error.message||'').includes('EXPIRED'))return setMissionCouponStatus('쿠폰 사용 기간이 종료되었습니다.',true);throw error;}if(!data?.ok)throw new Error(data?.reason||'coupon_failed');applyServerWallet(data.tokens);evoTokens=Number(data.evo_tokens)||evoTokens+reward.evo;localStorage.setItem('fm_evo_tokens',String(evoTokens));accountDirty=true;saveData();input.value='';setMissionCouponStatus('쿠폰 적용 완료! 토큰 1,000개와 진화 토큰 1개를 받았습니다.');}catch(e){console.error('쿠폰 적용 실패',e);setMissionCouponStatus('쿠폰을 적용하지 못했습니다. Supabase 출시 초기화 SQL을 먼저 적용해 주세요.',true)}finally{if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50')}}}
         function claimMission(id){ensureDaily();const m=DAILY_MISSIONS.find(x=>x.id===id);if(!m||!missionClaimable(m))return renderMissions();daily.claimed[id]=true;const rw={tokens:m.reward};grantRewards(rw);saveDaily();renderMissions();showRewardNotice(m.name,rw)}
         function claimAchievement(id){const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a||!achievementClaimable(a))return renderMissions();ach.claimed[id]=true;const rw={tokens:a.tokens,evo:a.evo};grantRewards(rw);saveAch();renderMissions();showRewardNotice(a.name,rw)}
         function claimAllMissions(){ensureDaily();const rw={tokens:0,evo:0},names=[];if(missionTab==='daily'){DAILY_MISSIONS.forEach(m=>{if(!missionClaimable(m))return;daily.claimed[m.id]=true;rw.tokens+=m.reward;names.push(m.name)});saveDaily()}else{ACHIEVEMENTS.forEach(a=>{if(!achievementClaimable(a))return;ach.claimed[a.id]=true;rw.tokens+=a.tokens;rw.evo+=a.evo;names.push(a.name)});saveAch()}if(!names.length)return;grantRewards(rw);renderMissions();showRewardNotice(`${names.length}개 미션 모두 받기`,rw)}
