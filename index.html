@@ -725,8 +725,10 @@
         @media(max-width:760px) { #screen-lobby .fm-top { grid-template-columns:minmax(0,1fr) auto; } #screen-lobby .fm-tip { grid-column:1/-1;grid-row:2;max-width:50%;height:2.65em;padding:0 8px;margin-top:2px; } #screen-lobby .fm-top-right { grid-column:2;grid-row:1;width:auto;justify-content:flex-end; } }
         @media(prefers-reduced-motion:reduce) { #screen-lobby .fm-tip-text { transition:none; } }
         /* 사이드바는 body에 고정되어 있으므로 로비 콘텐츠는 메뉴 폭만큼 안쪽에서 시작한다. */
-        body:not(.in-match) #fm-global-side { display:flex!important;visibility:visible!important;opacity:1!important; }
-        body.in-match #fm-global-side { display:none!important; }
+        body.has-global-nav:not(.in-match):not(.online-friendly-match) #fm-global-side { display:flex!important;visibility:visible!important;opacity:1!important; }
+        body.in-match #fm-global-side,
+        body.online-friendly-match #fm-global-side,
+        body:has(#screen-match.active) #fm-global-side { display:none!important; }
         #screen-lobby .fm-shell { inset:0 0 0 232px;grid-template-columns:minmax(0,1fr); }
         @media(min-width:761px) and (max-width:1050px) { #screen-lobby .fm-shell { inset:0 0 0 200px;grid-template-columns:minmax(0,1fr); } }
         @media(max-width:760px) { #screen-lobby .fm-shell { inset:0 0 calc(70px + env(safe-area-inset-bottom));grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr); } }
@@ -3711,7 +3713,6 @@
         function lobbyContinue() { if (lobbyNext()) playLeagueMatch(); else switchScreen('screen-league'); }
         function renderLobby() {
             const grid = document.getElementById('fm-grid'); if (!grid) return;
-            updatePersistentNav('screen-lobby');
             const esc = leagueEsc, n = lobbyNext(), starters = players.filter(p => p.isStarting), avg = getTeamOvr() || '–';
             const d = new Date(), days = ['일', '월', '화', '수', '목', '금', '토'];
             document.getElementById('fm-date').textContent = `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()} (${days[d.getDay()]}) · ${leagueState ? 'SEASON ' + leagueState.season : 'PRE-SEASON'}`;
@@ -9228,15 +9229,25 @@
           const anyDaily=DAILY_MISSIONS.some(missionClaimable),anyAch=ACHIEVEMENTS.some(achievementClaimable);const all=document.getElementById('mission-claim-all');all.disabled=dailyMode?!anyDaily:!anyAch;all.classList.toggle('opacity-40',all.disabled);all.classList.toggle('cursor-not-allowed',all.disabled);updateMissionIcon();}
         const MISSION_COUPONS={KICKOFF2026:{tokens:1000,evo:1,expires:'2026-10-31'}};
         function setMissionCouponStatus(message,isError=false){const el=document.getElementById('mission-coupon-status');if(el){el.textContent=message;el.className=`mt-3 min-h-5 text-sm ${isError?'text-red-300':'text-gray-300'}`}}
-        async function loadMissionCouponStatus(){if(!accountUser?.id||!window.yfmAccountReady){setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);return;}try{const {data,error}=await getOwnerRankClient().rpc('yfm_kickoff_coupon_status');if(error)throw error;if(data?.redeemed)setMissionCouponStatus('KICKOFF2026 쿠폰을 이미 사용했습니다.');else if(data?.expired)setMissionCouponStatus('쿠폰 사용 기간이 종료되었습니다.',true);}catch(e){console.warn('쿠폰 사용 기록을 불러오지 못했습니다.',e);setMissionCouponStatus('쿠폰 상태를 확인하지 못했습니다. Supabase 출시 초기화 SQL을 먼저 적용해 주세요.',true)}}
-        async function redeemMissionCoupon(event){event.preventDefault();const input=document.getElementById('mission-coupon-code'),button=document.getElementById('mission-coupon-submit'),code=String(input?.value||'').trim().toUpperCase(),reward=MISSION_COUPONS[code];if(!code)return setMissionCouponStatus('쿠폰 코드를 입력해 주세요.',true);if(!reward)return setMissionCouponStatus('사용할 수 없는 쿠폰 코드입니다.',true);if(!accountUser?.id||!window.yfmAccountReady)return setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);button.disabled=true;button.classList.add('opacity-50');try{const {data,error}=await getOwnerRankClient().rpc('yfm_redeem_kickoff_coupon');if(error){if(error.code==='23505'||String(error.message||'').includes('ALREADY_REDEEMED'))return setMissionCouponStatus('이미 사용한 쿠폰입니다.',true);if(String(error.message||'').includes('EXPIRED'))return setMissionCouponStatus('쿠폰 사용 기간이 종료되었습니다.',true);throw error;}if(!data?.ok)throw new Error(data?.reason||'coupon_failed');applyServerWallet(data.tokens);evoTokens=Number(data.evo_tokens)||evoTokens+reward.evo;localStorage.setItem('fm_evo_tokens',String(evoTokens));accountDirty=true;saveData();input.value='';setMissionCouponStatus('쿠폰 적용 완료! 토큰 1,000개와 진화 토큰 1개를 받았습니다.');}catch(e){console.error('쿠폰 적용 실패',e);setMissionCouponStatus('쿠폰을 적용하지 못했습니다. Supabase 출시 초기화 SQL을 먼저 적용해 주세요.',true)}finally{if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50')}}}
+        function missionCouponErrorMessage(error) {
+            const code=String(error?.code||'UNKNOWN'), message=String(error?.message||error||'알 수 없는 오류');
+            if(message.includes('ALREADY_REDEEMED'))return '이미 사용한 쿠폰입니다.';
+            if(message.includes('COUPON_EXPIRED'))return '쿠폰 사용 기간이 종료되었습니다.';
+            if(code==='PGRST202')return '서버에서 쿠폰 함수를 찾지 못했습니다. 쿠폰 복구 SQL을 적용해 주세요. [PGRST202]';
+            if(code==='42501')return `쿠폰 실행 권한이 없습니다. 쿠폰 복구 SQL을 적용해 주세요. [42501] ${message.slice(0,160)}`;
+            if(/JWT|로그인이 필요|not authenticated/i.test(message)||['PGRST301','PGRST302','PGRST303'].includes(code))return '로그인 세션이 만료되었거나 계정이 초기화되었습니다. 로그아웃 후 다시 로그인해 주세요.';
+            if(/Failed to fetch|NetworkError|Load failed/i.test(message))return '서버에 연결하지 못했습니다. 인터넷 연결을 확인한 후 다시 시도해 주세요.';
+            return `쿠폰 오류 [${code}]: ${message.slice(0,240)}`;
+        }
+        async function loadMissionCouponStatus(){if(!accountUser?.id||!window.yfmAccountReady){setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);return;}try{const {data,error}=await getOwnerRankClient().rpc('yfm_kickoff_coupon_status');if(error)throw error;if(data?.redeemed)setMissionCouponStatus('KICKOFF2026 쿠폰을 이미 사용했습니다.');else if(data?.expired)setMissionCouponStatus('쿠폰 사용 기간이 종료되었습니다.',true);}catch(e){console.warn('쿠폰 사용 기록을 불러오지 못했습니다.',e);setMissionCouponStatus(missionCouponErrorMessage(e),true)}}
+        async function redeemMissionCoupon(event){event.preventDefault();const input=document.getElementById('mission-coupon-code'),button=document.getElementById('mission-coupon-submit'),code=String(input?.value||'').trim().toUpperCase(),reward=MISSION_COUPONS[code];if(!code)return setMissionCouponStatus('쿠폰 코드를 입력해 주세요.',true);if(!reward)return setMissionCouponStatus('사용할 수 없는 쿠폰 코드입니다.',true);if(!accountUser?.id||!window.yfmAccountReady)return setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);button.disabled=true;button.classList.add('opacity-50');try{const {data,error}=await getOwnerRankClient().rpc('yfm_redeem_kickoff_coupon');if(error){if(String(error.message||'').includes('ALREADY_REDEEMED'))return setMissionCouponStatus('이미 사용한 쿠폰입니다.',true);if(String(error.message||'').includes('EXPIRED'))return setMissionCouponStatus('쿠폰 사용 기간이 종료되었습니다.',true);throw error;}if(!data?.ok)throw new Error(data?.reason||'coupon_failed');applyServerWallet(data.tokens);evoTokens=Number(data.evo_tokens)||evoTokens+reward.evo;localStorage.setItem('fm_evo_tokens',String(evoTokens));accountDirty=true;saveData();input.value='';setMissionCouponStatus('쿠폰 적용 완료! 토큰 1,000개와 진화 토큰 1개를 받았습니다.');}catch(e){console.error('쿠폰 적용 실패',e);setMissionCouponStatus(missionCouponErrorMessage(e),true)}finally{if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50')}}}
         function claimMission(id){ensureDaily();const m=DAILY_MISSIONS.find(x=>x.id===id);if(!m||!missionClaimable(m))return renderMissions();daily.claimed[id]=true;const rw={tokens:m.reward};grantRewards(rw);saveDaily();renderMissions();showRewardNotice(m.name,rw)}
         function claimAchievement(id){const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a||!achievementClaimable(a))return renderMissions();ach.claimed[id]=true;const rw={tokens:a.tokens,evo:a.evo};grantRewards(rw);saveAch();renderMissions();showRewardNotice(a.name,rw)}
         function claimAllMissions(){ensureDaily();const rw={tokens:0,evo:0},names=[];if(missionTab==='daily'){DAILY_MISSIONS.forEach(m=>{if(!missionClaimable(m))return;daily.claimed[m.id]=true;rw.tokens+=m.reward;names.push(m.name)});saveDaily()}else{ACHIEVEMENTS.forEach(a=>{if(!achievementClaimable(a))return;ach.claimed[a.id]=true;rw.tokens+=a.tokens;rw.evo+=a.evo;names.push(a.name)});saveAch()}if(!names.length)return;grantRewards(rw);renderMissions();showRewardNotice(`${names.length}개 미션 모두 받기`,rw)}
         function openMissions(){missionTab='daily';renderMissions();document.getElementById('mission-modal').classList.replace('hidden','flex')}
         function closeMissions(){document.getElementById('mission-modal').classList.replace('flex','hidden')}
         function dailyTick() {
-            recoverLeagueSave(); updateNewsBadge(); renderCareerChallengeStatus(); try { renderLobby(); } catch (e) { console.error(e); }
+            recoverLeagueSave(); updateNewsBadge(); renderCareerChallengeStatus(); if (document.getElementById('screen-lobby')?.classList.contains('active')) { try { renderLobby(); } catch (e) { console.error(e); } }
         updateMissionIcon();
             if (!document.getElementById('mission-modal').classList.contains('hidden')) renderMissions();
         }
@@ -10441,7 +10452,7 @@
     const _ex6FinishMatch = finishMatch;
     finishMatch = function () {
         const st = currentMatchState, r = _ex6FinishMatch.apply(this, arguments);
-        try { if (st && !(typeof sandboxMode === 'function' && sandboxMode(st.mode))) { hubBanter(st); hubMakeMail(st); saveData(); exSave(); hubBadge(); } } catch (x) { console.error(x); }
+        try { if (st && !(typeof sandboxMode === 'function' && sandboxMode(st.mode))) { hubBanter(st); hubMakeMail(st); saveData(); exSave(); } } catch (x) { console.error(x); }
         return r;
     };
 
@@ -10519,11 +10530,9 @@
     };
 
     // ---------- 진입 버튼 ----------
-    function hubBadge() { const b = document.getElementById('hub-nav-badge'); if (!b) return; const E = hubE(), n = E.mail.filter(m => !m.done).length + (E.evQueue ? 1 : 0); b.style.display = n ? '' : 'none'; b.textContent = n; }
     (function () {
         const nav = [...document.querySelectorAll('.fm-nav-item')].find(b => (b.getAttribute('onclick') || '').includes("screen-manager"));
-        if (nav && !document.getElementById('hub-nav')) { const b = document.createElement('button'); b.id = 'hub-nav'; b.className = 'fm-nav-item'; b.onclick = () => openHub(); b.innerHTML = '<span class="fm-ico">🧩</span><span>팀 허브</span><span id="hub-nav-badge" class="fm-badge" style="display:none"></span>'; nav.after(b); }
-        try { hubBadge(); } catch (x) {}
+        if (nav && !document.getElementById('hub-nav')) { const b = document.createElement('button'); b.id = 'hub-nav'; b.className = 'fm-nav-item'; b.onclick = () => openHub(); b.innerHTML = '<span class="fm-ico">🧩</span><span>팀 허브</span>'; nav.after(b); }
     })();
     const _ex6RenderSquadTalk = renderSquadTalk;
     renderSquadTalk = function () {
