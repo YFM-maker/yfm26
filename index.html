@@ -1460,17 +1460,8 @@
         <div class="bg-gray-800 rounded-2xl p-4 sm:p-6 w-full max-w-lg max-h-[92vh] max-h-[92dvh] overflow-y-auto custom-scrollbar border border-gray-600">
             <div class="flex justify-between items-center mb-3"><h2 class="text-2xl font-black">💾 저장 관리</h2><button onclick="closeSave()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
             <p class="text-sm text-gray-300 mb-4">게임 진행 상황은 이 브라우저와 로그인 계정에 자동 저장됩니다.</p>
-            <div class="mt-5 pt-4 border-t border-red-900/70">
-                <p class="text-xs text-gray-400 mb-2">현재 기기의 진행 기록을 초기화하고 처음부터 시작합니다.</p>
-                <button onclick="createNewStory()" class="w-full bg-red-800 hover:bg-red-700 border border-red-500 text-white font-black py-3 rounded-xl">🆕 새 파일 만들기</button>
-                <button onclick="replayTutorial()" class="w-full mt-2 bg-gray-700 text-white font-bold py-2.5 rounded-xl">📖 튜토리얼 다시 보기</button>
-            </div>
+            <button onclick="replayTutorial()" class="w-full mt-2 bg-gray-700 text-white font-bold py-2.5 rounded-xl">📖 튜토리얼 다시 보기</button>
             <button onclick="signOutGameAccount()" class="w-full mt-3 bg-gray-700 text-white font-bold py-2 rounded-lg">계정 로그아웃</button>
-            <p id="save-msg" class="text-sm mt-3 font-bold text-emerald-400"></p>
-        </div>
-    </div>
-            <button onclick="signOutGameAccount()" class="w-full mt-3 bg-gray-700 text-white font-bold py-2 rounded-lg">계정 로그아웃</button>
-            <p id="save-msg" class="text-sm mt-3 font-bold text-emerald-400"></p>
         </div>
     </div>
 
@@ -3780,7 +3771,7 @@
             {screen:'screen-lobby',target:'.fm-brand',title:'위대한 여정의 시작!',body:'처음에는 팀 관리에서 선발과 포메이션을 확인한 뒤 리그 경기에 도전해 봐.'}
         ];
         let tutorialStep = -1;
-        // 신규 게임과 새 스토리는 종건급 선택을 마친 직후에도 튜토리얼을 유지한다.
+        // 신규 게임은 종건급 선택을 마친 직후에도 튜토리얼을 유지한다.
         // 튜토리얼을 한 번도 끝내지 않은 저장(예: 튜토리얼이 없던 버전에서 넘어온 파일)이면 한 번 보여줌
         if (!localStorage.getItem('fm_tutorial_done_v1') && !localStorage.getItem('fm_tutorial_pending_v1')) localStorage.setItem('fm_tutorial_pending_v1', '1');
         function replayTutorial() {
@@ -9155,19 +9146,8 @@
         }
 
         // ================= 저장 관리 =================
-        function openSave() { document.getElementById('save-msg').innerText = ''; document.getElementById('save-modal').classList.replace('hidden', 'flex'); }
+        function openSave() { document.getElementById('save-modal').classList.replace('hidden', 'flex'); }
         function closeSave() { document.getElementById('save-modal').classList.replace('flex', 'hidden'); }
-        function saveMsg(t, bad) { const m = document.getElementById('save-msg'); m.innerText = t; m.className = 'text-sm mt-3 font-bold ' + (bad ? 'text-red-400' : 'text-emerald-400'); }
-        function createNewStory() {
-            if (!confirm('새 파일을 만들까요? 현재 기기의 스토리 진행 상황은 초기화되고 복구할 수 없습니다.')) return;
-            try {
-                const keys = []; for (let i = 0; i < localStorage.length; i++) { const key = localStorage.key(i); if (key && key.startsWith('fm_')) keys.push(key); }
-                keys.forEach(k => localStorage.removeItem(k));
-                localStorage.setItem('fm_beta_test_save_version', BETA_TEST_SAVE_VERSION);
-                localStorage.setItem('fm_tutorial_pending_v1', '1');
-                window.__wiping = true; setTimeout(() => location.reload(), 100);
-            } catch (e) { saveMsg('새 파일로 전환하지 못했습니다. 저장 공간을 확인한 뒤 다시 시도하세요.', true); }
-        }
         function closeEnhanceEffect() { if (!enhancementBusy || !enhancementReady) return; enhancementReady = false; enhancementBusy = false; const button = document.getElementById('enhance-confirm'); button.disabled = true; button.tabIndex = -1; document.getElementById('enhance-effect-overlay').classList.replace('flex','hidden'); }
 
         // ================= 일일 미션 =================
