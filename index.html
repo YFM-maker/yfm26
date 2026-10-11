@@ -4018,18 +4018,39 @@
                 const skip=new Set(['online','engineInterval','last','lastUi','alpha','_raf','_timer','onlineGoalOverlayTimer','onlineRoster','onlineHomeRoster','onlinePauseBase']);
                 const packed=JSON.stringify(st,(key,value)=>{if(skip.has(key)||typeof value==='function')return undefined;if(value instanceof Set)return {$yfmType:'Set',values:[...value]};if(value instanceof Map)return {$yfmType:'Map',entries:[...value]};return value;});
                 if(!packed)return false;
-                localStorage.setItem(ACTIVE_MATCH_KEY,JSON.stringify({v:1,owner:matchOwnerKey(),mode:st.mode,time:Number(st.time)||0,scoreHome:st.scoreHome||0,scoreAway:st.scoreAway||0,goal:!!goal,savedAt:Date.now(),state:packed}));
+                localStorage.setItem(ACTIVE_MATCH_KEY,JSON.stringify({v:1,owner:matchOwnerKey(),mode:st.mode,time:Number(st.time)||0,scoreHome:st.scoreHome||0,scoreAway:st.scoreAway||0,goal:!!goal,savedAt:Math.max(Date.now(),completedMatchCutoff()+1),state:packed}));
                 return true;
             }catch(e){console.warn('경기 이어하기 저장 실패:',e);return false;}
+        }
+        function completedMatchCutoff() {
+            return Math.max(Number(localStorage.getItem('fm_completed_match_at'))||0, Number(localStorage.getItem('yfm_completed_match_at_'+matchOwnerKey()))||0);
+        }
+        function clearFinishedMatchCheckpoint(st) {
+            if (!st || st.online || st.mode==='onlineFriendly') return;
+            let saved; try { saved=JSON.parse(localStorage.getItem(ACTIVE_MATCH_KEY)||'null'); } catch (_) {}
+            const cutoff=Math.max(Date.now(),completedMatchCutoff(),saved?.owner===matchOwnerKey()?(Number(saved.savedAt)||0):0);
+            // Keep a device copy outside fm_* so a stale cloud restore cannot erase it.
+            localStorage.setItem('yfm_completed_match_at_'+matchOwnerKey(),String(cutoff));
+            localStorage.setItem('fm_completed_match_at',String(cutoff));
+            localStorage.removeItem(ACTIVE_MATCH_KEY);
+            accountDirty=true;
+        }
+        function flushFinishedMatchSave() {
+            if (!accountUser?.id || window.__wiping) return;
+            accountDirty=true;
+            if (accountSaving) { setTimeout(flushFinishedMatchSave,250); return; }
+            uploadAccountSnapshot(true);
         }
         function reviveMatchValue(value){if(Array.isArray(value))return value.map(reviveMatchValue);if(!value||typeof value!=='object')return value;if(value.$yfmType==='Set')return new Set(value.values||[]);if(value.$yfmType==='Map')return new Map((value.entries||[]).map(([k,v])=>[reviveMatchValue(k),reviveMatchValue(v)]));Object.keys(value).forEach(k=>value[k]=reviveMatchValue(value[k]));return value;}
         function restoreSavedMatch(){
             let saved;try{saved=JSON.parse(localStorage.getItem(ACTIVE_MATCH_KEY)||'null');}catch(_){localStorage.removeItem(ACTIVE_MATCH_KEY);return false;}
             if(!saved||saved.v!==1||saved.owner!==matchOwnerKey())return false;
             if(saved.owner!=='guest'&&!window.yfmAccountReady)return false;
+            if((Number(saved.savedAt)||0)<=completedMatchCutoff()){localStorage.removeItem(ACTIVE_MATCH_KEY);return false;}
             try{
                 const st=reviveMatchValue(JSON.parse(saved.state));
                 if(!st||st.mode==='onlineFriendly'||st.ended||st.resultProcessed||!st.homePlayers?.length||!st.awayPlayers?.length)throw new Error('저장된 경기 데이터가 올바르지 않아.');
+                if(st.mode==='league'&&!st.leaguePlayoff&&(!leagueState||st.leagueSeason!==leagueState.season||st.leagueRound!==leagueState.round||leagueState.status!=='playing'))throw new Error('이미 완료되었거나 진행 중인 리그와 다른 경기입니다.');
                 currentMatchState=st;st.online=null;st.ended=false;st.resultProcessed=false;st.isPaused=false;st.userPaused=false;st.varOn=false;st.acc=0;st.last=performance.now();st.lastUi=0;st.engineInterval=null;st._checkpointAt=Math.floor((Number(st.time)||0)/5)*5;
                 document.getElementById('match-mode-text').innerText=st.mode==='league'?leagueMatchLabel(st.enemy):st.mode==='saudi'?'사우디 모드':st.mode==='rogue'?prematchLabel('rogue',st.enemy):st.mode==='europa'?`유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}`:st.mode==='worldcup'?`월드컵 ${worldCupState.round}`:st.mode==='tutorial'?'🎓 튜토리얼 친선전 · 선발 vs 비선발':!careerState?'친선 경기':careerState.round===2?'결승전':`${careerState.round}강 ${careerState.leg}차전`;
                 document.getElementById('match-enemy-name').innerText=st.enemy.name;const logo=st.enemy.logo||clubLogoUrl(st.enemy.id||st.enemy.name),logoEl=document.getElementById('match-enemy-logo');logoEl.src=logo||'';logoEl.classList.toggle('hidden',!logo);
@@ -8578,7 +8599,7 @@
             let st = currentMatchState;
             if (st.resultProcessed) return;
             st.resultProcessed = true;
-            if(!st.online)localStorage.removeItem(ACTIVE_MATCH_KEY);
+            clearFinishedMatchCheckpoint(st);
             clearInterval(st.engineInterval);
             if (st.online) {
                 playMatchSound('end'); finishMatchAudio(); document.getElementById('btn-tactics').style.display = 'none'; document.getElementById('btn-forfeit').style.display = 'none'; document.getElementById('online-match-emojis').style.display = 'none';
@@ -8685,9 +8706,11 @@
             recordMatch(st, rewardText); if (st.gap >= 10) { const hw = st.scoreHome > st.scoreAway, aw = st.scoreAway > st.scoreHome, dr = !hw && !aw; if (st.fav === 'away' && (hw || dr)) { document.getElementById('match-end-title').innerText = hw ? '🌟 기적의 승리!' : '🌟 기적의 무승부!'; } else if (st.fav === 'home' && (aw || dr)) { document.getElementById('match-end-title').innerText = aw ? '💔 충격의 이변...' : '😮 뜻밖의 무승부'; } }
             if (st.forfeit) { document.getElementById('match-end-title').innerText = '🏳️ 기권패'; rewardText = '기권 처리 (0:3 패배) · ' + rewardText; }
             document.getElementById('match-end-reward').innerText = rewardText; endOverlay.classList.replace('hidden', 'flex');
+            saveData(); flushFinishedMatchSave();
         }
 
         function endMatchFlow() {
+            clearFinishedMatchCheckpoint(currentMatchState); flushFinishedMatchSave();
             document.getElementById('match-end-overlay').classList.replace('flex', 'hidden');
             if (!currentMatchState) { switchScreen('screen-lobby'); return; }   // 결과창 버튼을 두 번 눌렀을 때 등
             if(currentMatchState.mode === 'onlineFriendly') { document.getElementById('online-match-emojis').style.display = 'none'; switchScreen('screen-online-friendly'); }
