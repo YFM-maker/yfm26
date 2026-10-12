@@ -1052,6 +1052,7 @@
 
     <div id="screen-social" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px;color:white">
       <div style="width:min(100%,1050px);margin:0 auto;padding-bottom:80px">
+        <button id="social-support-button" onclick="openAdminSupport()" style="background:#6d28a8;border-radius:9px;padding:10px 16px;font-weight:800;margin-bottom:12px">관리자에게 문의</button><div id="social-support-inbox" style="margin-bottom:12px"></div>
         <h1 style="font-size:28px;font-weight:900;margin-bottom:6px">👥 소셜</h1>
         <p style="color:#cbd5e1;font-size:13px;margin-bottom:18px">구단주명으로 친구를 찾고 메시지를 주고받아 봐.</p>
         <form onsubmit="searchSocialUser(event)" style="display:flex;gap:8px;margin-bottom:12px">
@@ -3087,6 +3088,7 @@
                 const {data:{session},error:sessionError}=await getOwnerRankClient().auth.getSession();
                 if(sessionError)throw sessionError;
                 if(!window.yfmAccountReady||!session?.user?.id||session.user.is_anonymous||accountUser?.id!==session.user.id){ownerRankRegistered=false;return false;}
+                if(window.yfmAdminId===session.user.id){ownerRankRegistered=false;return false;}
                 const {data,error}=await getOwnerRankClient().from('owner_rankings_v2').select('user_id').eq('user_id',session.user.id).maybeSingle();
                 if(error)throw error;
                 if(data){ownerRankRegistered=true;return true;}
@@ -3106,7 +3108,7 @@
             ownerRankSyncTimer=setTimeout(syncOwnerRank,1200);
         }
         async function syncOwnerRank() {
-            if(!accountUser?.id || !window.yfmAccountReady || document.hidden || window.__wiping) return;
+            if(!accountUser?.id || !window.yfmAccountReady || document.hidden || window.__wiping || accountUser.id===window.yfmAdminId) return;
             const snapshot=ownerRankSnapshot();
             if(!snapshot) return;
             const signature=JSON.stringify(snapshot);
@@ -3174,6 +3176,11 @@
         }
         let socialFriendId=null, socialFriendName='', socialRefreshBusy=false, socialFriends=[];
         let socialNotificationBusy=false;
+        let socialUnread=new Set(),supportPeers=new Set(),supportUnread=new Set();
+        const socialCanChat=id=>socialFriends.includes(id)||supportPeers.has(id);
+        const isSupportChat=id=>supportPeers.has(id);
+        function paintSocialDots(){document.querySelectorAll('[data-social-peer]').forEach(el=>{const on=socialUnread.has(el.dataset.socialPeer)||supportUnread.has(el.dataset.socialPeer);el.querySelector('.social-unread-dot').style.display=on?'inline-block':'none';});}
+        function attachSocialDot(row,id){row.dataset.socialPeer=id;const dot=document.createElement('span');dot.className='social-unread-dot';dot.setAttribute('aria-label','안 읽은 메시지');dot.style.cssText='width:9px;height:9px;border-radius:50%;background:#ef4444;flex:none;display:none';row.prepend(dot);return row;}
         const socialClient=()=>getOwnerRankClient();
         async function updateSocialNotifications(){
             if(!accountUser || document.hidden || socialNotificationBusy)return;
@@ -3182,11 +3189,13 @@
                 const me=accountUser.id;
                 const [requests,messages]=await Promise.all([
                     socialClient().from('social_friendships').select('id',{count:'exact',head:true}).eq('addressee_id',me).eq('status','pending'),
-                    socialClient().from('social_messages').select('id',{count:'exact',head:true}).eq('receiver_id',me).is('read_at',null)
+                    socialClient().from('social_messages').select('sender_id',{count:'exact'}).eq('receiver_id',me).is('read_at',null)
                 ]);
                 if(requests.error)throw requests.error;
                 if(messages.error)throw messages.error;
-                const count=(requests.count||0)+(messages.count||0),badge=document.getElementById('fm-social-badge');
+                if(accountUser?.id!==me)return;
+                socialUnread=new Set((messages.data||[]).map(m=>m.sender_id));paintSocialDots();
+                const count=(requests.count||0)+(messages.count||0)+supportUnread.size,badge=document.getElementById('fm-social-badge');
                 badge.style.display=count?'inline-flex':'none';
                 badge.textContent=count>99?'99+':String(count);
                 badge.setAttribute('aria-label',`새 소셜 알림 ${count}개`);
@@ -3238,7 +3247,7 @@
                     const otherId=link.requester_id===me?link.addressee_id:link.requester_id;
                     const profile=profileById.get(otherId),name=profile?.owner_name||profile?.username||'구단주';
                     const display=`${name} · @${profile?.username||'알 수 없음'}`;
-                    if(link.status==='accepted')list.append(socialRow(display,'친구',[['대화',()=>openSocialChat(otherId,name)],['친선전',()=>yfmOnlineInvite(otherId)]]));
+                    if(link.status==='accepted')list.append(attachSocialDot(socialRow(display,'친구',[['대화',()=>openSocialChat(otherId,name)],['친선전',()=>yfmOnlineInvite(otherId)]]),otherId));
                     else if(link.addressee_id===me)list.append(socialRow(display,'받은 친구 요청',[['수락',()=>answerSocialRequest(link.id,true)],['거절',()=>answerSocialRequest(link.id,false)]]));
                     else list.append(socialRow(display,'친구 수락 대기 중',[['취소',()=>answerSocialRequest(link.id,false)]]));
                 }
@@ -3247,7 +3256,8 @@
                 if(!ranked.length)rankList.textContent='순위에 반영된 친구 구단이 아직 없습니다.';
                 ranked.forEach((entry,i)=>rankList.append(socialRow(`${i+1}위 · ${entry.profile?.owner_name||entry.profile?.username||'구단주'}`,
                     `${entry.rank.published_club_name} · OVR ${entry.rank.published_ovr}`)));
-                if(socialFriendId && !socialFriends.includes(socialFriendId)){
+                try{await refreshAdminSupport();}catch(e){console.warn('관리자 문의 불러오기 실패',e);}
+                if(socialFriendId && !socialCanChat(socialFriendId)){
                     socialFriendId=null;document.getElementById('social-chat-title').textContent='친구를 선택하면 대화할 수 있어';
                     document.getElementById('social-chat-messages').textContent='친구 목록에서 대화할 친구를 골라줘.';
                     document.getElementById('social-chat-input').disabled=true;document.getElementById('social-chat-send').disabled=true;
@@ -3293,7 +3303,7 @@
             } catch(e){socialStatus(e.message||'요청을 처리하지 못했어.',true);}
         }
         async function openSocialChat(id,name){
-            if(!socialFriends.includes(id))return;
+            if(!socialCanChat(id))return;
             socialFriendId=id;socialFriendName=name;
             document.getElementById('social-chat-title').textContent=`${name}님과 대화`;
             document.getElementById('social-chat-input').disabled=false;document.getElementById('social-chat-send').disabled=false;
@@ -3301,10 +3311,11 @@
             await loadSocialMessages();
         }
         async function markSocialMessagesRead(other){
-            if(!accountUser || !socialFriends.includes(other))return;
+            if(!accountUser || !socialCanChat(other))return;
+            if(isSupportChat(other)){await supportRpc('read',{peer:other});supportUnread.delete(other);paintSocialDots();document.getElementById('social-support-button').textContent='관리자에게 문의'+(supportUnread.size?' 🔴':'');updateSocialNotifications();return;}
             const {error}=await socialClient().from('social_messages').update({read_at:new Date().toISOString()})
                 .eq('sender_id',other).eq('receiver_id',accountUser.id).is('read_at',null);
-            if(error)console.warn('메시지 읽음 처리 실패:',error);
+            if(error)console.warn('메시지 읽음 처리 실패:',error);else {socialUnread.delete(other);paintSocialDots();}
             updateSocialNotifications();
         }
         const socialTimeFormat=new Intl.DateTimeFormat('ko-KR',{
@@ -3314,11 +3325,11 @@
             if(!accountUser || !socialFriendId || document.hidden || document.querySelector('.screen.active')?.id!=='screen-social')return;
             const me=accountUser.id,other=socialFriendId,box=document.getElementById('social-chat-messages');
             try {
-                const {data,error}=await socialClient().from('social_messages').select('id,sender_id,body,created_at,read_at')
+                const {data,error}=isSupportChat(other)?{data:await supportRpc('messages',{peer:other}),error:null}:await socialClient().from('social_messages').select('id,sender_id,body,created_at,read_at')
                     .or(`and(sender_id.eq.${me},receiver_id.eq.${other}),and(sender_id.eq.${other},receiver_id.eq.${me})`)
                     .order('created_at',{ascending:false}).limit(50);
                 if(error)throw error;
-                if(other!==socialFriendId)return;
+                if(other!==socialFriendId||accountUser?.id!==me)return;
                 const lastId=box.dataset.lastId,nearBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;
                 box.replaceChildren();
                 if(!data?.length)box.textContent='아직 메시지가 없어. 먼저 말을 걸어봐.';
@@ -3338,16 +3349,16 @@
         async function sendSocialMessage(event){
             event.preventDefault();
             const input=document.getElementById('social-chat-input'),body=input.value.trim(),other=socialFriendId;
-            if(!accountUser || !socialFriends.includes(other) || !body || body.length>500)return;
+            if(!accountUser || !socialCanChat(other) || !body || body.length>500)return;
             const send=document.getElementById('social-chat-send');send.disabled=true;
             try {
-                const {error}=await socialClient().from('social_messages').insert({sender_id:accountUser.id,receiver_id:other,body});
+                const {error}=isSupportChat(other)?{data:await supportRpc('send',{peer:other,body,request_id:walletRequestId()}),error:null}:await socialClient().from('social_messages').insert({sender_id:accountUser.id,receiver_id:other,body});
                 if(error)throw error;
                 input.value='';await loadSocialMessages();
             } catch(e){socialStatus(e.message||'메시지를 보내지 못했어.',true);}
             finally{send.disabled=false;}
         }
-        setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)loadSocialMessages();},10000);
+        // 대화·문의·알림은 아래의 5초 소셜 갱신으로 함께 처리합니다.
         setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)refreshSocial();},30000);
         setInterval(updateSocialNotifications,20000);
         document.addEventListener('visibilitychange',()=>{if(!document.hidden && document.querySelector('.screen.active')?.id==='screen-social'){refreshSocial();loadSocialMessages();}});
@@ -3582,6 +3593,7 @@
             }catch(error){console.warn('관리자 변경 사항 불러오기 실패:',error);}
         }
         async function enterGameAccount(user) {
+            if(!(await checkGameAccess(user.id,true)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
             const {data,error}=await getOwnerRankClient().from('game_progress').select('save_data').eq('user_id',user.id).maybeSingle();
             if(error) throw error;
             const previousOwner=localStorage.getItem(accountDeviceKey);
@@ -3636,6 +3648,7 @@
         window.addEventListener('pagehide',()=>{if(accountDirty)uploadAccountSnapshot(true);});
         async function signOutGameAccount() {
             if(typeof window.yfmResetAdmin==='function')window.yfmResetAdmin();
+            socialFriendId=null;supportPeers.clear();supportUnread.clear();socialUnread.clear();
             await uploadAccountSnapshot(true);
             await getOwnerRankClient().auth.signOut();
             sessionStorage.removeItem('yfm_restored_account');
@@ -10964,12 +10977,14 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   const online=d.online_results||[],summary=d.online_summary||{};
   $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div class="my-3 p-3 rounded-xl bg-gray-900">서버 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b> · 보유 선수 ${format(roster.length)}명<br><small>가입 ${esc(time(u.created_at))} · 마지막 로그인 ${esc(time(u.last_sign_in_at))}</small></div>
   <div class="p-3 mb-4 rounded-xl bg-purple-950 border border-purple-700"><label class="block text-sm mb-2">변경 사유 (모든 변경에 필수)</label><input id="yfm-admin-reason" maxlength="500" class="w-full rounded-lg p-2 bg-gray-900 border border-gray-600" placeholder="보상 지급 / 비정상 획득 회수 / 기록 정정"><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-amount" type="number" min="1" max="1000000000" step="1" placeholder="토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">지급</button><button id="yfm-admin-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">회수·차감</button></div></div>
+  <div class="p-3 mb-4 rounded-xl bg-gray-900">계정 상태: <b>${d.suspension?.suspended?'정지':'정상'}</b>${d.suspension?.suspended?` · ${esc(d.suspension.reason)}`:''}<button id="yfm-admin-suspend" data-admin-write class="ml-3 px-3 py-2 rounded bg-red-800">${d.suspension?.suspended?'정지 해제':'계정 정지'}</button></div>
   <h4 class="font-black mb-2">오프라인 전적</h4><div style="overflow:auto"><table class="w-full text-sm"><thead><tr><th>모드</th><th>경기</th><th>승 / 무 / 패</th><th>득점 / 실점</th></tr></thead><tbody>${offline||'<tr><td colspan="4">기록 없음</td></tr>'}</tbody></table></div>
   <h4 class="font-black mt-5 mb-2">온라인 친선전</h4><p class="text-sm mb-3">${format(summary.games)}경기 · ${format(summary.wins)}승 ${format(summary.draws)}무 ${format(summary.losses)}패 · 최근 100경기</p><div>${online.map((r,i)=>`<div data-match="${i}" class="my-2 p-2 rounded-lg bg-gray-900"><div class="text-xs text-purple-200">${esc(time(r.ended_at))} · ${r.kind==='friend'?'친구 친선':'코드 친선'} · ${esc(r.method)}</div><div class="flex flex-wrap items-center gap-2 mt-2"><label class="text-xs">방장 <input class="admin-host w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.host_goals)||0}"></label><span>:</span><label class="text-xs">참가자 <input class="admin-guest w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.guest_goals)||0}"></label><button data-admin-write class="admin-score px-2 py-1 rounded bg-purple-700 text-sm">점수 정정</button></div></div>`).join('')||'<p class="text-sm text-gray-400">기록 없음</p>'}</div>
   <details class="mt-4"><summary class="font-bold cursor-pointer">전체 게임 저장 데이터 조회·수정</summary><p class="text-xs text-gray-400 my-2">선수·리그·오프라인 기록을 수정할 수 있습니다. 토큰은 위 지급·회수로 변경하세요. 다른 저장이 반영되면 다시 조회해야 합니다.</p><textarea id="yfm-admin-save-json" spellcheck="false" style="width:100%;height:300px;background:#0b0711;padding:10px;border:1px solid #584073;border-radius:8px;font:12px monospace"></textarea><button id="yfm-admin-save" data-admin-write class="mt-2 px-4 py-2 rounded-lg bg-red-800 font-bold">게임 데이터 수정 적용</button></details>
   <details class="mt-4"><summary class="font-bold cursor-pointer">토큰 거래 내역 (최근 50건)</summary><div style="overflow:auto"><table class="w-full text-xs"><tbody>${(d.transactions||[]).map(x=>`<tr><td>${esc(time(x.created_at))}</td><td>${esc(x.source)}</td><td>${Number(x.amount)>0?'+':''}${format(x.amount)} T</td><td>잔액 ${format(x.balance_after)}</td></tr>`).join('')||'<tr><td>기록 없음</td></tr>'}</tbody></table></div></details>
   <details class="mt-4"><summary class="font-bold cursor-pointer">관리자 변경 기록·수정 전 데이터 (최근 50건)</summary><div>${(d.audit||[]).map(x=>`<button data-audit="${esc(x.request_id)}" class="block w-full text-left p-2 my-1 rounded bg-gray-900 text-xs">${esc(time(x.created_at))} · ${esc(x.action)} · ${esc(x.reason)} ${x.delta!==null?`(${Number(x.delta)>0?'+':''}${format(x.delta)} T)`:''}</button>`).join('')||'기록 없음'}</div><textarea id="yfm-admin-audit-json" readonly style="width:100%;height:220px;background:#0b0711;padding:8px;font:11px monospace;margin-top:8px"></textarea></details>
   <details class="mt-4"><summary class="font-bold cursor-pointer">이전 버전 온라인 기록</summary><pre style="white-space:pre-wrap;word-break:break-all;font-size:11px">${esc(JSON.stringify(d.legacy_online_results||[],null,2))}</pre></details>`;
+  $('yfm-admin-suspend').onclick=async()=>{try{const target=A.target,suspended=!A.detail.suspension?.suspended,why=reason();if(!confirm(suspended?'이 계정의 모든 게임 서비스를 정지할까요?':'계정 정지를 해제할까요?'))return;await mutate('suspension',{user_id:target,suspended,reason:why});await selectUser(target);status(suspended?'계정 정지 완료':'정지 해제 완료');}catch(e){fail(e);}};
   $('yfm-admin-save-json').value=JSON.stringify(d.save,null,2);$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;
   $('yfm-admin-detail').querySelectorAll('[data-match]').forEach(el=>el.querySelector('.admin-score').onclick=()=>editScore(Number(el.dataset.match),el));
   $('yfm-admin-detail').querySelectorAll('[data-audit]').forEach(el=>el.onclick=async()=>{try{const data=await rpc('audit',{user_id:A.target,request_id:el.dataset.audit});$('yfm-admin-audit-json').value=JSON.stringify(data,null,2);}catch(e){fail(e);}});
@@ -10994,6 +11009,44 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
  $('yfm-admin-close').onclick=()=>{$('yfm-admin-modal').style.display='none';};$('yfm-admin-reload').onclick=()=>{A.offset=0;loadUsers().catch(fail);};$('yfm-admin-search').onkeydown=e=>{if(e.key==='Enter'){$('yfm-admin-reload').click();}};$('yfm-admin-prev').onclick=()=>{A.offset=Math.max(0,A.offset-50);loadUsers().catch(fail);};$('yfm-admin-next').onclick=()=>{A.offset+=50;loadUsers().catch(fail);};
  if(window.yfmAccountReady)window.yfmCheckAdmin();
 })();
+</script>
+
+
+<script>
+let gameAccessBusy=false,gameBlocked=false;
+async function checkGameAccess(uid,required=false){
+ if(gameAccessBusy&&!required)return !gameBlocked;
+ gameAccessBusy=true;
+ try{
+  const {data,error}=await getOwnerRankClient().rpc('yfm_account_status');
+  if(error)throw error;
+  if(!required&&accountUser?.id!==uid)return false;
+  window.yfmAdminId=data.admin_id;
+  if(!data.suspended)return true;
+  gameBlocked=true;window.yfmAccountReady=false;window.__wiping=true;
+  if(typeof currentMatchState!=='undefined'&&currentMatchState)currentMatchState.ended=true;
+  window.yfmResetAdmin?.();
+  let cover=document.getElementById('yfm-suspended');
+  if(!cover){cover=document.createElement('div');cover.id='yfm-suspended';cover.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#130d20;display:flex;align-items:center;justify-content:center;color:white;padding:30px';document.body.append(cover);}
+  cover.replaceChildren();const box=document.createElement('div'),title=document.createElement('h2'),reason=document.createElement('p'),out=document.createElement('button');
+  title.textContent='정지된 계정입니다';title.style.cssText='font-size:26px;font-weight:900;margin-bottom:16px';reason.textContent=data.reason||'관리자에 의해 이용이 제한되었습니다.';out.textContent='로그아웃';out.style.cssText='background:#6d28a8;padding:12px;border-radius:9px;margin-top:20px';out.onclick=async()=>{await getOwnerRankClient().auth.signOut();location.reload();};box.append(title,reason,out);cover.append(box);return false;
+ }catch(e){if(required)throw new Error('계정 이용 권한을 확인하지 못했습니다. 추가 SQL 적용과 연결을 확인해 주세요.');console.warn('계정 상태 확인 실패',e);return !gameBlocked;}finally{gameAccessBusy=false;}
+}
+async function supportRpc(action,payload={}){const {data,error}=await walletRpcWithRetry('yfm_support_rpc',{p_action:action,p_payload:payload});if(error)throw error;return data;}
+async function refreshAdminSupport(){
+ const uid=accountUser?.id;if(!uid)return;
+ const data=await supportRpc('inbox');if(accountUser?.id!==uid)return;
+ supportPeers=new Set((data.peers||[]).map(p=>p.user_id));supportUnread=new Set((data.peers||[]).filter(p=>Number(p.unread)>0).map(p=>p.user_id));
+ const b=document.getElementById('social-support-button');b.style.display=data.admin?'none':'';
+ b.textContent='관리자에게 문의'+(supportUnread.size?' 🔴':'');
+ const inbox=document.getElementById('social-support-inbox');inbox.replaceChildren();
+ if(data.admin){const h=document.createElement('h2');h.textContent='관리자 문의함';inbox.append(h);for(const p of data.peers||[])inbox.append(attachSocialDot(socialRow(p.owner_name||p.username||'구단주','문의 대화',[['대화',()=>openSocialChat(p.user_id,p.owner_name||p.username||'구단주')]]),p.user_id));}
+ paintSocialDots();
+}
+async function openAdminSupport(){try{await refreshAdminSupport();const id=window.yfmAdminId;if(!id||id===accountUser?.id)return;supportPeers.add(id);await openSocialChat(id,'관리자');}catch(e){socialStatus(e.message||'관리자 문의를 열지 못했습니다.',true);}}
+setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden)checkGameAccess(accountUser.id);},5000);
+setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden&&document.querySelector('.screen.active')?.id==='screen-social'){refreshAdminSupport().then(updateSocialNotifications).catch(()=>{});loadSocialMessages();}},5000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.yfmAccountReady&&accountUser)checkGameAccess(accountUser.id);});
 </script>
 
 </body>
