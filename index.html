@@ -15,8 +15,8 @@
     <style>
         html.account-resuming #opening, html.account-resuming #first-play-welcome { display:none !important; }
         html.account-resuming #account-gate { display:flex !important; }
-        html.account-resuming #account-form { display:none !important; }
-        html.account-resuming #account-gate::after { content:'진행도를 불러오는 중입니다…'; color:#e9d5ff; font-weight:700; }
+        html.account-resuming #account-form { display:block !important; }
+        html.account-resuming #account-gate::after { content:none; }
     
 .player-card.halloween-card{position:relative;aspect-ratio:1/1;height:auto;container-type:inline-size;background:transparent;border:0;border-radius:0;overflow:visible;scale:1.2;transform-origin:center}
 .player-card.halloween-card .card-background{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;clip-path:none;border-radius:0}
@@ -3307,31 +3307,31 @@
             const el = document.getElementById('owner-rank-status');
             if (el) { el.textContent = message; el.style.color = failed ? '#fca5a5' : '#c4b5fd'; }
         }
-        // 빈 화면 멈춤 방지: 여러 탭이 같은 로그인 잠금을 붙잡거나 서버 응답이 끊기면 Supabase 호출이 영원히 기다리던 문제
-        // → 잠금은 최대 5초만 기다리고, 네트워크 요청은 30초가 지나면 끊어서 오류로 처리한다.
-        async function yfmAuthLock(name, acquireTimeout, fn) {
-            if (!navigator.locks?.request) return await fn();
-            const ctrl = new AbortController(); let acquired = false;
-            const timer = setTimeout(() => ctrl.abort(), 5000);
-            try {
-                return await navigator.locks.request(name, {mode:'exclusive', signal:ctrl.signal}, async () => { acquired = true; clearTimeout(timer); return await fn(); });
-            } catch (e) {
-                clearTimeout(timer);
-                if (!acquired && ctrl.signal.aborted) { console.warn('로그인 잠금 대기 시간 초과 — 잠금 없이 진행합니다.'); return await fn(); }
-                throw e;
-            }
+        async function boundedAuthFetch(input,init={}){
+            const url=typeof input==='string'?input:input?.url||String(input);
+            if(!url.includes('/auth/v1/'))return fetch(input,init);
+            const controller=new AbortController(),original=init.signal;
+            const cancel=()=>controller.abort();if(original?.aborted)cancel();else original?.addEventListener('abort',cancel,{once:true});
+            const timer=setTimeout(cancel,12000);
+            try{return await fetch(input,{...init,signal:controller.signal});}
+            finally{clearTimeout(timer);original?.removeEventListener('abort',cancel);}
         }
-        function yfmTimedFetch(input, init = {}) {
-            const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 30000);
-            const outer = init.signal;
-            if (outer) { if (outer.aborted) ctrl.abort(); else outer.addEventListener('abort', () => ctrl.abort(), {once:true}); }
-            return fetch(input, {...init, signal:ctrl.signal}).finally(() => clearTimeout(timer));
+        async function boundedProgressRead(owner){
+            const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+            try{
+                const result=await getOwnerRankClient().from('game_progress').select('save_data').eq('user_id',owner).abortSignal(controller.signal).maybeSingle();
+                if(result.error)throw result.error;return result;
+            }finally{clearTimeout(timer);}
         }
+        function startupTimeout(promise,ms=12000){
+            let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject({code:'CLIENT_TIMEOUT',message:'로그인 확인 시간이 초과됐습니다.'}),ms);})]).finally(()=>clearTimeout(timer));
+        }
+        let startupBundleAvailable=null,accountGateBusy=false;
         function getOwnerRankClient() {
             if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(OWNER_RANK_URL)) throw new Error('HTML의 OWNER_RANK_URL에 프로젝트 URL을 입력해줘.');
             if (!OWNER_RANK_PUBLISHABLE_KEY.startsWith('sb_publishable_') && !OWNER_RANK_PUBLISHABLE_KEY.startsWith('eyJ')) throw new Error('HTML의 OWNER_RANK_PUBLISHABLE_KEY에 Supabase Publishable key를 입력해줘.');
             if (!window.supabase?.createClient) throw new Error('Supabase 연결 스크립트를 불러오지 못했어. 인터넷 연결을 확인해줘.');
-            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true,lock:yfmAuthLock},global:{fetch:yfmTimedFetch},realtime:{params:{eventsPerSecond:30}}});
+            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true},global:{fetch:boundedAuthFetch},realtime:{params:{eventsPerSecond:30}}});
             return ownerRankClient;
         }
         function ownerRankSnapshot() {
@@ -3447,7 +3447,7 @@
         const socialClient=()=>getOwnerRankClient();
         let socialNotificationCheckedAt=0,socialNotificationCheckedOwner=null;
         async function updateSocialNotifications(force=false){
-            if(!accountUser || document.hidden || socialNotificationBusy)return;
+            if(!accountUser || !window.yfmAccountReady || document.hidden || socialNotificationBusy)return;
             if(!force&&socialNotificationCheckedOwner===accountUser.id&&Date.now()-socialNotificationCheckedAt<19000)return;
             socialNotificationBusy=true;
             try {
@@ -3675,20 +3675,13 @@
         }
         async function openAccountGate() {
             const gate = document.getElementById('account-gate'); gate.style.display = 'flex';
-            const form = document.getElementById('account-form'); form.style.display = 'none';
-            if (window.yfmAccountReady) { finishAccountResume(); gate.style.display = 'none'; return; }
+            const form = document.getElementById('account-form');form.style.display='block';
+            if(accountGateBusy)return;accountGateBusy=true;const submit=document.getElementById('account-submit');submit.disabled=true;
+            if (window.yfmAccountReady) { finishAccountResume();gate.style.display='none';accountGateBusy=false;submit.disabled=false;return; }
             accountMessage('서버 연결 중...');
-            // 안전장치: 25초가 지나도 게임에 들어가지 못했으면 빈 화면 대신 로그인 창과 안내를 보여준다.
-            clearTimeout(window.yfmGateWatchdog);
-            window.yfmGateWatchdog = setTimeout(() => {
-                if (window.yfmAccountReady || gate.style.display === 'none' || form.style.display !== 'none') return;
-                finishAccountResume();
-                form.style.display = 'block';
-                accountMessage('서버 응답이 늦어지고 있어. 다시 로그인하거나 새로고침해줘. (같은 게임 탭이 여러 개 열려 있으면 하나만 남기고 닫아줘)');
-            }, 25000);
             try {
                 if (!(await waitSupabase())) throw new Error('supabase script timeout');
-                const {data:{session},error} = await retryNet(async () => { const r = await getOwnerRankClient().auth.getSession(); if (r.error) throw r.error; return r; });
+                const {data:{session},error}=await startupTimeout(getOwnerRankClient().auth.getSession());
                 if (error) throw error;
                 accountMessage('');
                 if (session?.user && !session.user.is_anonymous) {
@@ -3702,12 +3695,12 @@
                         accountMessage('기존 진행도를 유지하면서 아이디·새 비밀번호·구단주명을 등록해줘.');
                         return;
                     }
-                    try { await retryNet(() => enterGameAccount(session.user)); } catch (e) { console.warn(e); finishAccountResume(); form.style.display = 'block'; accountMessage('저장 데이터를 불러오지 못했어. 다시 로그인해줘.'); }
+                    try { await enterGameAccount(session.user); } catch (e) { console.warn(e); finishAccountResume(); form.style.display = 'block'; accountMessage('서버가 혼잡하거나 응답이 지연되고 있어. 기록은 유지돼. 잠시 후 로그인 버튼을 눌러 다시 시도해줘.'); }
                     return;
                 }
                 finishAccountResume();
                 form.style.display = 'block';
-            } catch (error) { finishAccountResume(); form.style.display = 'block'; accountMessage('서버 연결에 실패했어. 인터넷 연결을 확인해줘.'); }
+            } catch (error) { finishAccountResume();form.style.display='block';accountMessage('서버 응답을 확인하지 못했어. 잠시 후 다시 로그인해줘.'); }finally{accountGateBusy=false;submit.disabled=false;}
         }
         async function submitGameAccount(event) {
             event.preventDefault();
@@ -3716,7 +3709,7 @@
             const ownerName = document.getElementById('account-owner-name').value.trim();
             if (accountMode === 'signup' && (ownerName.length < 2 || ownerName.length > 16)) return accountMessage('구단주명은 2~16자로 입력해줘.');
             if (!/^[A-Za-z0-9!@#^*]{3,10}$/.test(id) || !/^[A-Za-z0-9!@#^*]{7,15}$/.test(password)) return accountMessage('아이디·비밀번호의 길이와 허용 문자를 확인해줘.');
-            const button = document.getElementById('account-submit'); button.disabled = true;
+            const button=document.getElementById('account-submit');if(button.disabled||accountGateBusy)return;button.disabled=true;
             accountMessage('계정 확인 중...');
             try {
                 if (!(await waitSupabase())) throw new Error('supabase script timeout');
@@ -3735,7 +3728,7 @@
                 }
                 const result = accountMode === 'signup'
                     ? await client.auth.signUp({email,password,options:{data:{username:id,owner_name:ownerName}}})
-                    : await retryNet(async () => { const r = await client.auth.signInWithPassword({email,password}); if (r.error && !/invalid/i.test(r.error.message || '') && (r.error.status === 0 || r.error.status >= 500 || /fetch|network/i.test(r.error.message || ''))) throw r.error; return r; });
+                    : await retryNet(async () => { const r = await client.auth.signInWithPassword({email,password}); if (r.error && !/invalid/i.test(r.error.message || '') && (r.error.status === 0 || r.error.status >= 500 || /fetch|network/i.test(r.error.message || ''))) throw r.error; return r; },1);
                 if (result.error) throw result.error;
                 if (!result.data.session) throw new Error('Supabase Auth의 이메일 확인을 꺼야 아이디 가입 후 바로 로그인할 수 있어.');
                 if (accountLegacyUser && accountMode === 'signup') {
@@ -3749,7 +3742,7 @@
                     reloadForAccountRestore(); return;
                 }
                 accountLegacyUser=null;
-                await retryNet(() => enterGameAccount(result.data.user));
+                await enterGameAccount(result.data.user);
             } catch(error) {
                 console.warn('게임 계정 로그인 실패:',error);
                 const msg = String(error && (error.message || error.code) || '');
@@ -3759,10 +3752,25 @@
                     : /timeout|fetch|network|Failed/i.test(msg) ? '서버 연결이 불안정해. 잠시 후 다시 시도해줘.' : '로그인에 실패했어. 잠시 후 다시 시도해줘.');
             } finally { button.disabled = false; }
         }
-        let tokenWalletBalance=null, tokenWalletRevision=0, tokenWalletQueue=Promise.resolve(), tokenWalletRefreshQueued=false;
+        let tokenWalletBalance=null, tokenWalletRevision=0, tokenWalletQueue=Promise.resolve(), tokenWalletRefreshQueued=false, tokenWalletPending=0;
+        let walletReadPromise=null,walletReadOwner=null,walletReadError=null,walletReadRetryAt=0;
         function applyServerWallet(balance){const n=Number(balance);if(!Number.isSafeInteger(n)||n<0)throw new Error('서버 토큰 잔액이 올바르지 않아.');tokenWalletRevision++;tokenWalletBalance=n;tokens=n;localStorage.setItem('fm_tokens',String(n));updateTokensUI();}
-        function queueWalletOperation(task){const run=tokenWalletQueue.then(task,task);tokenWalletQueue=run.catch(()=>{});return run;}
-        async function loadServerWallet(){if(!accountUser?.id)return tokens;const {data,error}=await walletRpcWithRetry('yfm_wallet_get');if(error)throw error;applyServerWallet(data?.balance);return tokenWalletBalance;}
+        function queueWalletOperation(task){tokenWalletPending++;const run=tokenWalletQueue.then(task,task).finally(()=>{tokenWalletPending=Math.max(0,tokenWalletPending-1);});tokenWalletQueue=run.catch(()=>{});return run;}
+        async function loadServerWallet(options={}){
+            const owner=accountUser?.id;if(!owner)return tokens;
+            if(walletReadPromise&&walletReadOwner===owner)return walletReadPromise;
+            if(!options.force&&walletReadOwner===owner&&walletReadError&&Date.now()<walletReadRetryAt)throw walletReadError;
+            walletReadOwner=owner;
+            const run=(async()=>{
+                try{
+                    const {data,error}=await walletRpcWithRetry('yfm_wallet_get',undefined,{maxAttempts:2,...options});if(error)throw error;
+                    if(accountUser?.id!==owner)throw {code:'LOGIN_REQUIRED',message:'계정이 변경되었습니다.'};
+                    applyServerWallet(data?.balance);walletReadError=null;walletReadRetryAt=0;return tokenWalletBalance;
+                }catch(e){if(accountUser?.id===owner){walletReadError=e;walletReadRetryAt=Date.now()+10000;}throw e;}
+            })();
+            walletReadPromise=run;
+            try{return await run;}finally{if(walletReadPromise===run)walletReadPromise=null;}
+        }
         function awardTokens(amount,source='game_reward',requestId=null){
             const n=Math.floor(Number(amount)||0);if(n<=0)return Promise.resolve(true);
             if(!accountUser?.id){tokens+=n;localStorage.setItem('fm_tokens',String(tokens));updateTokensUI();return Promise.resolve(true);}
@@ -3837,7 +3845,7 @@
                 const raw=atob(logo.slice(logo.indexOf(',')+1)),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
                 const digest=await crypto.subtle.digest('SHA-256',bytes),hash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
                 const path=`${owner}/club-${hash}.png`,bucket=getOwnerRankClient().storage.from('yfm-club-assets');
-                const {error}=await bucket.upload(path,new Blob([bytes],{type:'image/png'}),{contentType:'image/png',cacheControl:'31536000',upsert:false});
+                const {error}=await startupTimeout(bucket.upload(path,new Blob([bytes],{type:'image/png'}),{contentType:'image/png',cacheControl:'31536000',upsert:false}),10000);
                 if(error&&!['409','Duplicate'].includes(String(error.statusCode||error.error))&&!/already exists/i.test(error.message||''))throw error;
                 const url=bucket.getPublicUrl(path).data.publicUrl;
                 if(accountUser?.id!==owner||localStorage.getItem('fm_team_logo')!==logo)return;
@@ -3874,6 +3882,7 @@
                 const key=localStorage.key(i);
                 if (key?.startsWith('fm_') && key !== 'fm_items') data[key]=localStorage.getItem(key);
             }
+            if(accountUser?.id&&Number.isSafeInteger(tokenWalletBalance)&&tokenWalletBalance>=0)data.fm_tokens=String(tokenWalletBalance);
             return {app:'YFM',v:22,at:new Date().toISOString(),data:compactTournamentLogos(data)};
         }
         function restoreAccountSnapshot(snapshot) {
@@ -3881,12 +3890,14 @@
             Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
             Object.entries(expandTournamentLogos(snapshot.data)).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && typeof v==='string') localStorage.setItem(k,v);});
         }
-        async function uploadAccountSnapshot(force=false) {
-            if (!accountUser || accountSaving || window.__wiping) return;
+        async function uploadAccountSnapshot(force=false,initialSave=false) {
+            if (!accountUser || accountSaving || window.__wiping || (!window.yfmAccountReady&&!initialSave)) return;
             if (!force && (!accountDirty || Date.now()-accountLastWrite<55000)) return;
+            if(tokenWalletPending>0){accountDirty=true;return;}
             accountSaving=true;const saveOwner=accountUser.id;
             try {
-                await optimizeAccountLogo(saveOwner);if(accountUser?.id!==saveOwner)return;
+                if(window.yfmAccountReady)await optimizeAccountLogo(saveOwner);if(accountUser?.id!==saveOwner)return;
+                if(tokenWalletPending>0){accountDirty=true;return;}
                 const walletRevisionAtStart=tokenWalletRevision,snapshot=accountSnapshot(), serialized=canonData(snapshot.data);
                 if (serialized===accountLastSnapshot) {accountDirty=false;return;}
                 let saved,error;
@@ -3899,7 +3910,8 @@
                     }catch(e){if(['PGRST202','42883'].includes(String(e.code)))lightSaveAvailable=false;else throw e;}
                 }
                 if(lightSaveAvailable===false){
-                    const reply=await getOwnerRankClient().from('game_progress').upsert({user_id:saveOwner,save_data:snapshot},{onConflict:'user_id'}).select('save_data').single();saved=reply.data;error=reply.error;
+                    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+                    try{const reply=await getOwnerRankClient().from('game_progress').upsert({user_id:saveOwner,save_data:snapshot},{onConflict:'user_id'}).select('save_data').abortSignal(controller.signal).single();saved=reply.data;error=reply.error;}finally{clearTimeout(timer);}
                 }
                 if(error)throw error;if(accountUser?.id!==saveOwner)return;
                 // DB trigger returns the server-approved token value; overwrite any locally injected balance.
@@ -3922,9 +3934,23 @@
             }catch(error){console.warn('관리자 변경 사항 불러오기 실패:',error);}
         }
         async function enterGameAccount(user) {
-            if(!(await checkGameAccess(user.id,true)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
-            const {data,error}=await getOwnerRankClient().from('game_progress').select('save_data').eq('user_id',user.id).maybeSingle();
-            if(error) throw error;
+            accountMessage('계정 이용 상태와 저장 기록을 확인하는 중...');
+            let data,balance;
+            if(startupBundleAvailable!==false){
+                try{
+                    const reply=await walletRpcWithRetry('yfm_startup_bundle',{}, {maxAttempts:1,timeoutMs:10000});
+                    if(!reply.data?.status)throw new Error('로그인 서버 응답이 올바르지 않습니다.');
+                    startupBundleAvailable=true;
+                    if(!(await checkGameAccess(user.id,true,reply.data.status)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
+                    if(!Number.isSafeInteger(Number(reply.data.balance))||Number(reply.data.balance)<0)throw new Error('토큰 잔액을 확인하지 못했습니다.');
+                    data={save_data:reply.data.save_data};balance=Number(reply.data.balance);
+                }catch(e){if(['PGRST202','42883'].includes(String(e.code)))startupBundleAvailable=false;else throw e;}
+            }
+            if(startupBundleAvailable===false){
+                if(!(await checkGameAccess(user.id,true)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
+                accountMessage('저장 기록을 불러오는 중...');
+                data=(await boundedProgressRead(user.id)).data;
+            }
             const previousOwner=localStorage.getItem(accountDeviceKey);
             if (data?.save_data) {
                 const remote=canonData(compactTournamentLogos({...data.save_data.data})), remoteAt=data.save_data.at||'', syncAt=localStorage.getItem('yfm_sync_at')||'';
@@ -3951,20 +3977,18 @@
                     localStorage.setItem(accountDeviceKey,user.id); reloadForAccountRestore(); return;
                 }
                 accountUser=user;accountDirty=true;
-                await uploadAccountSnapshot(true);
+                await uploadAccountSnapshot(true,true);
                 if (accountDirty) throw new Error('첫 클라우드 저장에 실패했어.');
             }
             localStorage.setItem(accountDeviceKey,user.id);
             accountUser=user;
-            await loadServerWallet();
+            if(balance!==undefined)applyServerWallet(balance);else await loadServerWallet({maxAttempts:1,timeoutMs:10000,force:true});
             window.yfmAccountReady=true;
-            if(typeof window.yfmCheckAdmin==='function')window.yfmCheckAdmin();
-            settleLeagueRewards();
+            setTimeout(()=>{if(accountUser?.id!==user.id||!window.yfmAccountReady)return;if(typeof window.yfmCheckAdmin==='function')window.yfmCheckAdmin();settleLeagueRewards();},2000);
             finishAccountResume();
             document.getElementById('account-gate').style.display='none';
             renderAccountProfile();
-            checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});
-            updateSocialNotifications();
+            setTimeout(()=>{if(accountUser?.id!==user.id||!window.yfmAccountReady)return;checkOwnerRankRegistration().then(queueOwnerRankSync).catch(()=>{});updateSocialNotifications();},3500);
             if (typeof renderLobby==='function') renderLobby();
             ensureDaily();
             if (typeof showStarPick==='function') showStarPick();
@@ -11695,12 +11719,12 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
 
 <script>
 let gameAccessBusy=false,gameBlocked=false,gameAccessCheckedAt=0,gameAccessCheckedOwner=null;
-async function checkGameAccess(uid,required=false){
+async function checkGameAccess(uid,required=false,prefetchedStatus=null){
  if(!required&&(gameAccessBusy||(gameAccessCheckedOwner===uid&&Date.now()-gameAccessCheckedAt<28000)))return !gameBlocked;
  gameAccessBusy=true;
  try{
-  const {data,error}=await getOwnerRankClient().rpc('yfm_account_status');
-  if(error)throw error;
+  let data=prefetchedStatus;
+  if(!data){const reply=await walletRpcWithRetry('yfm_account_status',undefined,{maxAttempts:1,timeoutMs:10000});if(reply.error)throw reply.error;data=reply.data;}
   if(!required&&accountUser?.id!==uid)return false;
   gameAccessCheckedOwner=uid;gameAccessCheckedAt=Date.now();window.yfmAdminId=data.admin_id;
   if(!data.suspended)return true;
@@ -11753,6 +11777,21 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.yf
  more.onclick=()=>{const expanded=side.classList.toggle('mobile-nav-expanded');more.setAttribute('aria-expanded',String(expanded));more.querySelector('span:last-child').textContent=expanded?'닫기':'더보기';};
  nav.addEventListener('click',e=>{if(e.target.closest('.fm-nav-item')!==more)close();});
  document.addEventListener('pointerdown',e=>{if(!side.contains(e.target))close();});document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});mobile.addEventListener('change',close);
+})();
+</script>
+
+<script id="account-startup-safety">
+(()=>{
+ const reveal=message=>{
+   if(window.yfmAccountReady||document.getElementById('yfm-suspended'))return;
+   document.documentElement.classList.remove('account-resuming');
+   const form=document.getElementById('account-form'),gate=document.getElementById('account-gate');
+   if(form)form.style.display='block';if(gate)gate.style.display='flex';
+   const status=document.getElementById('account-error');if(status&&message)status.textContent=message;
+ };
+ if(document.documentElement.classList.contains('account-resuming'))reveal('진행도를 확인하는 중입니다. 서버가 느리면 잠시 후 다시 시도해 주세요.');
+ window.addEventListener('error',e=>{if(!e.error)return;reveal('화면 초기화 오류가 발생했습니다. 새로고침 후에도 같으면 오류 화면을 관리자에게 알려 주세요.');});
+ setTimeout(()=>{if(!window.yfmAccountReady&&document.getElementById('account-form')?.style.display==='none')reveal('서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.');},18000);
 })();
 </script>
 </body>
