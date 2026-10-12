@@ -2450,19 +2450,55 @@
             if (id === 'user') { const list = players.filter(p => p.isStarting); return list.length ? Math.round(list.reduce((n, p) => n + getCalculatedOvr(p), 0) / list.length) : 65; }
             return (clubById(id)?.ovr ?? 60) + clubMomentum(id);
         }
-        function persistLeague(reward = 0, evo = 0) {
-            // 시즌 진행·토큰·진화 토큰을 함께 복구할 수 있도록 작은 저널을 남긴다
-            const tx = { state: leagueState, tokens: tokens + reward, reward, evo: evoTokens + evo };
-            localStorage.setItem('fm_league_pending', JSON.stringify(tx));
-            if(!accountUser)tokens = tx.tokens; else if(reward>0)awardTokens(reward,'league_reward'); evoTokens = tx.evo; if(evo)achAdd('evoEarned',evo); saveData();
-            localStorage.setItem('fm_league_v2', JSON.stringify(leagueState));
-            localStorage.removeItem('fm_league_pending');
+        var leagueRewardSyncBusy=false;
+        function leagueRewardOwner(){return accountUser?.id||localStorage.getItem('yfm_cloud_owner')||null;}
+        function leagueRewardQueue(owner=leagueRewardOwner()) {
+            const merged=new Map();
+            for(const key of ['fm_league_rewards_pending_v1','yfm_league_rewards_pending_'+owner]){
+                let list;try{list=JSON.parse(localStorage.getItem(key)||'[]');}catch(_){list=[];}
+                if(Array.isArray(list))for(const item of list)if(item?.owner===owner&&item.requestId&&item.amount>0)merged.set(item.requestId,item);
+            }
+            return [...merged.values()];
         }
-        function recoverLeagueSave() {
-            const tx = JSON.parse(localStorage.getItem('fm_league_pending') || 'null');
-            if (tx && tx.state && tx.state.v === 2) { leagueState = tx.state; if(!accountUser)tokens = tx.tokens; else if(tx.reward>0)awardTokens(tx.reward,'league_reward'); if (tx.evo !== undefined) evoTokens = tx.evo; saveData(); localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); }
-            localStorage.removeItem('fm_league_pending');
-            S.league ||= blankRec(); S.awards ||= []; S.leagueTitles ||= {};
+        function writeLeagueRewardQueue(list,owner=leagueRewardOwner()){
+            const text=JSON.stringify(list);localStorage.setItem('fm_league_rewards_pending_v1',text);localStorage.setItem('yfm_league_rewards_pending_'+owner,text);accountDirty=true;
+        }
+        function enqueueLeagueReward(amount,requestId,owner=leagueRewardOwner()){
+            const list=leagueRewardQueue(owner);if(!list.some(x=>x.requestId===requestId))list.push({owner,amount,requestId});writeLeagueRewardQueue(list,owner);
+        }
+        async function settleLeagueRewards(){
+            if(leagueRewardSyncBusy||!accountUser?.id||!window.yfmAccountReady)return;
+            leagueRewardSyncBusy=true;const owner=accountUser.id;
+            try{
+                for(const item of leagueRewardQueue(owner)){
+                    if(accountUser?.id!==owner)break;
+                    const paid=await awardTokens(item.amount,'league_reward',item.requestId);
+                    if(!paid){if(typeof managerToast==='function')managerToast('리그 보상 지급을 서버에서 확인하지 못했습니다. 보상은 보관되며 다시 시도합니다.');break;}
+                    writeLeagueRewardQueue(leagueRewardQueue(owner).filter(x=>x.requestId!==item.requestId),owner);
+                    saveData();flushFinishedMatchSave();
+                }
+            }finally{leagueRewardSyncBusy=false;}
+        }
+        function persistLeague(reward=0,evo=0){
+            const owner=leagueRewardOwner(),requestId=crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)});
+            const tx={state:leagueState,tokens:tokens+reward,reward,evo:evoTokens+evo,owner,requestId};
+            localStorage.setItem('fm_league_pending',JSON.stringify(tx));
+            if(reward>0&&owner)enqueueLeagueReward(reward,requestId,owner);else if(!owner)tokens=tx.tokens;
+            evoTokens=tx.evo;if(evo)achAdd('evoEarned',evo);saveData();
+            localStorage.setItem('fm_league_v2',JSON.stringify(leagueState));localStorage.removeItem('fm_league_pending');
+            settleLeagueRewards();
+        }
+        function recoverLeagueSave(){
+            let tx;try{tx=JSON.parse(localStorage.getItem('fm_league_pending')||'null');}catch(_){}
+            if(tx?.state?.v===2){
+                leagueState=tx.state;const owner=tx.owner||leagueRewardOwner();
+                if(tx.reward>0&&owner){
+                    if(!tx.requestId){tx.requestId=crypto.randomUUID();tx.owner=owner;localStorage.setItem('fm_league_pending',JSON.stringify(tx));}
+                    enqueueLeagueReward(tx.reward,tx.requestId,owner);
+                }else if(!owner)tokens=tx.tokens;
+                if(tx.evo!==undefined)evoTokens=tx.evo;saveData();localStorage.setItem('fm_league_v2',JSON.stringify(leagueState));
+            }
+            localStorage.removeItem('fm_league_pending');S.league||=blankRec();S.awards||=[];S.leagueTitles||={};settleLeagueRewards();
         }
         // 모든 팀이 서로 한 번씩 (홀수 팀 리그는 라운드마다 한 팀 휴식)
         function leagueSchedule(ids) {
@@ -2963,6 +2999,7 @@
         }
 
         players = players.filter(p => p && ['FW', 'MF', 'DF', 'GK'].includes(p.position));
+        browserStarterLock(false);
         // Each owned card needs its own ID; older rapid purchases could share Date.now().
         let nextPlayerIdNumber = 0;
         function newPlayerCardId(prefix = 'p') {
@@ -3450,14 +3487,14 @@
                     : /timeout|fetch|network|Failed/i.test(msg) ? '서버 연결이 불안정해. 잠시 후 다시 시도해줘.' : '로그인에 실패했어. 잠시 후 다시 시도해줘.');
             } finally { button.disabled = false; }
         }
-        let tokenWalletBalance=null, tokenWalletQueue=Promise.resolve(), tokenWalletRefreshQueued=false;
-        function applyServerWallet(balance){const n=Number(balance);if(!Number.isSafeInteger(n)||n<0)throw new Error('서버 토큰 잔액이 올바르지 않아.');tokenWalletBalance=n;tokens=n;localStorage.setItem('fm_tokens',String(n));updateTokensUI();}
+        let tokenWalletBalance=null, tokenWalletRevision=0, tokenWalletQueue=Promise.resolve(), tokenWalletRefreshQueued=false;
+        function applyServerWallet(balance){const n=Number(balance);if(!Number.isSafeInteger(n)||n<0)throw new Error('서버 토큰 잔액이 올바르지 않아.');tokenWalletRevision++;tokenWalletBalance=n;tokens=n;localStorage.setItem('fm_tokens',String(n));updateTokensUI();}
         function queueWalletOperation(task){const run=tokenWalletQueue.then(task,task);tokenWalletQueue=run.catch(()=>{});return run;}
         async function loadServerWallet(){if(!accountUser?.id)return tokens;const {data,error}=await getOwnerRankClient().rpc('yfm_wallet_get');if(error)throw error;applyServerWallet(data?.balance);return tokenWalletBalance;}
-        function awardTokens(amount,source='game_reward'){
+        function awardTokens(amount,source='game_reward',requestId=null){
             const n=Math.floor(Number(amount)||0);if(n<=0)return Promise.resolve(true);
             if(!accountUser?.id){tokens+=n;localStorage.setItem('fm_tokens',String(tokens));updateTokensUI();return Promise.resolve(true);}
-            return queueWalletOperation(async()=>{const {data,error}=await getOwnerRankClient().rpc('yfm_wallet_credit',{p_amount:n,p_source:String(source||'game_reward'),p_request_id:(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)}))});if(error)throw error;if(!data?.ok){applyServerWallet(data?.balance);if(typeof managerToast==='function')managerToast('서버 토큰 한도에 걸려 보상이 지급되지 않았어.');return false;}applyServerWallet(data.balance);accountDirty=true;saveData();return true;}).catch(async e=>{console.warn('서버 토큰 지급 실패:',e);try{await loadServerWallet();}catch(_){}return false;});
+            return queueWalletOperation(async()=>{const {data,error}=await getOwnerRankClient().rpc('yfm_wallet_credit',{p_amount:n,p_source:String(source||'game_reward'),p_request_id:requestId||(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)}))});if(error)throw error;if(!data?.ok){applyServerWallet(data?.balance);if(typeof managerToast==='function')managerToast('서버 토큰 한도에 걸려 보상이 지급되지 않았어.');return false;}applyServerWallet(data.balance);accountDirty=true;saveData();return true;}).catch(async e=>{console.warn('서버 토큰 지급 실패:',e);try{await loadServerWallet();}catch(_){}return false;});
         }
         function spendTokens(amount,source='purchase'){
             const n=Math.floor(Number(amount)||0);if(n<=0)return Promise.resolve(true);
@@ -3482,13 +3519,13 @@
             if (!force && (!accountDirty || Date.now()-accountLastWrite<55000)) return;
             accountSaving=true;
             try {
-                const snapshot=accountSnapshot(), serialized=canonData(snapshot.data);
+                const walletRevisionAtStart=tokenWalletRevision,snapshot=accountSnapshot(), serialized=canonData(snapshot.data);
                 if (serialized===accountLastSnapshot) {accountDirty=false;return;}
                 const {data:saved,error}=await getOwnerRankClient().from('game_progress').upsert({user_id:accountUser.id,save_data:snapshot},{onConflict:'user_id'}).select('save_data').single();
                 if(error) throw error;
                 // DB trigger returns the server-approved token value; overwrite any locally injected balance.
                 const serverTokens=Number(saved?.save_data?.data?.fm_tokens);
-                if(Number.isSafeInteger(serverTokens)&&serverTokens>=0){tokenWalletBalance=serverTokens;if(serverTokens!==tokens){tokens=serverTokens;localStorage.setItem('fm_tokens',String(serverTokens));updateTokensUI();}}
+                if(Number.isSafeInteger(serverTokens)&&serverTokens>=0&&walletRevisionAtStart===tokenWalletRevision){tokenWalletRevision++;tokenWalletBalance=serverTokens;if(serverTokens!==tokens){tokens=serverTokens;localStorage.setItem('fm_tokens',String(serverTokens));updateTokensUI();}}
                 const acceptedData=saved?.save_data?.data||snapshot.data;
                 accountLastSnapshot=canonData(acceptedData);accountLastWrite=Date.now();accountDirty=canonData(accountSnapshot().data)!==accountLastSnapshot;localStorage.setItem('yfm_sync_at', saved?.save_data?.at||snapshot.at);
             } catch(error) {accountDirty=true; console.warn('클라우드 저장 실패:',error);}
@@ -3530,6 +3567,7 @@
             accountUser=user;
             await loadServerWallet();
             window.yfmAccountReady=true;
+            settleLeagueRewards();
             finishAccountResume();
             document.getElementById('account-gate').style.display='none';
             renderAccountProfile();
@@ -3605,7 +3643,7 @@
             updateTeamNameUI();
         }
 
-        function updateTokensUI() { ['token-display-recruit', 'token-display-enhance', 'token-display-fusion'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerText = tokens; }); document.querySelectorAll('.rogue-tokens').forEach(e => e.innerText = tokens); }
+        function updateTokensUI() { ['token-display-recruit', 'token-display-enhance', 'token-display-fusion'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerText = tokens; }); document.querySelectorAll('.rogue-tokens').forEach(e => e.innerText = tokens); ['league-tokens','fm-tokens'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=Number(tokens).toLocaleString();});const evo=document.getElementById('fm-evo');if(evo)evo.textContent=evoTokens; }
 
         function saveTeamName() {
             let input = document.getElementById('team-name-input').value.trim();
@@ -4004,7 +4042,7 @@
         const ACTIVE_MATCH_KEY='fm_active_match_v1';
         function matchOwnerKey(){return localStorage.getItem('yfm_cloud_owner')||'guest';}
         function saveActiveMatchCheckpoint(st,goal=false){
-            if(!st||st.online||st.mode==='onlineFriendly'||st.ended||st.resultProcessed)return false;
+            if(!st||st.online||['onlineFriendly','tutorial'].includes(st.mode)||st.ended||st.resultProcessed)return false;
             try{
                 const skip=new Set(['online','engineInterval','last','lastUi','alpha','_raf','_timer','onlineGoalOverlayTimer','onlineRoster','onlineHomeRoster','onlinePauseBase']);
                 const packed=JSON.stringify(st,(key,value)=>{if(skip.has(key)||typeof value==='function')return undefined;if(value instanceof Set)return {$yfmType:'Set',values:[...value]};if(value instanceof Map)return {$yfmType:'Map',entries:[...value]};return value;});
@@ -4040,7 +4078,7 @@
             if((Number(saved.savedAt)||0)<=completedMatchCutoff()){localStorage.removeItem(ACTIVE_MATCH_KEY);return false;}
             try{
                 const st=reviveMatchValue(JSON.parse(saved.state));
-                if(!st||st.mode==='onlineFriendly'||st.ended||st.resultProcessed||!st.homePlayers?.length||!st.awayPlayers?.length)throw new Error('저장된 경기 데이터가 올바르지 않아.');
+                if(!st||['onlineFriendly','tutorial'].includes(st.mode)||st.ended||st.resultProcessed||!st.homePlayers?.length||!st.awayPlayers?.length)throw new Error('저장된 경기 데이터가 올바르지 않아.');
                 if(st.mode==='league'&&!st.leaguePlayoff&&(!leagueState||st.leagueSeason!==leagueState.season||st.leagueRound!==leagueState.round||leagueState.status!=='playing'))throw new Error('이미 완료되었거나 진행 중인 리그와 다른 경기입니다.');
                 currentMatchState=st;st.online=null;st.ended=false;st.resultProcessed=false;st.isPaused=false;st.userPaused=false;st.varOn=false;st.acc=0;st.last=performance.now();st.lastUi=0;st.engineInterval=null;st._checkpointAt=Math.floor((Number(st.time)||0)/5)*5;
                 document.getElementById('match-mode-text').innerText=st.mode==='league'?leagueMatchLabel(st.enemy):st.mode==='saudi'?'사우디 모드':st.mode==='rogue'?prematchLabel('rogue',st.enemy):st.mode==='europa'?`유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}`:st.mode==='worldcup'?`월드컵 ${worldCupState.round}`:st.mode==='tutorial'?'🎓 튜토리얼 친선전 · 선발 vs 비선발':!careerState?'친선 경기':careerState.round===2?'결승전':`${careerState.round}강 ${careerState.leg}차전`;
@@ -5247,22 +5285,38 @@
             const out = []; while (out.length < 5 && pool.length) { const w = pool.map(c => Math.exp(-(c.ovr - 80) / 5)), t = w.reduce((a, b) => a + b, 0); let x = Math.random() * t, i = 0; for (; i < pool.length - 1; i++) { x -= w[i]; if (x <= 0) break; } out.push(pool.splice(i, 1)[0]); }
             return out;
         }
+        function browserStarterLock(create=false) {
+            let lock;try{lock=JSON.parse(localStorage.getItem('yfm_browser_starter_v1')||'null');}catch(_){}
+            if(lock?.v===1&&(lock.selected||lock.candidates?.length===5))return lock;
+            const existing=players.find(p=>String(p.id||'').startsWith('p_star_'));
+            let candidates;try{candidates=JSON.parse(localStorage.getItem('fm_star_cands')||'null');}catch(_){}
+            if(!existing&&(!Array.isArray(candidates)||candidates.length!==5)&&!create)return null;
+            lock={v:1,selected:existing?{n:existing.name,pos:existing.position,ovr:fixedOvr(existing.name)||existing.ovr}:null,candidates:Array.isArray(candidates)&&candidates.length===5?candidates:existing?[]:rollStars()};
+            localStorage.setItem('yfm_browser_starter_v1',JSON.stringify(lock));return lock;
+        }
+        function grantBrowserStarter(c) {
+            if(localStorage.getItem('fm_need_star')!=='1')return;
+            if(!players.some(p=>String(p.id||'').startsWith('p_star_')))players.push({ id:newPlayerCardId('p_star'),name:c.n,ovr:fixedOvr(c.n)||c.ovr,position:c.pos,isStarting:false,level:0,slotIndex:-1,cond:100,inj:0,evo:0 });
+            localStorage.removeItem('fm_need_star');localStorage.removeItem('fm_star_cands');
+            autoAssignStarters();S.ace=undefined;computeUserAce();saveData();localStorage.setItem('fm_stats',JSON.stringify(S));
+            addNews('🌟',`${c.n} 영입! 새 구단의 첫 발걸음`,`${c.pos} · OVR ${c.ovr}의 종건급 선수가 창단 멤버로 합류했습니다.`,'팀 소식');
+            document.getElementById('star-modal').classList.replace('flex','hidden');
+            if(accountUser?.id)uploadAccountSnapshot(true);
+            maybeStartTutorial();
+        }
         function showStarPick() {
-            if (localStorage.getItem('fm_need_star') !== '1') return;
-            let c = null; try { c = JSON.parse(localStorage.getItem('fm_star_cands') || 'null'); } catch (e) { }
-            if (!c || c.length !== 5) { c = rollStars(); localStorage.setItem('fm_star_cands', JSON.stringify(c)); }
-            document.getElementById('star-list').innerHTML = c.map((x, i) => `<div onclick="pickStar(${i})" class="cursor-pointer bg-gray-800 hover:bg-gray-700 border-2 border-yellow-500/60 hover:border-yellow-400 rounded-2xl p-3 text-center w-40 transition hover:scale-105"><div class="mx-auto">${playerCardMarkup({name:x.n,position:x.pos,ovr:x.ovr,cond:100},{tier:3,position:x.pos,ovr:x.ovr,condition:100,className:'orb-row'})}</div><div class="mt-2 font-black text-lg">${x.n}</div><div class="text-xs text-gray-400 mt-1">종건급</div></div>`).join('');
-            document.getElementById('star-modal').classList.replace('hidden', 'flex');
+            if(localStorage.getItem('fm_need_star')!=='1')return;
+            const lock=browserStarterLock(true);
+            if(lock.selected){grantBrowserStarter(lock.selected);return;}
+            const c=lock.candidates;localStorage.setItem('fm_star_cands',JSON.stringify(c));
+            document.getElementById('star-list').innerHTML=c.map((x,i)=>`<div onclick="pickStar(${i})" class="cursor-pointer bg-gray-800 hover:bg-gray-700 border-2 border-yellow-500/60 hover:border-yellow-400 rounded-2xl p-3 text-center w-40 transition hover:scale-105"><div class="mx-auto">${playerCardMarkup({name:x.n,position:x.pos,ovr:x.ovr,cond:100},{tier:3,position:x.pos,ovr:x.ovr,condition:100,className:'orb-row'})}</div><div class="mt-2 font-black text-lg">${x.n}</div><div class="text-xs text-gray-400 mt-1">종건급</div></div>`).join('');
+            document.getElementById('star-modal').classList.replace('hidden','flex');
         }
         function pickStar(i) {
-            const c = JSON.parse(localStorage.getItem('fm_star_cands') || '[]')[i]; if (!c) return;
-            if (!confirm(`${c.n} (${c.pos} · OVR ${c.ovr}) 선수를 정말로 선택하시겠습니까?\n선택하면 다른 후보로 바꿀 수 없습니다.`)) return;
-            players.push({ id: newPlayerCardId('p_star'), name: c.n, ovr: fixedOvr(c.n) || c.ovr, position: c.pos, isStarting: false, level: 0, slotIndex: -1, cond: 100, inj: 0, evo: 0 });
-            localStorage.removeItem('fm_need_star'); localStorage.removeItem('fm_star_cands');
-            autoAssignStarters(); S.ace = undefined; computeUserAce(); saveData(); localStorage.setItem('fm_stats', JSON.stringify(S));
-            addNews('🌟', `${c.n} 영입! 새 구단의 첫 발걸음`, `${c.pos} · OVR ${c.ovr}의 종건급 선수가 창단 멤버로 합류했습니다.`, '팀 소식');
-            document.getElementById('star-modal').classList.replace('flex', 'hidden');
-            maybeStartTutorial();
+            if(localStorage.getItem('fm_need_star')!=='1')return;
+            const lock=browserStarterLock(true),c=lock.selected||lock.candidates[i];if(!c)return;
+            if(!confirm(`${c.n} (${c.pos} · OVR ${c.ovr}) 선수를 정말로 선택하시겠습니까?\n이 브라우저에서는 새 계정으로 가입해도 같은 선수가 지급됩니다.`))return;
+            lock.selected=c;localStorage.setItem('yfm_browser_starter_v1',JSON.stringify(lock));grantBrowserStarter(c);
         }
         function pickSub(id) { openTactics(); tacSel = id; renderTactics(); }
         function toggleSpeed() { matchSpeed = matchSpeed === 1 ? 2 : matchSpeed === 2 ? 0.5 : 1; const b = document.getElementById('btn-speed'); b.innerText = `배속 x${matchSpeed}`; b.classList.toggle('slow', matchSpeed < 1); b.title = '배속: x1 → x2 → x0.5 순서로 바뀝니다'; }
@@ -10102,6 +10156,8 @@
         // tickExtras 래퍼에 튜토리얼 진행도 연결
         const _exTickExtras2 = tickExtras; tickExtras = function (st) { const r = _exTickExtras2.apply(this, arguments); try { exTutTick(st); } catch (x) { console.error(x); } return r; };
         function exFinishTutorial(st) {
+            if (!st || st.resultProcessed) return;
+            st.resultProcessed=true; clearFinishedMatchCheckpoint(st);
             st.ended = true; try { finishMatchAudio(); } catch (x) {}
             const ov = document.getElementById('match-end-overlay');
             document.getElementById('match-end-title').innerText = '🎓 튜토리얼 친선전 종료';
@@ -10122,12 +10178,13 @@
             document.getElementById('end-extra').innerHTML = `<div class="rounded-xl bg-gray-800/80 border border-amber-500/40 p-3 text-xs text-gray-200"><div class="font-black text-sm mb-2 text-amber-300">🎓 이제 실전에서 만날 기능들</div>${tips.map(([h, b]) => `<div class="mb-2"><b>${h}</b><br>${b}</div>`).join('')}</div>`;
             document.getElementById('match-end-reward').innerText = '튜토리얼 완료! 🎁 첫 완료 보상 +300T · 결과는 기록에 남지 않습니다';
             const E = EX(); if (!E.tutDone) { E.tutDone = 1; awardTokens(300,'tutorial_reward'); updateTokensUI(); saveData(); } E.tutRun = 0; exSave();
+            saveData(); flushFinishedMatchSave();
             ov.classList.replace('hidden', 'flex');
         }
         const _exEndMatchFlow2 = endMatchFlow;
         endMatchFlow = function () {
             const st = currentMatchState;
-            if (st && st.mode === 'tutorial') { document.getElementById('match-end-overlay').classList.replace('flex', 'hidden'); const c = document.getElementById('ex-coach'); if (c) c.style.display = 'none'; currentMatchState = null; switchScreen('screen-lobby'); return; }
+            if (st && st.mode === 'tutorial') { clearFinishedMatchCheckpoint(st);flushFinishedMatchSave();document.getElementById('match-end-overlay').classList.replace('flex', 'hidden'); const c = document.getElementById('ex-coach'); if (c) c.style.display = 'none'; currentMatchState = null; switchScreen('screen-lobby'); return; }
             return _exEndMatchFlow2.apply(this, arguments);
         };
         // 처음 시작한 계정: 화면 안내 튜토리얼이 끝나면 친선전 제안 · 튜토리얼 메뉴에서 언제든 다시
