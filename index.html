@@ -846,12 +846,12 @@
         body:not(.in-match) :is(#screen-lobby, #screen-mode-select, #screen-career-select, #screen-league, #screen-league-rankings, #screen-saudi, #screen-recruit, #screen-enhance, #screen-fusion, #screen-manager, #screen-stats, #screen-owner-rank, #screen-career, #screen-cup, #screen-rogue) :is(button, .fm-card, .league-panel, .fm-nav-item) { transition: transform .18s ease, box-shadow .22s ease, filter .2s ease, border-color .2s ease, background-color .2s ease; }
         @media (hover:hover) { body:not(.in-match) .screen.active:not(#screen-match) button:hover { filter: brightness(1.12); } }
         body:not(.in-match) .screen.active:not(#screen-match) button:active { transform: scale(.975); }
-        body:not(.in-match) :is(#team-detail-modal, #prematch-modal, #mission-modal, #save-modal).flex > :first-child { animation: menuDialogEnter .26s cubic-bezier(.2,.8,.2,1) both; }
+        body:not(.in-match) :is(#team-detail-modal, #prematch-modal, #mission-modal).flex > :first-child { animation: menuDialogEnter .26s cubic-bezier(.2,.8,.2,1) both; }
         @media (prefers-reduced-motion: reduce) {
             .screen.active:not(#screen-match), .screen.active.bg-gradient-dark:not(#screen-match), body:not(.in-match) #screen-lobby .fm-nav-item.active, body:not(.in-match) #fm-grid > .fm-card,
             body:not(.in-match) :is(#screen-mode-select, #screen-career-select, #screen-saudi) :is(.group, .league-panel),
             body:not(.in-match) :is(#screen-league, #screen-league-rankings, #screen-owner-rank, #screen-recruit, #screen-enhance, #screen-fusion, #screen-manager, #screen-stats, #screen-cup, #screen-career, #screen-rogue) :is(.league-panel, .bg-gray-800, .bg-gray-900),
-            body:not(.in-match) :is(#team-detail-modal, #prematch-modal, #mission-modal, #save-modal).flex > :first-child { animation: none; }
+            body:not(.in-match) :is(#team-detail-modal, #prematch-modal, #mission-modal).flex > :first-child { animation: none; }
             body:not(.in-match) :is(#screen-lobby .fm-card, #screen-mode-select .group)::after,
             body:not(.in-match) :is(.fm-nav-item,.fm-btn,#screen-mode-select .group).touch-sheen::after { display:none; }
         }
@@ -995,7 +995,6 @@
                     <button class="fm-nav-item" onclick="switchScreen('screen-online-friendly')"><span class="fm-ico">🌐</span><span>온라인 친선</span></button>
                     <button class="fm-nav-item" onclick="openMissions()"><span class="fm-ico">🎯</span><span>미션</span><i id="fm-mission-dot" class="fm-dot" style="display:none"></i><img id="mission-btn" alt="" hidden></button>
                     <button id="yfm-admin-nav" class="fm-nav-item" style="display:none" onclick="yfmOpenAdmin()"><span class="fm-ico">🛠</span><span>개발자 관리</span></button>
-                    <button class="fm-nav-item" onclick="openSave()"><span class="fm-ico">💾</span><span>저장 관리</span></button>
                     <button class="fm-nav-item" onclick="replayTutorial()"><span class="fm-ico">📖</span><span>튜토리얼</span></button>
                 </nav>
                 <div id="account-profile">
@@ -1490,16 +1489,6 @@
         <div class="bg-gray-900 rounded-2xl p-6 w-full max-w-xl border border-gray-600 max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-black">💬 소셜 피드</h2><button onclick="closeSocialFeed()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
             <div id="social-list" class="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1"></div>
-        </div>
-    </div>
-
-    <!-- 저장 관리 -->
-    <div id="save-modal" class="fixed inset-0 bg-black/80 z-[90] hidden items-center justify-center p-6" onclick="if(event.target===this)closeSave()">
-        <div class="bg-gray-800 rounded-2xl p-4 sm:p-6 w-full max-w-lg max-h-[92vh] max-h-[92dvh] overflow-y-auto custom-scrollbar border border-gray-600">
-            <div class="flex justify-between items-center mb-3"><h2 class="text-2xl font-black">💾 저장 관리</h2><button onclick="closeSave()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
-            <p class="text-sm text-gray-300 mb-4">게임 진행 상황은 이 브라우저와 로그인 계정에 자동 저장됩니다.</p>
-            <button onclick="replayTutorial()" class="w-full mt-2 bg-gray-700 text-white font-bold py-2.5 rounded-xl">📖 튜토리얼 다시 보기</button>
-            <button onclick="signOutGameAccount()" class="w-full mt-3 bg-gray-700 text-white font-bold py-2 rounded-lg">계정 로그아웃</button>
         </div>
     </div>
 
@@ -4042,7 +4031,7 @@
             {screen:'screen-recruit',target:'[onclick="startGacha(1)"]',title:'새로운 가족',body:'토큰으로 천민급·노말급·종건급 선수를 뽑아. 높은 OVR 선수일수록 등장 확률이 낮아.'},
             {screen:'screen-enhance',target:'#enhance-none-selected',title:'한계를 넘어서',body:'선수를 선택해 토큰으로 +10까지 강화할 수 있어. +3부터는 실패 시 일정 확률(20~40%)로 1단계 하락하고, 성공할 때 4% 확률로 +2 크리티컬이 발동해.'},
             {screen:'screen-fusion',target:'#fusion-center',title:'선수의 잠재력을 깨워라',body:'진화토큰으로 선수의 진화 단계를 올릴 수 있어. 강화와 별도로 OVR이 영구적으로 올라가.'},
-            {screen:'screen-lobby',target:'.fm-nav',title:'감독의 발자취',body:'미션 보상을 챙기고 기록실에서 성적을 확인해. 저장 관리에서 진행 기록을 파일로 백업할 수 있어.'},
+            {screen:'screen-lobby',target:'.fm-nav',title:'감독의 발자취',body:'미션 보상을 챙기고 기록실에서 성적을 확인해. 게임 진행 기록은 자동으로 저장돼.'},
             {screen:'screen-lobby',target:'.fm-brand',title:'위대한 여정의 시작!',body:'처음에는 팀 관리에서 선발과 포메이션을 확인한 뒤 리그 경기에 도전해 봐.'}
         ];
         let tutorialStep = -1;
@@ -9541,9 +9530,6 @@
             ov.innerHTML = `<div class="anim-success flex flex-col items-center text-center"><div class="text-7xl font-black mb-3 text-yellow-400">진화 성공!</div><div class="text-3xl mb-3">${stars(t.evo)}</div><div class="text-2xl font-bold mb-2">${t.name} · OVR ${beforeOvr} → <span class="text-yellow-400">${getCalculatedOvr(t)}</span></div><div class="text-amber-300 mb-8">남은 진화 토큰 🧬 ${evoTokens}</div><button onclick="document.getElementById('fusion-overlay').classList.replace('flex','hidden'); renderFusion();" class="px-12 py-3 bg-white text-black font-bold text-xl rounded-full">확인</button></div>`;
         }
 
-        // ================= 저장 관리 =================
-        function openSave() { document.getElementById('save-modal').classList.replace('hidden', 'flex'); }
-        function closeSave() { document.getElementById('save-modal').classList.replace('flex', 'hidden'); }
         function closeEnhanceEffect() { if (!enhancementBusy || !enhancementReady) return; enhancementReady = false; enhancementBusy = false; const button = document.getElementById('enhance-confirm'); button.disabled = true; button.tabIndex = -1; document.getElementById('enhance-effect-overlay').classList.replace('flex','hidden'); }
 
         // ================= 일일 미션 =================
@@ -11339,8 +11325,8 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
  function drawDetail(){const d=A.detail,u=A.selected||{},records=d.offline||{},labels={league:'리그',career:'챔피언스리그',saudi:'사우디',europa:'유로파',worldcup:'월드컵'};let roster=[];try{roster=JSON.parse(d.save?.data?.fm_players||'[]');}catch(_){}
   const offline=Object.entries(records).filter(([k,v])=>v&&typeof v==='object'&&v.p!==undefined).map(([k,v])=>`<tr><td>${esc(labels[k]||k)}</td><td>${format(v.p)}</td><td>${format(v.w)} / ${format(v.d)} / ${format(v.l)}</td><td>${format(v.gf)} / ${format(v.ga)}</td></tr>`).join('');
   const online=d.online_results||[],summary=d.online_summary||{};
-  $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div style="margin:12px 0;padding:14px;border:2px solid #9d60d5;border-radius:12px;background:#2a1438"><h4 style="font-weight:900;font-size:18px;margin-bottom:8px">계정 정지 관리</h4><p>현재 상태: <b>${d.suspension?.suspended?'정지':'정상'}</b>${d.suspension?.suspended?` · ${esc(d.suspension.reason)}`:''}</p><p style="font-size:12px;color:#dfc7ef;margin:8px 0">아래 변경 사유를 입력한 뒤 정지하거나 해제하세요.</p>${!d.suspension?'<p style="color:#fca5a5;font-size:12px;margin:8px 0">추가 정지·문의 SQL이 적용되지 않았습니다. 서버 SQL을 먼저 적용해 주세요.</p>':''}<button id="yfm-admin-suspend" data-admin-write ${A.target===accountUser.id||!d.suspension?'disabled':''} style="padding:10px 18px;border-radius:8px;background:${d.suspension?.suspended?'#167652':'#a32d43'};font-weight:900;opacity:${A.target===accountUser.id||!d.suspension?'.5':'1'}">${A.target===accountUser.id?'관리자 계정은 정지 불가':d.suspension?.suspended?'정지 해제':'이 계정 정지'}</button></div><div class="my-3 p-3 rounded-xl bg-gray-900">서버 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b> · 보유 선수 ${format(roster.length)}명<br><small>가입 ${esc(time(u.created_at))} · 마지막 로그인 ${esc(time(u.last_sign_in_at))}</small></div>
-  <div class="p-3 mb-4 rounded-xl bg-purple-950 border border-purple-700"><label class="block text-sm mb-2">변경 사유 (모든 변경에 필수)</label><input id="yfm-admin-reason" maxlength="500" class="w-full rounded-lg p-2 bg-gray-900 border border-gray-600" placeholder="보상 지급 / 비정상 획득 회수 / 기록 정정"><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-amount" type="number" min="1" max="1000000000" step="1" placeholder="토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">지급</button><button id="yfm-admin-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">회수·차감</button></div></div>
+  $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div style="margin:12px 0;padding:14px;border:2px solid #9d60d5;border-radius:12px;background:#2a1438"><h4 style="font-weight:900;font-size:18px;margin-bottom:8px">계정 정지 관리</h4><p>현재 상태: <b>${d.suspension?.suspended?'정지':'정상'}</b>${d.suspension?.suspended?` · ${esc(d.suspension.reason)}`:''}</p><p style="font-size:12px;color:#dfc7ef;margin:8px 0">아래 변경 사유를 입력한 뒤 정지하거나 해제하세요.</p>${!d.suspension?'<p style="color:#fca5a5;font-size:12px;margin:8px 0">추가 정지·문의 SQL이 적용되지 않았습니다. 서버 SQL을 먼저 적용해 주세요.</p>':''}<button id="yfm-admin-suspend" data-admin-write ${A.target===accountUser.id||!d.suspension?'disabled':''} style="padding:10px 18px;border-radius:8px;background:${d.suspension?.suspended?'#167652':'#a32d43'};font-weight:900;opacity:${A.target===accountUser.id||!d.suspension?'.5':'1'}">${A.target===accountUser.id?'관리자 계정은 정지 불가':d.suspension?.suspended?'정지 해제':'이 계정 정지'}</button></div><div class="my-3 p-3 rounded-xl bg-gray-900">서버 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b> · 🧬 진화토큰 <b class="text-purple-300">${format(d.save?.data?.fm_evo_tokens)}개</b> · 보유 선수 ${format(roster.length)}명<br><small>가입 ${esc(time(u.created_at))} · 마지막 로그인 ${esc(time(u.last_sign_in_at))}</small></div>
+  <div class="p-3 mb-4 rounded-xl bg-purple-950 border border-purple-700"><label class="block text-sm mb-2">변경 사유 (모든 변경에 필수)</label><input id="yfm-admin-reason" maxlength="500" class="w-full rounded-lg p-2 bg-gray-900 border border-gray-600" placeholder="보상 지급 / 비정상 획득 회수 / 기록 정정"><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-amount" type="number" min="1" max="1000000000" step="1" placeholder="토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">지급</button><button id="yfm-admin-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">회수·차감</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-evo-amount" type="number" min="1" max="1000000000" step="1" placeholder="진화토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-evo-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">진화토큰 지급</button><button id="yfm-admin-evo-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">진화토큰 압수</button></div></div>
 
   <h4 class="font-black mb-2">오프라인 전적</h4><div style="overflow:auto"><table class="w-full text-sm"><thead><tr><th>모드</th><th>경기</th><th>승 / 무 / 패</th><th>득점 / 실점</th></tr></thead><tbody>${offline||'<tr><td colspan="4">기록 없음</td></tr>'}</tbody></table></div>
   <h4 class="font-black mt-5 mb-2">온라인 친선전</h4><p class="text-sm mb-3">${format(summary.games)}경기 · ${format(summary.wins)}승 ${format(summary.draws)}무 ${format(summary.losses)}패 · 최근 100경기</p><div>${online.map((r,i)=>`<div data-match="${i}" class="my-2 p-2 rounded-lg bg-gray-900"><div class="text-xs text-purple-200">${esc(time(r.ended_at))} · ${r.kind==='friend'?'친구 친선':'코드 친선'} · ${esc(r.method)}</div><div class="flex flex-wrap items-center gap-2 mt-2"><label class="text-xs">방장 <input class="admin-host w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.host_goals)||0}"></label><span>:</span><label class="text-xs">참가자 <input class="admin-guest w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.guest_goals)||0}"></label><button data-admin-write class="admin-score px-2 py-1 rounded bg-purple-700 text-sm">점수 정정</button></div></div>`).join('')||'<p class="text-sm text-gray-400">기록 없음</p>'}</div>
@@ -11349,7 +11335,7 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   <details class="mt-4"><summary class="font-bold cursor-pointer">관리자 변경 기록·수정 전 데이터 (최근 50건)</summary><div>${(d.audit||[]).map(x=>`<button data-audit="${esc(x.request_id)}" class="block w-full text-left p-2 my-1 rounded bg-gray-900 text-xs">${esc(time(x.created_at))} · ${esc(x.action)} · ${esc(x.reason)} ${x.delta!==null?`(${Number(x.delta)>0?'+':''}${format(x.delta)} T)`:''}</button>`).join('')||'기록 없음'}</div><textarea id="yfm-admin-audit-json" readonly style="width:100%;height:220px;background:#0b0711;padding:8px;font:11px monospace;margin-top:8px"></textarea></details>
   <details class="mt-4"><summary class="font-bold cursor-pointer">이전 버전 온라인 기록</summary><pre style="white-space:pre-wrap;word-break:break-all;font-size:11px">${esc(JSON.stringify(d.legacy_online_results||[],null,2))}</pre></details>`;
   $('yfm-admin-suspend').onclick=async()=>{try{const target=A.target,suspended=!A.detail.suspension?.suspended,why=reason();if(!confirm(suspended?'이 계정의 모든 게임 서비스를 정지할까요?':'계정 정지를 해제할까요?'))return;await mutate('suspension',{user_id:target,suspended,reason:why});await selectUser(target);status(suspended?'계정 정지 완료':'정지 해제 완료');}catch(e){fail(e);}};
-  $('yfm-admin-save-json').value=JSON.stringify(d.save,null,2);$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;
+  $('yfm-admin-save-json').value=JSON.stringify(d.save,null,2);$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;$('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);
   $('yfm-admin-detail').querySelectorAll('[data-match]').forEach(el=>el.querySelector('.admin-score').onclick=()=>editScore(Number(el.dataset.match),el));
   $('yfm-admin-detail').querySelectorAll('[data-audit]').forEach(el=>el.onclick=async()=>{try{const data=await rpc('audit',{user_id:A.target,request_id:el.dataset.audit});$('yfm-admin-audit-json').value=JSON.stringify(data,null,2);}catch(e){fail(e);}});
  }
@@ -11368,6 +11354,27 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   }finally{A.busy=false;$('yfm-admin-detail').querySelectorAll('[data-admin-write]').forEach(b=>b.disabled=b.id==='yfm-admin-suspend'&&(A.target===accountUser?.id||!A.detail?.suspension));}
  }
  async function adjustTokens(sign){try{const amount=Number($('yfm-admin-amount').value);if(!Number.isSafeInteger(amount)||amount<1||amount>1000000000)throw new Error('토큰 수량을 올바르게 입력해 주세요.');const target=A.target,result=await mutate('tokens',{user_id:target,delta:sign*amount,reason:reason()});if(!result)return;if(target===accountUser.id){applyServerWallet(result.balance);saveData();}await selectUser(target);if(target===accountUser.id&&A.detail)applyServerWallet(A.detail.tokens);status(`변경 완료 · 서버 잔액 ${format(result.balance)} T. 유저 화면은 다음 저장·재접속 때 반영됩니다.`);}catch(e){fail(e);}}
+ async function adjustEvoTokens(sign){
+  try{
+   if(A.busy)return;
+   const amount=Number($('yfm-admin-evo-amount').value),why=reason(),target=A.target,owner=accountUser?.id;
+   if(!Number.isSafeInteger(amount)||amount<1||amount>1000000000)throw new Error('진화토큰 수량을 올바르게 입력해 주세요.');
+   const detail=A.detail,save=JSON.parse(JSON.stringify(detail.save||null));
+   if(!save?.data||save.app!=='YFM')throw new Error('유저의 게임 저장 데이터가 없습니다. 게임을 한 번 저장한 뒤 다시 조회해 주세요.');
+   const before=Number(save.data.fm_evo_tokens||0);
+   if(!Number.isSafeInteger(before)||before<0)throw new Error('진화토큰 잔액이 올바르지 않습니다. 다시 조회해 주세요.');
+   const after=Math.max(0,before+sign*amount);
+   if(!Number.isSafeInteger(after))throw new Error('진화토큰 최대 수량을 초과했습니다.');
+   if(after===before)throw new Error('압수할 진화토큰이 없습니다.');
+   save.data.fm_evo_tokens=String(after);
+   const result=await mutate('save',{user_id:target,save,expected_at:detail.save.at||null,reason:`[진화토큰 ${sign>0?'지급':'압수'} ${Math.abs(after-before)}개 · ${before} → ${after}] ${why}`});
+   if(!result)return;
+   if(accountUser?.id!==owner)return;
+   if(target===owner){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}
+   await selectUser(target);
+   status(`진화토큰 ${sign>0?'지급':'압수'} 완료 · 잔액 ${format(after)}개. 유저 화면은 다음 저장·재접속 때 반영됩니다.`);
+  }catch(e){fail(e);}
+ }
  async function editSave(){try{const target=A.target,save=JSON.parse($('yfm-admin-save-json').value),why=reason();if(!confirm('선택한 유저의 게임 저장 데이터를 수정할까요? 변경 전 데이터는 관리자 기록에 보관됩니다.'))return;const result=await mutate('save',{user_id:target,save,expected_at:A.detail.save?.at||null,reason:why});if(!result)return;if(target===accountUser.id){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}await selectUser(target);status('저장 데이터 수정 완료. 유저는 다음 저장·재접속 때 변경 사항을 다시 불러옵니다.');}catch(e){fail(e);}}
  async function editScore(i,el){try{const r=A.detail.online_results[i],h=Number(el.querySelector('.admin-host').value),g=Number(el.querySelector('.admin-guest').value);if(!Number.isInteger(h)||!Number.isInteger(g)||h<0||g<0||h>99||g>99)throw new Error('스코어는 0~99로 입력해 주세요.');const target=A.target,result=await mutate('online_score',{user_id:target,room_id:r.room_id,host_goals:h,guest_goals:g,reason:reason()});if(result){await selectUser(target);status('온라인 전적을 정정했습니다.');}}catch(e){fail(e);}}
  $('yfm-admin-close').onclick=()=>{$('yfm-admin-modal').style.display='none';};$('yfm-admin-reload').onclick=()=>{A.offset=0;loadUsers().catch(fail);};$('yfm-admin-search').onkeydown=e=>{if(e.key==='Enter'){$('yfm-admin-reload').click();}};$('yfm-admin-prev').onclick=()=>{A.offset=Math.max(0,A.offset-50);loadUsers().catch(fail);};$('yfm-admin-next').onclick=()=>{A.offset+=50;loadUsers().catch(fail);};
