@@ -2498,7 +2498,7 @@
                 }else if(!owner)tokens=tx.tokens;
                 if(tx.evo!==undefined)evoTokens=tx.evo;saveData();localStorage.setItem('fm_league_v2',JSON.stringify(leagueState));
             }
-            localStorage.removeItem('fm_league_pending');S.league||=blankRec();S.awards||=[];S.leagueTitles||={};settleLeagueRewards();
+            localStorage.removeItem('fm_league_pending');S.league||=blankRec();S.awards||=[];S.leagueTitles||={};resolveLegacyLeaguePlayoff();settleLeagueRewards();
         }
         // 모든 팀이 서로 한 번씩 (홀수 팀 리그는 라운드마다 한 팀 휴식)
         function leagueSchedule(ids) {
@@ -2568,8 +2568,8 @@
             [[gk, '득점왕', 'g'], [ak, '도움왕', 'a']].forEach(([r, t, k]) => { if (r) S.awards.push({ s: l.season, l: L.n, t, n: r.n, c: leagueName(r.c), v: r[k], mine: r.c === 'user' }); });
             let reward = 0, evo = 0, text = '';
             if (champ === 'user') { achAdd('leagueTitles'); if(l.li<5) achSet('asiaTitles',Object.keys(S.leagueTitles||{}).filter(n=>(S.leagueTitles[n]||0)>0).length>=5?1:0); if(l.li>=10)achAdd('europeTitles'); if(l.li===LG.length-1)achAdd('premierTitles'); achSet('differentTitles',Object.keys(S.leagueTitles||{}).filter(k=>(S.leagueTitles[k]||0)>0).length+1); if(l.li===LG.length-1)achSet('allLeagues',Object.keys(S.leagueTitles||{}).filter(k=>(S.leagueTitles[k]||0)>0).length+1>=LG.length?1:0); const starters=players.filter(p=>p.isStarting); if(starters.length&&starters.every(p=>p.originalStarter))achSet('originalTitle',1); if(Number(ach.stats.seasonStartTokens||tokens)<=1000)achSet('lowBudgetTitle',1); const userRow=table.find(r=>r.id==='user'),bestGA=Math.min(...table.map(r=>r.ga)); if(userRow&&userRow.ga===bestGA)achSet('bestDefense',1); reward = L.t; evo = L.e; S.leagueTitles[L.n] = (S.leagueTitles[L.n] || 0) + 1; const titleCount=Object.values(S.leagueTitles).reduce((a,b)=>a+b,0), uniqueLeagues=Object.keys(S.leagueTitles).filter(k=>S.leagueTitles[k]>0).length; achSet('leagueTitles',titleCount); achSet('differentTitles',uniqueLeagues); if(uniqueLeagues>=LG.length)achSet('allLeagues',1); if(l.li<5&&uniqueLeagues>=5)achSet('asiaTitles',1); text += ` · 🏆 ${L.n} 우승! +${L.t} T · 🧬 진화 토큰 +${L.e}`; }
-            l.nextLi = (l.po && l.po.winner ? l.po.winner === 'user' : rank === 1) ? Math.min(LG.length - 1, l.li + 1) : l.li; if(l.nextLi>l.li){achAdd('promotions'); if(l.li===0&&l.nextLi===LG.length-1)achSet('promotionJourney',1);}
-            text += l.nextLi > l.li ? ` · ⬆️ ${LG[l.nextLi].n} 승격!` : l.li === LG.length - 1 ? ` · ${rank}위로 시즌 종료` : ` · ${rank}위 · 잔류 ${l.po && (l.po.a === 'user' || l.po.b === 'user') ? '(승격 결정전 패배)' : '(1·2위 승격 결정전 승리 시 승격)'}`;
+            l.nextLi = (rank === 1 || (rank === 2 && l.po?.winner === 'user')) ? Math.min(LG.length - 1, l.li + 1) : l.li; if(l.nextLi>l.li){achAdd('promotions'); if(l.li===0&&l.nextLi===LG.length-1)achSet('promotionJourney',1);}
+            text += l.nextLi > l.li ? ` · ⬆️ ${LG[l.nextLi].n} 승격!` : l.li === LG.length - 1 ? ` · ${rank}위로 시즌 종료` : ` · ${rank}위 · 잔류 ${l.po && (l.po.a === 'user' || l.po.b === 'user') ? '(승격 결정전 패배)' : '(1위 자동 승격 · 2위는 결정전 승리 시 승격)'}`;
             if (gk) text += ` · 득점왕 ${gk.n}(${gk.g})`;
             l.titleReward = reward; l.evoReward = evo;
             localStorage.setItem('fm_stats', JSON.stringify(S));
@@ -2860,9 +2860,10 @@
             openPrematch('league', { id, name: c.name, ovr: Math.round(c.ovr + clubMomentum(id)), userHome: f.h === 'user', formation: clubForm(c), lineup: clubLineup(c) });
         }
         function renderLeague() {
+            resolveLegacyLeaguePlayoff();
             document.getElementById('league-tokens').textContent = tokens;
             const c = document.getElementById('league-content'), cur = leagueState ? leagueState.li : 0;
-            const ladder = `<details class="league-panel" ${leagueState ? '' : 'open'}><summary class="font-bold cursor-pointer">14개 리그 · 보상표</summary><div style="overflow:auto"><table class="league-table"><tr><th>단계</th><th>리그</th><th>평균 OVR</th><th>매 경기</th><th>우승</th><th>진화 토큰</th></tr>${LG.map((L, i) => `<tr class="${i === cur && leagueState ? 'league-me' : ''}"><td>${i + 1}</td><td>${L.n}</td><td>${L.o}</td><td>${L.m} T</td><td>${L.t} T</td><td>🧬 ${L.e}</td></tr>`).join('')}</table></div><p class="league-muted">시즌마다 모든 팀과 한 번씩(리그별 12~30경기) · 정규리그 1·2위가 단판 승격 결정전을 치러 이긴 팀이 승격해. 1위로 마치면 우승 보상과 진화 토큰도 받아. 강등은 없습니다.</p></details>`;
+            const ladder = `<details class="league-panel" ${leagueState ? '' : 'open'}><summary class="font-bold cursor-pointer">14개 리그 · 보상표</summary><div style="overflow:auto"><table class="league-table"><tr><th>단계</th><th>리그</th><th>평균 OVR</th><th>매 경기</th><th>우승</th><th>진화 토큰</th></tr>${LG.map((L, i) => `<tr class="${i === cur && leagueState ? 'league-me' : ''}"><td>${i + 1}</td><td>${L.n}</td><td>${L.o}</td><td>${L.m} T</td><td>${L.t} T</td><td>🧬 ${L.e}</td></tr>`).join('')}</table></div><p class="league-muted">시즌마다 모든 팀과 한 번씩(리그별 12~30경기) · 정규리그 1위는 바로 승격해. 2위는 1위 팀과 단판 결정전을 치러 이기면 추가로 승격해. 1위 팀의 승격은 결정전 결과와 관계없이 유지돼. 1위로 마치면 우승 보상과 진화 토큰도 받아. 강등은 없습니다.</p></details>`;
             const rules = `<details class="league-panel"><summary class="font-bold cursor-pointer">리그 규칙</summary><p class="league-muted">실제 리그의 모든 구단과 내 팀이 함께 뛰며, 빠지는 구단 없이 모든 팀이 서로 한 번씩 맞붙습니다(홈·원정은 팀마다 절반씩). 팀 수가 홀수인 리그는 라운드마다 한 팀씩 쉬며, 내 팀이 쉬는 라운드는 자동으로 진행됩니다. 승리 3점·무승부 1점, 순위는 승점 → 득실차 → 다득점. 매 경기 보상은 결과와 관계없이 지급됩니다. 구단 OVR은 게임용 수치이며, 선수 명단은 2025-26 시즌 무렵 기준이라 이적이 반영되지 않았을 수 있습니다.</p></details>`;
             if (!leagueState) { c.innerHTML = `<div class="league-panel"><div class="text-emerald-400 font-bold">LEAGUE LADDER</div><h1 class="league-title my-3">K리그2에서 프리미어리그까지</h1><p class="league-muted mb-4">K리그2 → K리그1 → J1리그 → MLS → 사우디 프로리그 → 쉬페르리그 → 에레디비시 → 브라질 세리에 A → 프리메이라리가 → 리그 1 → 분데스리가 → 세리에 A → 라리가 → 프리미어리그</p><button class="league-button" onclick="startLeagueSeason()">K리그2 첫 시즌 시작</button></div>${ladder}${rules}`; return; }
             const l = leagueState, L = LG[l.li], table = leagueTable(), rank = table.findIndex(t => t.id === 'user') + 1, me = table[rank - 1], f = leagueNextFixture();
@@ -2877,7 +2878,7 @@
             const mine = l.schedule.map((r, i) => ({ f: r.find(isMine), i })).filter(x => x.f);
             const lastRound = l.round ? l.schedule[l.round - 1] : l.schedule[0];
             c.innerHTML = `<div class="flex justify-between items-center mb-5"><div><div class="text-emerald-400 font-bold">SEASON ${l.season} · ${l.li + 1}단계 / 14</div><h1 class="league-title">${L.n}</h1><p class="league-muted">${l.myPlayed} / ${lgTotal()}경기 · 평균 OVR ${L.o}</p></div><div class="text-right"><div class="text-3xl font-black">${rank}위 · ${me.pts}점</div><div class="league-muted">${me.w}승 ${me.d}무 ${me.l}패 · 🧬 ${evoTokens}</div></div></div>
-                <div class="league-grid"><div class="league-panel">${next}</div><div class="league-panel"><h2 class="font-bold mb-3">시즌 목표</h2><div class="text-2xl font-black text-yellow-400">우승 ${L.t} T · 🧬 ${L.e}</div><p class="league-muted">${l.li < LG.length - 1 ? '1·2위 → 🏟️ 승격 결정전 → ' + LG[l.li + 1].n + ' 승격' : '최고 리그'}<br>매 경기 ${L.m} T · 시즌 ${lgTotal()}경기 합계 ${lgTotal() * L.m} T</p><div style="height:8px;background:#334155;border-radius:8px;margin-top:20px"><div style="width:${l.myPlayed / lgTotal() * 100}%;height:100%;background:#34d399;border-radius:8px"></div></div></div></div>
+                <div class="league-grid"><div class="league-panel">${next}</div><div class="league-panel"><h2 class="font-bold mb-3">시즌 목표</h2><div class="text-2xl font-black text-yellow-400">우승 ${L.t} T · 🧬 ${L.e}</div><p class="league-muted">${l.li < LG.length - 1 ? '1위 자동 승격 · 2위는 1위와 결정전 승리 → ' + LG[l.li + 1].n + ' 승격' : '최고 리그'}<br>매 경기 ${L.m} T · 시즌 ${lgTotal()}경기 합계 ${lgTotal() * L.m} T</p><div style="height:8px;background:#334155;border-radius:8px;margin-top:20px"><div style="width:${l.myPlayed / lgTotal() * 100}%;height:100%;background:#34d399;border-radius:8px"></div></div></div></div>
                 <div class="league-panel" style="overflow:auto"><h2 class="text-xl font-bold mb-3">리그 순위표</h2><table class="league-table"><thead><tr>${['순위', '구단', '경기', '승', '무', '패', '득점', '실점', '득실', '승점', '최근 5경기'].map(v => `<th>${v}</th>`).join('')}</tr></thead><tbody>${table.map((r, i) => `<tr class="${r.id === 'user' ? 'league-me' : ''}"><td>${i + 1}${r.id === l.champion ? ' 🏆' : i <= 1 && l.li < LG.length - 1 ? ' 🎟️' : ''}</td><td>${clubLabel(r.id)}${realTag(r.id)}</td>${[r.p, r.w, r.d, r.l, r.gf, r.ga, r.gf - r.ga, r.pts, r.form.slice(-5).join(' ') || '–'].map(v => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
                 <div id="league-player-rankings" class="league-grid">${rankRows('g', '득점')}${rankRows('a', '도움')}</div>${(S.news || []).filter(x => x.tag === L.n).length ? `<div class="league-panel"><h2 class="font-bold mb-3">📰 ${L.n} 뉴스</h2><div class="flex flex-col gap-2">${S.news.filter(x => x.tag === L.n).slice(0, 5).map(newsCard).join('')}</div></div>` : ''}
                 ${l.status === 'finished' && l.awards ? `<div class="league-panel"><h2 class="font-bold mb-2">🏅 시즌 개인상</h2><button class="league-button mb-3" onclick="showAwards(leagueState)">시즌 정산 다시 보기</button><p>👟 득점왕: <b>${l.awards.g ? leagueEsc(l.awards.g.n) + ' (' + leagueEsc(leagueName(l.awards.g.c)) + ', ' + l.awards.g.g + '골)' : '-'}</b></p><p>🅰️ 도움왕: <b>${l.awards.a ? leagueEsc(l.awards.a.n) + ' (' + leagueEsc(leagueName(l.awards.a.c)) + ', ' + l.awards.a.a + '도움)' : '-'}</b></p></div>` : ''}
@@ -3798,7 +3799,7 @@
             {screen:'screen-lobby',target:'.fm-brand',title:'설렘 가득한 첫날',body:'천민급 위주로 구성된 초기 선수단과 종건급 선수 한 명으로 시작해. 화면을 한 번 누르면 다음 안내로 넘어가.'},
             {screen:'screen-lobby',target:'.fm-card.fm-span-8',title:'다음 상대는 누구?',body:'여기에 다음 상대와 팀 OVR이 보여. 경기 시작을 누르면 그 경기에서만 사용할 선발과 전술을 조정할 수 있어.'},
             {screen:'screen-mode-select',target:'.group',title:'자본주의 축구',body:'온전히 돈을 벌기 위한 모드야. 팀을 골라 단판 경기를 할 수 있어. 선수 체력·부상·성장은 반영되지 않아.'},
-            {screen:'screen-mode-select',target:'[onclick="switchScreen(\'screen-league\')"]',title:'정상을 향한 도전',body:'K리그2부터 시작해 정규리그 1·2위가 되면 승격 결정전! 이기면 다음 리그로 승격해. 경기마다 토큰을 얻고 우승하면 진화토큰도 받아.'},
+            {screen:'screen-mode-select',target:'[onclick="switchScreen(\'screen-league\')"]',title:'정상을 향한 도전',body:'K리그2부터 시작해 정규리그 1위는 바로 승격해. 2위도 1위 팀과 단판 결정전에서 이기면 추가로 승격해. 경기마다 토큰을 얻고 우승하면 진화토큰도 받아.'},
             {screen:'screen-mode-select',target:'[onclick="switchScreen(\'screen-career-select\')"]',title:'더 큰 무대로',body:'챔피언스리그·유로파리그·월드컵에 도전하는 대회 메뉴야. 보상과 도전 횟수는 대회별로 달라.'},
             {screen:'screen-career-select',target:'.grid, .flex.flex-1',title:'입맛대로',body:'챔피언스리그·유로파리그·월드컵 중 하나를 선택해. 대회가 진행 중이면 이어서 경기할 수 있어.'},
             {screen:'screen-manager',target:'#pitch-container',title:'승리는 라인업에서 시작된다',body:'축구장 위 선수를 눌러 선발과 후보를 바꾸고 포메이션·팀 전술을 관리해. 저장한 팀 설정은 다음 경기에도 유지돼.'},
@@ -3934,7 +3935,7 @@
             '같은 포지션의 후보 선수를 키워 두면 경기 운영이 한결 편해져요.',
             '강화에만 토큰을 쓰기보다 선수 영입을 위해 일부를 남겨 두는 것도 좋아요.',
             '강화에 성공하면 크리티컬로 강화 단계가 한 번 더 오를 수 있어요.',
-            '리그 1·2위가 승격 결정전을 치러, 이긴 팀이 다음 리그로 승격해요.',
+            '정규리그 1위는 자동 승격! 2위도 1위 팀과 결정전에서 이기면 추가로 승격해요.',
             '리그 우승 보상으로 진화 토큰도 얻을 수 있어요.',
             '일일 미션을 확인해 보세요. 평소처럼 플레이하면서 보상을 챙길 수 있어요.',
             '업적을 달성했다면 보상받기 버튼도 잊지 마세요.',
@@ -4080,6 +4081,7 @@
                 const st=reviveMatchValue(JSON.parse(saved.state));
                 if(!st||['onlineFriendly','tutorial'].includes(st.mode)||st.ended||st.resultProcessed||!st.homePlayers?.length||!st.awayPlayers?.length)throw new Error('저장된 경기 데이터가 올바르지 않아.');
                 if(st.mode==='league'&&!st.leaguePlayoff&&(!leagueState||st.leagueSeason!==leagueState.season||st.leagueRound!==leagueState.round||leagueState.status!=='playing'))throw new Error('이미 완료되었거나 진행 중인 리그와 다른 경기입니다.');
+                if(st.leaguePlayoff&&(!leagueState||leagueState.status!=='playoff'||st.leagueSeason!==leagueState.season||leagueState.po?.b!=='user'||st.enemy?.id!==leagueState.po?.a))throw new Error('더 이상 진행 대상이 아닌 승격 결정전입니다.');
                 currentMatchState=st;st.online=null;st.ended=false;st.resultProcessed=false;st.isPaused=false;st.userPaused=false;st.varOn=false;st.acc=0;st.last=performance.now();st.lastUi=0;st.engineInterval=null;st._checkpointAt=Math.floor((Number(st.time)||0)/5)*5;
                 document.getElementById('match-mode-text').innerText=st.mode==='league'?leagueMatchLabel(st.enemy):st.mode==='saudi'?'사우디 모드':st.mode==='rogue'?prematchLabel('rogue',st.enemy):st.mode==='europa'?`유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}`:st.mode==='worldcup'?`월드컵 ${worldCupState.round}`:st.mode==='tutorial'?'🎓 튜토리얼 친선전 · 선발 vs 비선발':!careerState?'친선 경기':careerState.round===2?'결승전':`${careerState.round}강 ${careerState.leg}차전`;
                 document.getElementById('match-enemy-name').innerText=st.enemy.name;const logo=st.enemy.logo||clubLogoUrl(st.enemy.id||st.enemy.name),logoEl=document.getElementById('match-enemy-logo');logoEl.src=logo||'';logoEl.classList.toggle('hidden',!logo);
@@ -8173,16 +8175,28 @@
             }
         }
 
-        // ===================== 🏟️ 리그 승격 결정전 (정규리그 1위 vs 2위 · 이긴 팀 승격) =====================
+        // ===================== 🏟️ 리그 승격: 1위 자동 · 2위는 1위와 결정전 승리 시 추가 승격 =====================
         function beginLeaguePlayoff(l) {
-            if (l.li >= LG.length - 1) return { pending: false, text: '' };
-            const tb = leagueTable(), a = tb[0].id, b = tb[1].id;
-            l.po = { a, b, done: false };
-            if (a === 'user' || b === 'user') { l.status = 'playoff'; const opp = a === 'user' ? b : a; return { pending: true, text: ` · 🏟️ 정규리그 ${a === 'user' ? 1 : 2}위! 승격 결정전 진출 (상대 ${leagueName(opp)})` }; }
-            const gap = (leagueStrength(a) - leagueStrength(b)) / 28; let ha = leaguePoisson(Math.max(.2, Math.min(3.8, 1.35 + gap + .18))), hb = leaguePoisson(Math.max(.2, Math.min(3.8, 1.35 - gap)));
-            let pens = ''; if (ha === hb) { const aw = Math.random() < 0.5 + gap * 0.3; pens = ' (승부차기)'; l.po.winner = aw ? a : b; } else l.po.winner = ha > hb ? a : b;
-            l.po.score = `${ha}:${hb}${pens}`; l.po.done = true;
-            return { pending: false, text: ` · 🏟️ 승격 결정전 ${leagueName(a)} ${ha}:${hb} ${leagueName(b)}${pens} → ${leagueName(l.po.winner)} 승격` };
+            if(l.li>=LG.length-1){delete l.po;return {pending:false,text:''};}
+            const tb=leagueTable(),rank=tb.findIndex(t=>t.id==='user')+1;
+            if(rank!==2){delete l.po;return {pending:false,text:''};}
+            l.po={a:tb[0].id,b:'user',done:false};l.status='playoff';
+            return {pending:true,text:` · 🏟️ 정규리그 2위! 승격 결정전 진출 (상대 1위 ${leagueName(l.po.a)} · 1위 팀은 승격 확정)`};
+        }
+        function resolveLegacyLeaguePlayoff() {
+            const l=leagueState;if(!l)return false;
+            if(l.status==='finished'&&l.rank===1&&l.nextLi===l.li&&l.li<LG.length-1){
+                l.nextLi=l.li+1;delete l.po;achAdd('promotions');persistLeague();return true;
+            }
+            if(l.status!=='playoff')return false;
+            const tb=leagueTable(),rank=tb.findIndex(t=>t.id==='user')+1;
+            if(rank===2&&l.li<LG.length-1){
+                if(!l.po||l.po.a!==tb[0].id||l.po.b!=='user'){
+                    l.po={a:tb[0].id,b:'user',done:false};persistLeague();
+                }
+                return false;
+            }
+            delete l.po;const result=finishLeagueSeason();persistLeague(result.reward,result.evo);seasonNews(l);return true;
         }
         function playLeaguePlayoff() {
             const l = leagueState; if (!l || l.status !== 'playoff' || !l.po) return;
@@ -8203,7 +8217,7 @@
         function playoffPanel(l) {
             const home = l.po.a === 'user', opp = home ? l.po.b : l.po.a, oc = clubById(opp), tb = leagueTable(), orow = tb.find(t => t.id === opp);
             return `<div class="text-amber-300 font-black tracking-wide">🏟️ 승격 결정전 · 단판 승부</div><h2 class="text-xl sm:text-2xl font-black my-3 flex flex-wrap items-center gap-3">${clubLabel(home ? 'user' : opp, true)} <span class="text-gray-500">vs</span> ${clubLabel(home ? opp : 'user', true)}</h2>
-                <p class="league-muted mb-3">정규리그 1위 ${leagueEsc(leagueName(l.po.a))} vs 2위 ${leagueEsc(leagueName(l.po.b))} · 비기면 연장전·승부차기<br>이기면 <b class="text-white">${LG[l.li + 1].n}</b> 승격! · 상대 OVR ${oc ? oc.ovr : '-'} · ${home ? '1위 어드밴티지: 홈 경기' : '원정 경기'}${orow ? ` · 상대 최근 ${orow.form.slice(-5).join(' ')}` : ''}<br>경기 보상 ${LG[l.li].m} T</p><button class="league-button" onclick="playLeaguePlayoff()">⚔️ 승격 결정전 시작</button>`;
+                <p class="league-muted mb-3">정규리그 2위의 추가 승격 기회 · 상대: 1위 ${leagueEsc(leagueName(l.po.a))}<br>1위 팀은 이미 승격 확정 · 결정전 결과와 무관합니다.<br>비기면 연장전·승부차기 · 이기면 <b class="text-white">${LG[l.li + 1].n}</b> 승격! · 상대 OVR ${oc ? oc.ovr : '-'} · ${home ? '1위 어드밴티지: 홈 경기' : '원정 경기'}${orow ? ` · 상대 최근 ${orow.form.slice(-5).join(' ')}` : ''}<br>경기 보상 ${LG[l.li].m} T</p><button class="league-button" onclick="playLeaguePlayoff()">⚔️ 승격 결정전 시작</button>`;
         }
 
         // ===================== beta45: 경기 종료 휘슬 · 실수 평점 · 기록 축하 · 극장골 · 수석코치 =====================
