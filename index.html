@@ -2467,19 +2467,48 @@
         function enqueueLeagueReward(amount,requestId,owner=leagueRewardOwner()){
             const list=leagueRewardQueue(owner);if(!list.some(x=>x.requestId===requestId))list.push({owner,amount,requestId});writeLeagueRewardQueue(list,owner);
         }
+        var leagueRewardRetryTimer=null;
+        function showLeagueRewardStatus(){
+            let box=document.getElementById('league-reward-pending');
+            const list=accountUser?.id?leagueRewardQueue(accountUser.id):[];
+            if(!list.length||!window.yfmAccountReady){if(box)box.remove();return;}
+            if(!box){
+                box=document.createElement('div');box.id='league-reward-pending';
+                box.style.cssText='position:fixed;right:12px;bottom:12px;z-index:9999;max-width:320px;padding:12px 16px;border:1px solid #fbbf24;border-radius:12px;background:#172033;color:#fff;font-size:13px;box-shadow:0 4px 20px #0008';
+                document.body.appendChild(box);
+            }
+            box.replaceChildren();
+            const label=document.createElement('div');
+            label.textContent='리그 보상 '+list.reduce((n,x)=>n+Number(x.amount),0).toLocaleString()+'T · '+(leagueRewardSyncBusy?'서버 지급 확인 중':'미지급 보관 중 · 자동 재시도');
+            box.appendChild(label);
+            const button=document.createElement('button');button.textContent='지급 다시 확인';button.disabled=leagueRewardSyncBusy;button.style.cssText='margin-top:8px;color:#fbbf24;font-weight:bold';
+            button.onclick=()=>settleLeagueRewards();box.appendChild(button);
+        }
+        function scheduleLeagueRewardRetry(){
+            if(leagueRewardRetryTimer)clearTimeout(leagueRewardRetryTimer);
+            leagueRewardRetryTimer=null;
+            if(accountUser?.id&&window.yfmAccountReady&&leagueRewardQueue(accountUser.id).length)
+                leagueRewardRetryTimer=setTimeout(()=>{leagueRewardRetryTimer=null;settleLeagueRewards();},15000);
+        }
         async function settleLeagueRewards(){
             if(leagueRewardSyncBusy||!accountUser?.id||!window.yfmAccountReady)return;
-            leagueRewardSyncBusy=true;const owner=accountUser.id;
+            if(leagueRewardRetryTimer)clearTimeout(leagueRewardRetryTimer);leagueRewardRetryTimer=null;
+            leagueRewardSyncBusy=true;const owner=accountUser.id;showLeagueRewardStatus();
             try{
                 for(const item of leagueRewardQueue(owner)){
-                    if(accountUser?.id!==owner)break;
+                    if(accountUser?.id!==owner||!window.yfmAccountReady)break;
                     const paid=await awardTokens(item.amount,'league_reward',item.requestId);
-                    if(!paid){if(typeof managerToast==='function')managerToast('리그 보상 지급을 서버에서 확인하지 못했습니다. 보상은 보관되며 다시 시도합니다.');break;}
+                    if(!paid)break;
+                    // Keep the request until the server confirms payment. Reuse its ID on every retry.
                     writeLeagueRewardQueue(leagueRewardQueue(owner).filter(x=>x.requestId!==item.requestId),owner);
+                    if(accountUser?.id!==owner)break;
                     saveData();flushFinishedMatchSave();
                 }
-            }finally{leagueRewardSyncBusy=false;}
+            }catch(error){console.warn('리그 미지급 보상 재시도 대기:',error);}
+            finally{leagueRewardSyncBusy=false;showLeagueRewardStatus();scheduleLeagueRewardRetry();}
         }
+        window.addEventListener('online',()=>settleLeagueRewards());
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden)settleLeagueRewards();});
         function persistLeague(reward=0,evo=0){
             const owner=leagueRewardOwner(),requestId=crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)});
             const tx={state:leagueState,tokens:tokens+reward,reward,evo:evoTokens+evo,owner,requestId};
@@ -2487,7 +2516,7 @@
             if(reward>0&&owner)enqueueLeagueReward(reward,requestId,owner);else if(!owner)tokens=tx.tokens;
             evoTokens=tx.evo;if(evo)achAdd('evoEarned',evo);saveData();
             localStorage.setItem('fm_league_v2',JSON.stringify(leagueState));localStorage.removeItem('fm_league_pending');
-            settleLeagueRewards();
+            flushFinishedMatchSave();settleLeagueRewards();
         }
         function recoverLeagueSave(){
             let tx;try{tx=JSON.parse(localStorage.getItem('fm_league_pending')||'null');}catch(_){}
@@ -3307,8 +3336,8 @@
             socialFriendId=id;socialFriendName=name;
             document.getElementById('social-chat-title').textContent=`${name}님과 대화`;
             document.getElementById('social-chat-input').disabled=false;document.getElementById('social-chat-send').disabled=false;
-            await markSocialMessagesRead(id);
             await loadSocialMessages();
+            try{await markSocialMessagesRead(id);}catch(e){console.warn("읽음 처리 실패:",e);}
         }
         async function markSocialMessagesRead(other){
             if(!accountUser || !socialCanChat(other))return;
@@ -3338,13 +3367,13 @@
                     const bubble=document.createElement('div');bubble.style.cssText=`max-width:85%;white-space:pre-wrap;overflow-wrap:anywhere;background:${msg.sender_id===me?'#6d36b3':'#302447'};padding:8px 11px;border-radius:11px;font-size:13px`;
                     const message=document.createElement('div');message.textContent=msg.body;
                     const time=document.createElement('small');time.style.cssText='display:block;margin-top:5px;color:#e2d5f5;font-size:10px;text-align:right';
-                    time.textContent=socialTimeFormat.format(new Date(msg.created_at));
+                    const sentAt=new Date(msg.created_at);time.textContent=Number.isFinite(sentAt.getTime())?socialTimeFormat.format(sentAt):'';
                     bubble.append(message,time);row.append(bubble);box.append(row);
                 });
                 box.dataset.lastId=String(data?.[0]?.id||'');
                 if(nearBottom || lastId!==box.dataset.lastId)box.scrollTop=box.scrollHeight;
-                if((data||[]).some(msg=>msg.sender_id===other && !msg.read_at))markSocialMessagesRead(other);
-            } catch(e){socialStatus('메시지를 불러오지 못했어.',true);}
+                if((data||[]).some(msg=>msg.sender_id===other && !msg.read_at))markSocialMessagesRead(other).catch(e=>console.warn('읽음 처리 실패:',e));
+            } catch(e){console.warn('메시지 조회 실패:',e);if(other===socialFriendId&&accountUser?.id===me)socialStatus(isSupportChat(other)?supportErrorMessage(e):'메시지를 불러오지 못했습니다. '+(e?.message||''),true);}
         }
         async function sendSocialMessage(event){
             event.preventDefault();
@@ -3490,7 +3519,7 @@
         function awardTokens(amount,source='game_reward',requestId=null){
             const n=Math.floor(Number(amount)||0);if(n<=0)return Promise.resolve(true);
             if(!accountUser?.id){tokens+=n;localStorage.setItem('fm_tokens',String(tokens));updateTokensUI();return Promise.resolve(true);}
-            return queueWalletOperation(async()=>{const {data,error}=await walletRpcWithRetry('yfm_wallet_credit',{p_amount:n,p_source:String(source||'game_reward'),p_request_id:requestId||(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)}))});if(error)throw error;if(!data?.ok){applyServerWallet(data?.balance);if(typeof managerToast==='function')managerToast('서버 토큰 한도에 걸려 보상이 지급되지 않았어.');return false;}applyServerWallet(data.balance);accountDirty=true;saveData();return true;}).catch(async e=>{console.warn('서버 토큰 지급 실패:',e);try{await loadServerWallet();}catch(_){}if(typeof managerToast==='function')managerToast(walletErrorMessage(e,'토큰 보상 지급'));return false;});
+            return queueWalletOperation(async()=>{const {data,error}=await walletRpcWithRetry('yfm_wallet_credit',{p_amount:n,p_source:String(source||'game_reward'),p_request_id:requestId||(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)}))});if(error)throw error;if(!data?.ok){applyServerWallet(data?.balance);if(source!=='league_reward'&&typeof managerToast==='function')managerToast('서버 토큰 한도에 걸려 보상이 지급되지 않았어.');return false;}applyServerWallet(data.balance);accountDirty=true;saveData();return true;}).catch(async e=>{console.warn('서버 토큰 지급 실패:',e);try{await loadServerWallet();}catch(_){}if(source!=='league_reward'&&typeof managerToast==='function')managerToast(walletErrorMessage(e,'토큰 보상 지급'));return false;});
         }
         function walletRequestId(){return crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)});}
         function walletErrorMessage(error,action='토큰 결제'){
@@ -11032,9 +11061,15 @@ async function checkGameAccess(uid,required=false){
   title.textContent='정지된 계정입니다';title.style.cssText='font-size:26px;font-weight:900;margin-bottom:16px';reason.textContent=data.reason||'관리자에 의해 이용이 제한되었습니다.';out.textContent='로그아웃';out.style.cssText='background:#6d28a8;padding:12px;border-radius:9px;margin-top:20px';out.onclick=async()=>{await getOwnerRankClient().auth.signOut();location.reload();};box.append(title,reason,out);cover.append(box);return false;
  }catch(e){if(required)throw new Error('계정 이용 권한을 확인하지 못했습니다. 추가 SQL 적용과 연결을 확인해 주세요.');console.warn('계정 상태 확인 실패',e);return !gameBlocked;}finally{gameAccessBusy=false;}
 }
+function supportErrorMessage(e){
+ const code=String(e?.code||''),message=String(e?.message||e||'알 수 없는 오류');
+ if(code==='42702')return '관리자 문의 서버 SQL에 이름 충돌이 있습니다. 관리자 문의 복구 SQL을 실행해 주세요. [42702]';
+ if(code==='PGRST202'||code==='42883'||code==='42P01')return '관리자 문의 서버 함수 또는 테이블을 찾지 못했습니다. 관리자 문의 SQL 적용을 확인해 주세요. ['+code+']';
+ return '관리자 문의 오류 ['+(code||'UNKNOWN')+']: '+message.slice(0,240);
+}
 async function supportRpc(action,payload={}){const {data,error}=await walletRpcWithRetry('yfm_support_rpc',{p_action:action,p_payload:payload});if(error)throw error;return data;}
 let supportRefreshBusy=false;
-function showSupportError(e){const box=document.getElementById('social-support-inbox');box.replaceChildren();const p=document.createElement('p');p.style.cssText='padding:12px;border:1px solid #a34d66;border-radius:9px;color:#fca5a5;font-size:13px';p.textContent=e?.code==='PGRST202'?'관리자 문의용 추가 SQL이 아직 적용되지 않았습니다.':`문의함을 불러오지 못했습니다: ${e?.message||e}`;box.append(p);}
+function showSupportError(e){const box=document.getElementById('social-support-inbox');box.replaceChildren();const p=document.createElement('p');p.style.cssText='padding:12px;border:1px solid #a34d66;border-radius:9px;color:#fca5a5;font-size:13px';p.textContent=supportErrorMessage(e);box.append(p);}
 async function refreshAdminSupport(){
  const uid=accountUser?.id;if(!uid||supportRefreshBusy)return;
  supportRefreshBusy=true;try{
