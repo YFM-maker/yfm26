@@ -17,7 +17,17 @@
         html.account-resuming #account-gate { display:flex !important; }
         html.account-resuming #account-form { display:none !important; }
         html.account-resuming #account-gate::after { content:'진행도를 불러오는 중입니다…'; color:#e9d5ff; font-weight:700; }
-    </style>
+    
+.player-card.halloween-card{position:relative;aspect-ratio:1/1;height:auto;container-type:inline-size;background:transparent;border:0;border-radius:0;overflow:visible;scale:1.2;transform-origin:center}
+.player-card.halloween-card .card-background{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;clip-path:none;border-radius:0}
+.player-card.halloween-card .card-ovr,.player-card.halloween-card .card-position{position:absolute;left:27.2%;transform:translate(-50%,-50%);line-height:1;text-align:center;color:#fd9f28;font-weight:900;font-family:'NexonLv1GothicCard',Arial,sans-serif;letter-spacing:0;white-space:nowrap;text-shadow:none;background:none;border:0;padding:0;width:auto}
+.player-card.halloween-card .card-ovr{top:22%;font-size:8.5cqw}
+.player-card.halloween-card .card-position{top:27.5%;font-size:5cqw}
+.halloween-pack{width:min(100%,20rem);border:2px solid #fd9f28;border-radius:20px;padding:20px;background:radial-gradient(ellipse at 50% 40%,#692a09 0,#1b100c 48%,#090909 100%);color:#fff;text-align:center;box-shadow:0 10px 35px #0008;position:relative;overflow:hidden}
+.halloween-pack h2{font-size:28px;font-weight:900;color:#fd9f28}.halloween-pack small{letter-spacing:3px;color:#eea762}.halloween-pack .pumpkin{font-size:100px;line-height:1.7;filter:drop-shadow(0 0 22px #f9731680)}
+.halloween-pack button{width:100%;border-radius:12px;padding:12px;font-weight:900;margin-top:10px;background:#d65b08}.halloween-pack .odds{background:#100c0a;border:1px solid #ad5a20;color:#ffbe7c;font-size:13px}.halloween-pack p{color:#d5baa6;font-size:13px;margin-top:8px}
+
+</style>
 
     <link rel="icon" type="image/png" href="https://github.com/user-attachments/assets/f6034f7a-4400-423b-9dbc-6829a2f90645">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1394,6 +1404,9 @@
                 <button class="mt-2 w-full bg-black/40 border border-yellow-500/50 text-yellow-100 font-bold py-2 rounded-xl hover:bg-yellow-600/80 transition z-10" onclick="event.stopPropagation(); showTierOdds(3)">선수별 확률</button>
             </div>
             
+            <section class="halloween-pack" aria-label="할로윈 이벤트뽑기">
+                <small>HALLOWEEN · 2026</small><h2>이벤트뽑기</h2><p>어둠 속에서 찾아온 세 명의 스트라이커</p><div class="pumpkin" aria-hidden="true">🎃</div><p>기본 OVR 70 · ST · +1 ~ +5 등장</p><p>보유 이벤트 뽑기권 <b id="halloween-ticket-count">0</b>장</p><button id="halloween-draw-button" onclick="startHalloweenGacha()">🎟 이벤트 뽑기권 1장으로 뽑기</button><button class="odds" onclick="showHalloweenOdds()">명단 · 확률 확인</button><p>뽑기권은 관리자 지급으로만 획득합니다.</p>
+            </section>
             <!-- 작은 화면에서도 항상 접근 가능한 선수 방출 버튼 -->
             <div class="w-full flex justify-center mt-4 mb-6 basis-full">
                 <button onclick="openSellModal()" class="w-full sm:w-auto bg-red-600 hover:bg-red-500 text-white font-black text-base sm:text-xl py-3 px-8 sm:px-12 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] transition">
@@ -3025,6 +3038,17 @@
             const rosterPlayer = p && players.find(x => x.id === p.id);
             return rosterPlayer ? getPlayerTier(rosterPlayer) : orbTierFromOvr(p?.displayOvr ?? p?.ovr ?? 60);
         }
+        const HALLOWEEN_SEASON='halloween2026';
+        const HALLOWEEN_PLAYERS=[
+            {name:'서예호',image:'https://github.com/user-attachments/assets/a5ae0d69-cb02-4d19-a85d-22b02f6c310f'},
+            {name:'서태환',image:'https://github.com/user-attachments/assets/09b05d47-5cb9-4f92-90e6-3c0626f3e304'},
+            {name:'조형진',image:'https://github.com/user-attachments/assets/0b877ab5-64ea-42df-b830-bcdf867a6357'}
+        ];
+        function isHalloweenPlayer(p){return p?.eventSeason===HALLOWEEN_SEASON;}
+        function halloweenTickets(){const n=Number(localStorage.getItem('fm_halloween_tickets')||0);return Number.isSafeInteger(n)&&n>=0?n:0;}
+        function updateHalloweenTickets(){const el=document.getElementById('halloween-ticket-count');if(el)el.textContent=halloweenTickets().toLocaleString();}
+        function drawHalloweenPlayer(){const member=HALLOWEEN_PLAYERS[Math.floor(Math.random()*3)],r=Math.random();return {...member,level:r<.1?1:r<.3?2:r<.7?3:r<.9?4:5};}
+        window.updateHalloweenCard=function(el,ovr,position='ST'){if(!el?.matches('.halloween-card'))return;el.querySelector('.card-ovr').textContent=String(ovr);el.querySelector('.card-position').textContent=String(position);el.setAttribute('aria-label',`${el.dataset.playerName} ${position} OVR ${ovr}`);};
         const PLAYER_CARD_BACKGROUND = 'https://github.com/user-attachments/assets/fd9b3a75-4449-4f0c-86bd-9edbb42dc700';
         const NORMAL_CARD_BG = 'https://github.com/user-attachments/assets/ce2b0266-3411-4fc6-8f71-884e3c772cb4';
         const JONGGEON_CARD_BG = 'https://github.com/user-attachments/assets/db4e94e3-769a-48e3-8248-94ba1b2d088a';
@@ -3037,9 +3061,20 @@
             const nameClass = length <= 2 ? 'short-name' : length === 3 ? '' : length === 4 ? 'long-name' : 'extra-long-name';
             const cardClass = options.className ? ' ' + options.className : '';
             const tier = options.tier ?? orbTierForPlayer(p);
+            if(isHalloweenPlayer(p)){
+                const image=HALLOWEEN_PLAYERS.find(x=>x.name===p.name)?.image;
+                if(image)return `<div class="player-card halloween-card${cardClass}" data-player-name="${escape(name)}" aria-label="${escape(name)} ST OVR ${escape(ovr)}"><img class="card-background" src="${image}" alt="${escape(name)} 할로윈 카드"><span class="card-ovr">${escape(ovr)}</span><span class="card-position">ST</span></div>`;
+            }
             const background = `<img class="card-background" src="${tier === 1 ? PLAYER_CARD_BACKGROUND : tier === 2 ? NORMAL_CARD_BG : JONGGEON_CARD_BG}" alt="">`;
             return `<div class="player-card tier-${tier}${tier === 2 ? ' normal-card' : tier === 3 ? ' jonggeon-card' : ''}${cardClass}" aria-label="${escape(name)} ${escape(pos)} OVR ${escape(ovr)}">${background}<span class="card-ovr">${escape(ovr)}</span><span class="card-position">${escape(pos)}</span><span class="card-name ${nameClass}">${escape(name)}</span></div>`;
         }
+        // Each event card exposes independent reactive HTML text values.
+        window.bindHalloweenCard=function(el){
+            if(el.halloweenValues)return el.halloweenValues;
+            const values={ovr:el.querySelector('.card-ovr').textContent,position:el.querySelector('.card-position').textContent};
+            el.halloweenValues=new Proxy(values,{set(target,key,value){target[key]=value;if(key==='ovr'||key==='position')window.updateHalloweenCard(el,target.ovr,target.position);return true;}});
+            return el.halloweenValues;
+        };
         // Fit uncommon long names to the name bar without changing its center or card scale.
         function fitPlayerCardNames(root = document) {
             (root.matches?.('.player-card') ? root.querySelectorAll('.card-name') : root.querySelectorAll('.player-card .card-name')).forEach(el => {
@@ -3057,6 +3092,7 @@
         function watchPlayerCardNames(root = document) {
             const cards = root.matches?.('.player-card') ? [root] : [...root.querySelectorAll('.player-card')];
             cards.forEach(el => {
+                if(el.matches('.halloween-card'))window.bindHalloweenCard(el);
                 if (!el.dataset.cardObserved) {
                     el.dataset.cardObserved = '1';
                     playerCardResizeObserver.observe(el);
@@ -3127,6 +3163,7 @@
         players.forEach(p => { if (typeof p.evo !== 'number') p.evo = 0; if (typeof p.ovr !== 'number') p.ovr = 60; if (typeof p.cond !== 'number') p.cond = 100; if (typeof p.inj !== 'number') p.inj = 0; });
         recoverCond();
         players.forEach(p => {
+            if(isHalloweenPlayer(p)){p.ovr=70;p.position='FW';p.pos2='ST';return;}
             const value = fixedOvr(p.name);
             if (value === undefined) return;
             const poolPosition = Object.values(tierData).flatMap(tier => Object.entries(tier)).find(([pos, names]) => names.includes(p.name.replace(/ \d+세$/, '')))?.[0];
@@ -9203,6 +9240,7 @@
         let sellSelection = [];
 
         function getPlayerTier(p) {
+            if(isHalloweenPlayer(p))return 2;
             if (p.tf || p.tier) return orbTierFromOvr(p.ovr);   // 기존 영입 선수: 뽑기와 같은 기준 (80+ 종건급 · 70+ 노말급)
             let baseName = p.name.replace(/ \d+세$/, '');
             if (tierData[1][p.position] && tierData[1][p.position].includes(baseName)) return 1;
@@ -9305,6 +9343,7 @@
         }
 
         function renderGachaPreviews() {
+            updateHalloweenTickets();
             const samples = {1:{value:65,label:'60~69'},2:{value:75,label:'70~79'},3:{value:90,label:'80~99'}};
             Object.entries(samples).forEach(([tier, sample]) => {
                 const el = document.getElementById(`gacha-preview-${tier}`);
@@ -9354,6 +9393,29 @@
                 document.getElementById('gacha-card-glow').style.backgroundColor=glowColor; card.classList.remove('hidden'); setTimeout(()=>card.classList.add('show'), 50); 
             }; if(gachaSkipped) revealGachaCard(); else setTimeout(revealGachaCard, 200);
             setTimeout(() => { flash.classList.replace('anim-flash-white', 'hidden'); }, 1000);
+        }
+        let halloweenDrawBusy=false;
+        function showHalloweenOdds(){
+            document.getElementById('tier-list-title').textContent='🎃 할로윈 이벤트 · 명단과 확률';
+            document.getElementById('tier-list-content').innerHTML=`<p>이벤트 뽑기권 1장을 사용합니다. 일반 뽑기에는 이벤트 카드가 등장하지 않습니다.</p><div class="bg-gray-900 rounded-xl p-4">${HALLOWEEN_PLAYERS.map(p=>`<p>${p.name} · FW / ST · 기본 OVR 70 · 33⅓%</p>`).join('')}</div><div class="bg-gray-900 rounded-xl p-4"><b>선수 선택 후 강화 단계 확률 (모든 선수 동일)</b><p>+1: 10% · +2: 20% · +3: 40% · +4: 20% · +5: 10%</p><p>강화 확률과 비용, 진화 규칙은 노말급과 같습니다.</p></div>`;
+            document.getElementById('tier-list-modal').classList.replace('hidden','flex');
+        }
+        async function startHalloweenGacha(){
+            if(halloweenDrawBusy||!document.getElementById('gacha-overlay').classList.contains('hidden'))return;
+            if(!accountUser?.id||gameBlocked)return alert('로그인 후 이용해 주세요.');
+            const tickets=halloweenTickets();if(tickets<1)return alert('이벤트 뽑기권이 없습니다. 관리자에게 지급받아 주세요.');
+            halloweenDrawBusy=true;
+            try{
+                const drawn=drawHalloweenPlayer(),p={id:newPlayerCardId('halloween'),name:drawn.name,ovr:70,position:'FW',pos2:'ST',eventSeason:HALLOWEEN_SEASON,isStarting:false,level:drawn.level,evo:0,cond:100,inj:0,slotIndex:-1};
+                localStorage.setItem('fm_halloween_tickets',String(tickets-1));players.push(p);achAdd('recruits');saveData();updateHalloweenTickets();
+                const ovl=document.getElementById('gacha-overlay'),box=document.getElementById('gacha-animation-box'),card=document.getElementById('gacha-result-card');
+                ovl.classList.replace('hidden','flex');card.classList.remove('show');card.classList.add('hidden');box.textContent='🎃';box.className='text-9xl anim-shake-medium';box.style.display='block';SFX.gachaOpen();
+                await waitEffectOrSkip(2500);box.style.display='none';SFX.gachaReveal();
+                document.getElementById('gacha-result-circle').innerHTML=playerCardMarkup(p,{ovr:getCalculatedOvr(p)});
+                document.getElementById('gacha-result-name').textContent=`🎃 ${p.name} · ST · +${p.level}`;
+                document.getElementById('gacha-card-glow').style.backgroundColor='#fd9f28';card.classList.remove('hidden');setTimeout(()=>card.classList.add('show'),50);
+                uploadAccountSnapshot(true).catch(console.warn);
+            }finally{halloweenDrawBusy=false;}
         }
         function closeGachaResult() { const ovl = document.getElementById('gacha-overlay'); const card = document.getElementById('gacha-result-card'); card.classList.remove('show'); setTimeout(() => { ovl.classList.replace('flex', 'hidden'); }, 300); }
 
@@ -11325,8 +11387,8 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
  function drawDetail(){const d=A.detail,u=A.selected||{},records=d.offline||{},labels={league:'리그',career:'챔피언스리그',saudi:'사우디',europa:'유로파',worldcup:'월드컵'};let roster=[];try{roster=JSON.parse(d.save?.data?.fm_players||'[]');}catch(_){}
   const offline=Object.entries(records).filter(([k,v])=>v&&typeof v==='object'&&v.p!==undefined).map(([k,v])=>`<tr><td>${esc(labels[k]||k)}</td><td>${format(v.p)}</td><td>${format(v.w)} / ${format(v.d)} / ${format(v.l)}</td><td>${format(v.gf)} / ${format(v.ga)}</td></tr>`).join('');
   const online=d.online_results||[],summary=d.online_summary||{};
-  $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div style="margin:12px 0;padding:14px;border:2px solid #9d60d5;border-radius:12px;background:#2a1438"><h4 style="font-weight:900;font-size:18px;margin-bottom:8px">계정 정지 관리</h4><p>현재 상태: <b>${d.suspension?.suspended?'정지':'정상'}</b>${d.suspension?.suspended?` · ${esc(d.suspension.reason)}`:''}</p><p style="font-size:12px;color:#dfc7ef;margin:8px 0">아래 변경 사유를 입력한 뒤 정지하거나 해제하세요.</p>${!d.suspension?'<p style="color:#fca5a5;font-size:12px;margin:8px 0">추가 정지·문의 SQL이 적용되지 않았습니다. 서버 SQL을 먼저 적용해 주세요.</p>':''}<button id="yfm-admin-suspend" data-admin-write ${A.target===accountUser.id||!d.suspension?'disabled':''} style="padding:10px 18px;border-radius:8px;background:${d.suspension?.suspended?'#167652':'#a32d43'};font-weight:900;opacity:${A.target===accountUser.id||!d.suspension?'.5':'1'}">${A.target===accountUser.id?'관리자 계정은 정지 불가':d.suspension?.suspended?'정지 해제':'이 계정 정지'}</button></div><div class="my-3 p-3 rounded-xl bg-gray-900">서버 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b> · 🧬 진화토큰 <b class="text-purple-300">${format(d.save?.data?.fm_evo_tokens)}개</b> · 보유 선수 ${format(roster.length)}명<br><small>가입 ${esc(time(u.created_at))} · 마지막 로그인 ${esc(time(u.last_sign_in_at))}</small></div>
-  <div class="p-3 mb-4 rounded-xl bg-purple-950 border border-purple-700"><label class="block text-sm mb-2">변경 사유 (모든 변경에 필수)</label><input id="yfm-admin-reason" maxlength="500" class="w-full rounded-lg p-2 bg-gray-900 border border-gray-600" placeholder="보상 지급 / 비정상 획득 회수 / 기록 정정"><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-amount" type="number" min="1" max="1000000000" step="1" placeholder="토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">지급</button><button id="yfm-admin-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">회수·차감</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-evo-amount" type="number" min="1" max="1000000000" step="1" placeholder="진화토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-evo-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">진화토큰 지급</button><button id="yfm-admin-evo-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">진화토큰 압수</button></div></div>
+  $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div style="margin:12px 0;padding:14px;border:2px solid #9d60d5;border-radius:12px;background:#2a1438"><h4 style="font-weight:900;font-size:18px;margin-bottom:8px">계정 정지 관리</h4><p>현재 상태: <b>${d.suspension?.suspended?'정지':'정상'}</b>${d.suspension?.suspended?` · ${esc(d.suspension.reason)}`:''}</p><p style="font-size:12px;color:#dfc7ef;margin:8px 0">아래 변경 사유를 입력한 뒤 정지하거나 해제하세요.</p>${!d.suspension?'<p style="color:#fca5a5;font-size:12px;margin:8px 0">추가 정지·문의 SQL이 적용되지 않았습니다. 서버 SQL을 먼저 적용해 주세요.</p>':''}<button id="yfm-admin-suspend" data-admin-write ${A.target===accountUser.id||!d.suspension?'disabled':''} style="padding:10px 18px;border-radius:8px;background:${d.suspension?.suspended?'#167652':'#a32d43'};font-weight:900;opacity:${A.target===accountUser.id||!d.suspension?'.5':'1'}">${A.target===accountUser.id?'관리자 계정은 정지 불가':d.suspension?.suspended?'정지 해제':'이 계정 정지'}</button></div><div class="my-3 p-3 rounded-xl bg-gray-900">서버 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b> · 🧬 진화토큰 <b class="text-purple-300">${format(d.save?.data?.fm_evo_tokens)}개</b> · 🎟 이벤트 뽑기권 <b>${format(d.save?.data?.fm_halloween_tickets)}장</b> · 보유 선수 ${format(roster.length)}명<br><small>가입 ${esc(time(u.created_at))} · 마지막 로그인 ${esc(time(u.last_sign_in_at))}</small></div>
+  <div class="p-3 mb-4 rounded-xl bg-purple-950 border border-purple-700"><label class="block text-sm mb-2">변경 사유 (모든 변경에 필수)</label><input id="yfm-admin-reason" maxlength="500" class="w-full rounded-lg p-2 bg-gray-900 border border-gray-600" placeholder="보상 지급 / 비정상 획득 회수 / 기록 정정"><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-amount" type="number" min="1" max="1000000000" step="1" placeholder="토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">지급</button><button id="yfm-admin-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">회수·차감</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-evo-amount" type="number" min="1" max="1000000000" step="1" placeholder="진화토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-evo-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">진화토큰 지급</button><button id="yfm-admin-evo-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">진화토큰 압수</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-ticket-amount" type="number" min="1" max="1000000000" step="1" placeholder="이벤트 뽑기권 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-ticket-gift" data-admin-write class="px-3 py-2 rounded-lg bg-orange-700 font-bold">🎟 뽑기권 지급</button><button id="yfm-admin-ticket-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">뽑기권 압수</button></div></div>
 
   <h4 class="font-black mb-2">오프라인 전적</h4><div style="overflow:auto"><table class="w-full text-sm"><thead><tr><th>모드</th><th>경기</th><th>승 / 무 / 패</th><th>득점 / 실점</th></tr></thead><tbody>${offline||'<tr><td colspan="4">기록 없음</td></tr>'}</tbody></table></div>
   <h4 class="font-black mt-5 mb-2">온라인 친선전</h4><p class="text-sm mb-3">${format(summary.games)}경기 · ${format(summary.wins)}승 ${format(summary.draws)}무 ${format(summary.losses)}패 · 최근 100경기</p><div>${online.map((r,i)=>`<div data-match="${i}" class="my-2 p-2 rounded-lg bg-gray-900"><div class="text-xs text-purple-200">${esc(time(r.ended_at))} · ${r.kind==='friend'?'친구 친선':'코드 친선'} · ${esc(r.method)}</div><div class="flex flex-wrap items-center gap-2 mt-2"><label class="text-xs">방장 <input class="admin-host w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.host_goals)||0}"></label><span>:</span><label class="text-xs">참가자 <input class="admin-guest w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.guest_goals)||0}"></label><button data-admin-write class="admin-score px-2 py-1 rounded bg-purple-700 text-sm">점수 정정</button></div></div>`).join('')||'<p class="text-sm text-gray-400">기록 없음</p>'}</div>
@@ -11335,7 +11397,7 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   <details class="mt-4"><summary class="font-bold cursor-pointer">관리자 변경 기록·수정 전 데이터 (최근 50건)</summary><div>${(d.audit||[]).map(x=>`<button data-audit="${esc(x.request_id)}" class="block w-full text-left p-2 my-1 rounded bg-gray-900 text-xs">${esc(time(x.created_at))} · ${esc(x.action)} · ${esc(x.reason)} ${x.delta!==null?`(${Number(x.delta)>0?'+':''}${format(x.delta)} T)`:''}</button>`).join('')||'기록 없음'}</div><textarea id="yfm-admin-audit-json" readonly style="width:100%;height:220px;background:#0b0711;padding:8px;font:11px monospace;margin-top:8px"></textarea></details>
   <details class="mt-4"><summary class="font-bold cursor-pointer">이전 버전 온라인 기록</summary><pre style="white-space:pre-wrap;word-break:break-all;font-size:11px">${esc(JSON.stringify(d.legacy_online_results||[],null,2))}</pre></details>`;
   $('yfm-admin-suspend').onclick=async()=>{try{const target=A.target,suspended=!A.detail.suspension?.suspended,why=reason();if(!confirm(suspended?'이 계정의 모든 게임 서비스를 정지할까요?':'계정 정지를 해제할까요?'))return;await mutate('suspension',{user_id:target,suspended,reason:why});await selectUser(target);status(suspended?'계정 정지 완료':'정지 해제 완료');}catch(e){fail(e);}};
-  $('yfm-admin-save-json').value=JSON.stringify(d.save,null,2);$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;$('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);
+  $('yfm-admin-save-json').value=JSON.stringify(d.save,null,2);$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;$('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);$('yfm-admin-ticket-gift').onclick=()=>adjustEventTickets(1);$('yfm-admin-ticket-remove').onclick=()=>adjustEventTickets(-1);
   $('yfm-admin-detail').querySelectorAll('[data-match]').forEach(el=>el.querySelector('.admin-score').onclick=()=>editScore(Number(el.dataset.match),el));
   $('yfm-admin-detail').querySelectorAll('[data-audit]').forEach(el=>el.onclick=async()=>{try{const data=await rpc('audit',{user_id:A.target,request_id:el.dataset.audit});$('yfm-admin-audit-json').value=JSON.stringify(data,null,2);}catch(e){fail(e);}});
  }
@@ -11373,6 +11435,27 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
    if(target===owner){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}
    await selectUser(target);
    status(`진화토큰 ${sign>0?'지급':'압수'} 완료 · 잔액 ${format(after)}개. 유저 화면은 다음 저장·재접속 때 반영됩니다.`);
+  }catch(e){fail(e);}
+ }
+ async function adjustEventTickets(sign){
+  try{
+   if(A.busy)return;
+   const amount=Number($('yfm-admin-ticket-amount').value),why=reason(),target=A.target,owner=accountUser?.id;
+   if(!Number.isSafeInteger(amount)||amount<1||amount>1000000000)throw new Error('이벤트 뽑기권 수량을 올바르게 입력해 주세요.');
+   const detail=A.detail,save=JSON.parse(JSON.stringify(detail.save||null));
+   if(!save?.data||save.app!=='YFM')throw new Error('유저의 게임 저장 데이터가 없습니다. 게임을 한 번 저장한 뒤 다시 조회해 주세요.');
+   const before=Number(save.data.fm_halloween_tickets||0);
+   if(!Number.isSafeInteger(before)||before<0)throw new Error('이벤트 뽑기권 잔액이 올바르지 않습니다. 다시 조회해 주세요.');
+   const after=Math.max(0,before+sign*amount);
+   if(!Number.isSafeInteger(after))throw new Error('이벤트 뽑기권 최대 수량을 초과했습니다.');
+   if(after===before)throw new Error('압수할 이벤트 뽑기권이 없습니다.');
+   save.data.fm_halloween_tickets=String(after);
+   const result=await mutate('save',{user_id:target,save,expected_at:detail.save.at||null,reason:`[이벤트 뽑기권 ${sign>0?'지급':'압수'} ${Math.abs(after-before)}장 · ${before} → ${after}] ${why}`});
+   if(!result)return;
+   if(accountUser?.id!==owner)return;
+   if(target===owner){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}
+   await selectUser(target);
+   status(`이벤트 뽑기권 ${sign>0?'지급':'압수'} 완료 · 잔액 ${format(after)}장. 유저 화면은 다음 저장·재접속 때 반영됩니다.`);
   }catch(e){fail(e);}
  }
  async function editSave(){try{const target=A.target,save=JSON.parse($('yfm-admin-save-json').value),why=reason();if(!confirm('선택한 유저의 게임 저장 데이터를 수정할까요? 변경 전 데이터는 관리자 기록에 보관됩니다.'))return;const result=await mutate('save',{user_id:target,save,expected_at:A.detail.save?.at||null,reason:why});if(!result)return;if(target===accountUser.id){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}await selectUser(target);status('저장 데이터 수정 완료. 유저는 다음 저장·재접속 때 변경 사항을 다시 불러옵니다.');}catch(e){fail(e);}}
