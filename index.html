@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
@@ -899,7 +899,100 @@
 #saudi-team-list { display:flex; flex-wrap:nowrap; align-items:center; gap:16px; padding:8px 18px 18px; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; }
 #saudi-team-list > div { flex:0 0 220px; scroll-snap-align:start; }
 @media (max-width:760px) { #screen-saudi { padding:12px; } #screen-saudi h1 { font-size:22px; margin:42px 0 14px; } #saudi-team-list { gap:10px; padding:8px 8px 18px; } #saudi-team-list > div { flex-basis:180px; } }
-</style></head>
+</style><style id="device-responsive-ui">
+/* Device layouts: phone <=760px, tablet 761–1180px. */
+:root{--mobile-nav-height:64px}
+.screen{min-width:0}button,input,select,textarea{touch-action:manipulation}button:focus-visible{outline:2px solid #fd9f28;outline-offset:3px}
+#yfm-mobile-more{display:none}
+@media(pointer:coarse){button:not(.player-node):not(.prematch-token),select{min-height:42px}input,textarea{font-size:16px!important}}
+@media(min-width:761px) and (max-width:1180px){
+ html{font-size:14px}#fm-global-side{width:152px!important}
+ body.has-global-nav .screen.active:not(#screen-lobby):not(#screen-match){width:calc(100vw - 152px)!important;margin-left:152px!important}
+ #screen-lobby .fm-shell{inset:0 0 0 152px!important}
+ #fm-global-side .fm-nav-item{font-size:12px;padding:10px 8px;gap:8px}
+ #screen-manager>div:first-child{width:235px;flex-shrink:0;padding:14px}
+ #screen-enhance>header{flex-wrap:wrap;gap:10px;padding:14px!important}
+ #screen-enhance>header h1{position:static;transform:none;font-size:23px}
+ #screen-enhance>div.flex.flex-1{padding:12px;gap:12px}
+ #screen-fusion>div.flex.flex-1{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.2fr);overflow-y:auto;align-items:start}
+ #screen-fusion>div.flex.flex-1>div{width:auto;min-width:0}
+ #fusion-targets{max-height:56dvh}#fusion-center{padding:18px!important}
+ #screen-fusion>div.flex.flex-1>div:last-child{grid-column:1/-1}
+ #screen-fusion>header{flex-wrap:wrap;gap:10px;padding:12px}
+ .match-top{height:auto;min-height:96px;grid-template-columns:1fr;padding:8px;gap:7px}.mt-left{display:none}.mt-board{justify-self:center;max-width:100%}.mt-actions{justify-content:center;flex-wrap:wrap}.mt-btn{padding:8px 12px;font-size:12px}
+ .match-side{display:none}.match-body{min-height:0}
+ #screen-recruit>main>div.group,#screen-recruit .halloween-pack{width:calc(50% - 12px);max-width:340px}
+}
+@media(min-width:761px) and (max-width:1000px) and (orientation:portrait){
+ #screen-manager{flex-direction:column!important;overflow-y:auto}
+ #screen-manager>#pitch-container{order:-1;flex:none;width:100%;height:650px;min-height:650px}
+ #screen-manager>div:first-child{width:100%;height:auto;overflow:visible;flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
+ #screen-manager>div:first-child>h1,#screen-manager>div:first-child>h2,#screen-manager>div:first-child>button:first-child{grid-column:1/-1}
+}
+@media(max-width:760px), (max-width:1000px) and (max-height:500px){
+ html{font-size:14px}body{overflow:hidden} .screen.active{max-width:100vw}
+ #fm-global-side{inset:auto 0 0!important;width:100%!important;border-right:0;border-top:1px solid #654878;height:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom))!important;padding:0!important;box-sizing:border-box}
+ #fm-global-side .fm-brand{display:none}#fm-global-side .fm-nav{flex-direction:row;padding:4px 6px calc(4px + env(safe-area-inset-bottom))!important;gap:3px;overflow:hidden!important;height:100%;align-items:stretch}
+ #fm-global-side .fm-nav-item{display:none;flex:1 1 0;min-width:0;max-width:none;min-height:48px;font-size:10px;padding:5px 2px}
+ #fm-global-side .fm-nav-item.mobile-primary,#fm-global-side #yfm-mobile-more{display:flex}
+ #fm-global-side .fm-nav-sep,#fm-global-side #account-profile{display:none!important}
+ #fm-global-side.mobile-nav-expanded{height:auto!important;max-height:80dvh;border-radius:18px 18px 0 0;box-shadow:0 -18px 80px #000b}
+ #fm-global-side.mobile-nav-expanded .fm-nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow-y:auto!important;max-height:65dvh;padding:12px 8px!important}
+ #fm-global-side.mobile-nav-expanded .fm-nav-item{display:flex;min-height:58px}
+ #fm-global-side.mobile-nav-expanded #account-profile{display:flex!important;position:static!important;max-width:none!important;margin:8px;flex-shrink:0}
+ body.has-global-nav .screen.active:not(#screen-lobby):not(#screen-match){width:100vw!important;margin:0!important;height:calc(100dvh - var(--mobile-nav-height) - env(safe-area-inset-bottom))!important}
+ #screen-lobby .fm-shell{inset:0 0 calc(var(--mobile-nav-height) + env(safe-area-inset-bottom))!important}
+ .screen:not(#screen-match)>header{flex-wrap:wrap;gap:8px;padding:12px!important}
+ .screen:not(#screen-match)>header>button{font-size:13px!important}
+ #screen-enhance>header h1{position:static!important;transform:none!important;font-size:20px!important;order:-1;width:100%;text-align:center}
+ #screen-enhance>header>div{margin-left:auto}#screen-recruit>header>div{padding:7px 12px;font-size:16px}
+ #screen-recruit>main{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:10px;align-content:start}
+ #screen-recruit>main>div.group,#screen-recruit .halloween-pack{width:100%;min-width:0;padding:12px 8px;border-radius:14px}
+ #screen-recruit h2,#screen-recruit .halloween-pack h2{font-size:19px;line-height:1.3}#screen-recruit>main p{font-size:11px;margin-bottom:10px}
+ #screen-recruit [id^="gacha-preview-"]{min-height:150px;margin-bottom:10px}#screen-recruit .orb-card-gacha{width:108px}
+ #screen-recruit .halloween-pack .pumpkin{font-size:73px;line-height:1.75}#screen-recruit .halloween-pack small{font-size:9px;letter-spacing:1px}
+ #screen-recruit>main>div.basis-full{grid-column:1/-1}#screen-recruit>main button{font-size:12px;padding:10px 6px}
+ #screen-manager{flex-direction:column!important;overflow-y:auto;overscroll-behavior:contain}
+ #screen-manager>#pitch-container{order:-1;flex:none;width:100%;height:550px;min-height:550px}
+ #screen-manager>div:first-child{width:100%;height:auto;flex:none;overflow:visible;padding:14px}
+ #pitch-container .player-node{width:clamp(46px,13vw,62px);height:auto;aspect-ratio:800/1080}
+ #pitch-container>div.absolute{top:8px;padding:5px 12px;font-size:12px;white-space:nowrap}#team-avg-ovr{font-size:22px}
+ #formation-panel{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ #screen-enhance{overflow-y:auto}#screen-enhance>header{flex:none}
+ #screen-enhance>div.flex.flex-1{flex:none;flex-direction:column;overflow:visible;padding:10px!important;gap:12px!important}
+ #screen-enhance>div.flex.flex-1>div:first-child{width:100%!important;flex:none}
+ #screen-enhance>div.flex.flex-1>div:first-child>div:first-child{flex:none}
+ #enhance-player-list{max-height:230px;min-height:100px}
+ #screen-enhance>div.flex.flex-1>div:last-child{flex:none;min-height:300px;padding:18px 14px!important;overflow:visible}
+ #enhance-panel>div{margin-bottom:18px}#enhance-panel>div>div.flex{gap:16px}#enhance-none-selected{font-size:16px;text-align:center}
+ #screen-fusion{overflow-y:auto}#screen-fusion>header{flex:none}#screen-fusion>header h1{font-size:20px}#screen-fusion>header>div{padding:6px 10px}
+ #screen-fusion>div.flex.flex-1{display:flex;flex-direction:column;flex:none;overflow:visible;padding:10px;gap:12px}
+ #screen-fusion>div.flex.flex-1>div{width:100%;flex:none;min-width:0}#fusion-targets{max-height:220px}#fusion-center{padding:18px 12px!important;min-height:240px}
+ #screen-social{padding:12px!important}#social-chat-messages{height:clamp(200px,38dvh,360px)!important}#social-chat-form{position:sticky;bottom:0;padding:8px 0;background:#19152c}
+ #yfm-admin-modal{padding:10px!important}#yfm-admin-detail{flex-basis:100%!important;padding:12px!important}#yfm-admin-modal section{min-width:0!important}#yfm-admin-detail .flex.flex-wrap{flex-wrap:wrap}#yfm-admin-detail input[type=number]{flex-basis:100%}
+ #screen-stats{padding:12px;gap:10px}#screen-stats>div:first-child{flex-wrap:wrap;gap:8px}#screen-stats>div:first-child>span{display:none}#screen-stats h1{font-size:22px}#stats-tabs{gap:5px}#stats-tabs button{font-size:11px;padding:8px 3px}
+ .match-top{height:auto!important;min-height:98px;grid-template-columns:minmax(0,1fr)!important;padding:6px!important;gap:5px;flex:none}
+ .mt-left{display:none!important}.mt-board{justify-self:center;max-width:100%;min-width:0}.mt-name{max-width:calc((100vw - 142px)/2);padding:0 6px;font-size:11px!important;min-width:0}.mt-name .kit{display:none}.mt-name img{width:18px;height:18px}.mt-score{width:28px;font-size:21px}.mt-clock{padding:3px 7px}.mt-clock b{font-size:16px}
+ .mt-actions{justify-content:flex-start;overflow-x:auto;gap:5px;padding-bottom:2px;max-width:100%;flex-wrap:nowrap}.mt-btn{flex:none;white-space:nowrap;font-size:11px;padding:7px 9px;min-height:38px!important}
+ .match-side{display:none!important}.match-body{padding:5px;min-height:0}.match-comm{height:95px;flex-shrink:0;font-size:12px;margin:0 5px 5px}
+ #tactics-panel{overflow-y:auto;padding:10px!important}#tactics-panel>div.flex-1{flex:none!important;flex-direction:column!important;height:auto!important;overflow:visible!important}
+ #tactics-panel>div.flex-1>.pitch-wrap{height:310px;min-height:310px;flex:none}#tactics-panel .w-72{width:100%!important;min-width:0;max-height:none!important;overflow:visible!important;padding:12px!important}
+ #tac-buttons button{font-size:12px;padding:8px}#tac-bench{max-height:240px;overflow-y:auto}
+ #match-ht-overlay,#match-end-overlay{justify-content:flex-start;padding:16px!important;overscroll-behavior:contain}
+ :is(#player-modal,#swap-modal,#tier-list-modal,#mission-modal,#prematch-modal,#star-modal){padding:12px!important;overflow-y:auto}
+ :is(#player-modal,#swap-modal,#tier-list-modal,#mission-modal)>div:first-child{width:100%!important;max-height:88dvh;overflow-y:auto;padding:14px}
+ #star-modal{justify-content:flex-start;padding-top:28px!important}#star-modal h2{font-size:24px;text-align:center}#star-list{gap:10px}
+ #gacha-result-card{padding:20px 0;max-height:92dvh;overflow-y:auto;width:100%}#gacha-result-circle{width:min(55vw,210px)}
+ #gacha-result-name{font-size:20px;margin-top:25px}#gacha-result-card>button{margin-top:14px}
+}
+@media(max-width:1000px) and (max-height:500px){
+ #screen-manager>#pitch-container{height:520px;min-height:520px}
+ .match-top{min-height:82px}.match-comm{height:44px}#screen-match .pitch-wrap{min-height:0}.mt-actions{justify-content:center}
+ #tactics-panel>div.flex-1>.pitch-wrap{height:300px;min-height:300px}
+}
+@media(max-width:360px){#screen-recruit>main{grid-template-columns:minmax(0,1fr)}#screen-recruit .orb-card-gacha{width:130px}}
+</style>
+</head>
 <body>
     <div id="opening" onclick="event.stopPropagation()" onpointerdown="event.stopPropagation()"><img src="https://github.com/user-attachments/assets/c12a40ec-da7e-41aa-a0d3-8d72489d55c9" alt=""></div>
     <div id="first-play-welcome" class="fixed inset-0 z-[9998] flex items-center justify-center bg-black" style="opacity:0;visibility:hidden;transition:opacity .8s ease,visibility .8s ease"><img src="https://github.com/user-attachments/assets/1216d605-f2ac-4b31-9a84-294df99e277e" alt="환영 이미지" class="w-full h-full object-cover"></div>
@@ -11513,5 +11606,19 @@ setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden&&docum
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.yfmAccountReady&&accountUser)checkGameAccess(accountUser.id);});
 </script>
 
+
+<script id="device-responsive-behavior">
+(()=>{
+ const side=document.getElementById('fm-global-side');if(!side)return;
+ const nav=side.querySelector('.fm-nav'),mobile=matchMedia('(max-width:760px), (max-width:1000px) and (max-height:500px)');
+ const primary=['screen-lobby','screen-mode-select','screen-manager','screen-recruit'];
+ nav.querySelectorAll('.fm-nav-item').forEach(b=>{if(primary.some(id=>(b.getAttribute('onclick')||'').includes("'"+id+"'")))b.classList.add('mobile-primary');});
+ const more=document.createElement('button');more.id='yfm-mobile-more';more.className='fm-nav-item';more.type='button';more.innerHTML='<span class="fm-ico">☰</span><span>더보기</span>';more.setAttribute('aria-expanded','false');more.setAttribute('aria-label','전체 메뉴 열기');nav.append(more);
+ const close=()=>{side.classList.remove('mobile-nav-expanded');more.setAttribute('aria-expanded','false');more.querySelector('span:last-child').textContent='더보기';};
+ more.onclick=()=>{const expanded=side.classList.toggle('mobile-nav-expanded');more.setAttribute('aria-expanded',String(expanded));more.querySelector('span:last-child').textContent=expanded?'닫기':'더보기';};
+ nav.addEventListener('click',e=>{if(e.target.closest('.fm-nav-item')!==more)close();});
+ document.addEventListener('pointerdown',e=>{if(!side.contains(e.target))close();});document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});mobile.addEventListener('change',close);
+})();
+</script>
 </body>
 </html>
