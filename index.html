@@ -3425,8 +3425,10 @@
         function paintSocialDots(){document.querySelectorAll('[data-social-peer]').forEach(el=>{const on=socialUnread.has(el.dataset.socialPeer)||supportUnread.has(el.dataset.socialPeer);el.querySelector('.social-unread-dot').style.display=on?'inline-block':'none';});}
         function attachSocialDot(row,id){row.dataset.socialPeer=id;const dot=document.createElement('span');dot.className='social-unread-dot';dot.setAttribute('aria-label','안 읽은 메시지');dot.style.cssText='width:9px;height:9px;border-radius:50%;background:#ef4444;flex:none;display:none';row.prepend(dot);return row;}
         const socialClient=()=>getOwnerRankClient();
-        async function updateSocialNotifications(){
+        let socialNotificationCheckedAt=0,socialNotificationCheckedOwner=null;
+        async function updateSocialNotifications(force=false){
             if(!accountUser || document.hidden || socialNotificationBusy)return;
+            if(!force&&socialNotificationCheckedOwner===accountUser.id&&Date.now()-socialNotificationCheckedAt<19000)return;
             socialNotificationBusy=true;
             try {
                 const me=accountUser.id;
@@ -3437,6 +3439,7 @@
                 if(requests.error)throw requests.error;
                 if(messages.error)throw messages.error;
                 if(accountUser?.id!==me)return;
+                socialNotificationCheckedAt=Date.now();socialNotificationCheckedOwner=me;
                 socialUnread=new Set((messages.data||[]).map(m=>m.sender_id));paintSocialDots();
                 const count=(requests.count||0)+(messages.count||0)+supportUnread.size,badge=document.getElementById('fm-social-badge');
                 badge.style.display=count?'inline-flex':'none';
@@ -3564,8 +3567,10 @@
         const socialTimeFormat=new Intl.DateTimeFormat('ko-KR',{
             timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'
         });
+        let socialMessageLoading=false;
         async function loadSocialMessages(){
             if(!accountUser || !socialFriendId || document.hidden || document.querySelector('.screen.active')?.id!=='screen-social')return;
+            if(socialMessageLoading)return;socialMessageLoading=true;
             const me=accountUser.id,other=socialFriendId,box=document.getElementById('social-chat-messages');
             try {
                 const {data,error}=isSupportChat(other)?{data:await supportRpc('messages',{peer:other}),error:null}:await socialClient().from('social_messages').select('id,sender_id,body,created_at,read_at')
@@ -3587,7 +3592,7 @@
                 box.dataset.lastId=String(data?.[0]?.id||'');
                 if(nearBottom || lastId!==box.dataset.lastId)box.scrollTop=box.scrollHeight;
                 if((data||[]).some(msg=>msg.sender_id===other && !msg.read_at))markSocialMessagesRead(other).catch(e=>console.warn('읽음 처리 실패:',e));
-            } catch(e){console.warn('메시지 조회 실패:',e);if(other===socialFriendId&&accountUser?.id===me)socialStatus(isSupportChat(other)?supportErrorMessage(e):'메시지를 불러오지 못했습니다. '+(e?.message||''),true);}
+            } catch(e){console.warn('메시지 조회 실패:',e);if(other===socialFriendId&&accountUser?.id===me)socialStatus(isSupportChat(other)?supportErrorMessage(e):'메시지를 불러오지 못했습니다. '+(e?.message||''),true);}finally{socialMessageLoading=false;}
         }
         async function sendSocialMessage(event){
             event.preventDefault();
@@ -3744,13 +3749,13 @@
             if(code==='CLIENT_TIMEOUT'||/Failed to fetch|NetworkError|Load failed|timeout/i.test(message))return '서버 응답을 확인하지 못했습니다. 연결 후 같은 작업을 다시 시도해 주세요. 같은 결제 번호를 유지합니다.';
             return `${action} 오류 [${code}]: ${message.slice(0,240)}`;
         }
-        async function walletRpcWithRetry(name,args){
+        async function walletRpcWithRetry(name,args,options={}){
             const client=getOwnerRankClient();let lastError,refreshed=false;
-            for(let attempt=0;attempt<3;attempt++){
-                let timer;
+            for(let attempt=0;attempt<(options.maxAttempts||3);attempt++){
+                let timer;const controller=new AbortController();
                 try{
-                    const request=client.rpc(name,args);
-                    const result=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>reject({code:'CLIENT_TIMEOUT',message:'Server request timed out'}),10000);})]);
+                    const request=client.rpc(name,args).abortSignal(controller.signal);
+                    const result=await Promise.race([request,new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject({code:'CLIENT_TIMEOUT',message:'Server request timed out'});},options.timeoutMs||10000);})]);
                     if(result.error)throw result.error;
                     return result;
                 }catch(error){
@@ -3763,8 +3768,8 @@
                         continue;
                     }
                     const retry=code==='CLIENT_TIMEOUT'||['40001','40P01','55P03','PGRST000','PGRST001','PGRST002'].includes(code)||Number(error?.status)>=500||/Failed to fetch|NetworkError|Load failed|timeout/i.test(message);
-                    if(!retry||attempt===2)throw error;
-                    await new Promise(resolve=>setTimeout(resolve,300*(attempt+1)));
+                    if(!retry||attempt===(options.maxAttempts||3)-1)throw error;
+                    await new Promise(resolve=>setTimeout(resolve,(1000*(attempt+1)+Math.random()*500)));
                 }finally{if(timer)clearTimeout(timer);}
             }
             throw lastError;
@@ -3794,28 +3799,81 @@
                 alert(walletErrorMessage(error));return false;
             });
         }
+        let assetMigrationRetryAt=0,assetMigrationOwner=null,lightSaveAvailable=null;
+        async function optimizeAccountLogo(owner){
+            if(assetMigrationOwner!==owner){assetMigrationOwner=owner;assetMigrationRetryAt=0;}
+            if(Date.now()<assetMigrationRetryAt)return;
+            const logo=localStorage.getItem('fm_team_logo')||'';
+            if(!/^data:image\/png;base64,/.test(logo))return;
+            try{
+                const raw=atob(logo.slice(logo.indexOf(',')+1)),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+                const digest=await crypto.subtle.digest('SHA-256',bytes),hash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+                const path=`${owner}/club-${hash}.png`,bucket=getOwnerRankClient().storage.from('yfm-club-assets');
+                const {error}=await bucket.upload(path,new Blob([bytes],{type:'image/png'}),{contentType:'image/png',cacheControl:'31536000',upsert:false});
+                if(error&&!['409','Duplicate'].includes(String(error.statusCode||error.error))&&!/already exists/i.test(error.message||''))throw error;
+                const url=bucket.getPublicUrl(path).data.publicUrl;
+                if(accountUser?.id!==owner||localStorage.getItem('fm_team_logo')!==logo)return;
+                // Replace all repeated copies in saved tournament trees with the same asset URL.
+                for(const key of ['fm_europa_tournament','fm_worldcup_tournament','fm_career']){
+                    const value=localStorage.getItem(key);if(!value)continue;
+                    try{const compact=JSON.stringify(JSON.parse(value),(_,v)=>v===logo?url:v);localStorage.setItem(key,compact);}catch(_){}
+                }
+                for(const state of [typeof europaState!=='undefined'?europaState:null,typeof worldCupState!=='undefined'?worldCupState:null,typeof careerState!=='undefined'?careerState:null]){
+                    if(!state)continue;
+                    const visit=obj=>{if(!obj||typeof obj!=='object')return;Object.keys(obj).forEach(k=>{if(obj[k]===logo)obj[k]=url;else if(obj[k]&&typeof obj[k]==='object')visit(obj[k]);});};visit(state);
+                }
+                teamLogoData=url;localStorage.setItem('fm_team_logo',url);accountDirty=true;updateTeamNameUI();
+            }catch(error){assetMigrationRetryAt=Date.now()+300000;console.warn('로고 별도 저장을 준비하지 못했습니다. 기존 이미지와 저장은 유지합니다.',error);}
+        }
+        // The logo is stored once; older snapshots still restore normally.
+        function compactTournamentLogos(data){
+            const logo=data.fm_team_logo;if(!logo)return data;
+            for(const key of ['fm_europa_tournament','fm_worldcup_tournament','fm_career']){
+                if(!data[key])continue;
+                try{data[key]=JSON.stringify(JSON.parse(data[key]),(k,v)=>k==='logo'&&v===logo?'yfm:club-logo':v);}catch(_){}
+            }return data;
+        }
+        function expandTournamentLogos(data){
+            const result={...data},logo=result.fm_team_logo||'';
+            for(const key of ['fm_europa_tournament','fm_worldcup_tournament','fm_career']){
+                if(!result[key])continue;
+                try{result[key]=JSON.stringify(JSON.parse(result[key]),(_,v)=>v==='yfm:club-logo'?logo:v);}catch(_){}
+            }return result;
+        }
         function accountSnapshot() {
             const data = {};
             for (let i=0;i<localStorage.length;i++) {
                 const key=localStorage.key(i);
                 if (key?.startsWith('fm_') && key !== 'fm_items') data[key]=localStorage.getItem(key);
             }
-            return {app:'YFM',v:22,at:new Date().toISOString(),data};
+            return {app:'YFM',v:22,at:new Date().toISOString(),data:compactTournamentLogos(data)};
         }
         function restoreAccountSnapshot(snapshot) {
             if (snapshot?.app!=='YFM' || !snapshot.data || !Array.isArray(JSON.parse(snapshot.data.fm_players||'null'))) throw new Error('서버 저장 데이터가 올바르지 않아.');
             Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
-            Object.entries(snapshot.data).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && typeof v==='string') localStorage.setItem(k,v);});
+            Object.entries(expandTournamentLogos(snapshot.data)).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && typeof v==='string') localStorage.setItem(k,v);});
         }
         async function uploadAccountSnapshot(force=false) {
             if (!accountUser || accountSaving || window.__wiping) return;
             if (!force && (!accountDirty || Date.now()-accountLastWrite<55000)) return;
-            accountSaving=true;
+            accountSaving=true;const saveOwner=accountUser.id;
             try {
+                await optimizeAccountLogo(saveOwner);if(accountUser?.id!==saveOwner)return;
                 const walletRevisionAtStart=tokenWalletRevision,snapshot=accountSnapshot(), serialized=canonData(snapshot.data);
                 if (serialized===accountLastSnapshot) {accountDirty=false;return;}
-                const {data:saved,error}=await getOwnerRankClient().from('game_progress').upsert({user_id:accountUser.id,save_data:snapshot},{onConflict:'user_id'}).select('save_data').single();
-                if(error) throw error;
+                let saved,error;
+                if(lightSaveAvailable!==false){
+                    try{
+                        const reply=await walletRpcWithRetry('yfm_save_progress_light',{p_snapshot:snapshot},{maxAttempts:1});
+                        lightSaveAvailable=true;
+                        if(!reply.data?.ok||!Number.isSafeInteger(Number(reply.data.balance))||Number(reply.data.balance)<0||typeof reply.data.at!=='string')throw new Error('서버 저장 응답을 확인하지 못했습니다.');
+                        saved={save_data:{...snapshot,at:reply.data.at,data:{...snapshot.data,fm_tokens:String(reply.data.balance)}}};
+                    }catch(e){if(['PGRST202','42883'].includes(String(e.code)))lightSaveAvailable=false;else throw e;}
+                }
+                if(lightSaveAvailable===false){
+                    const reply=await getOwnerRankClient().from('game_progress').upsert({user_id:saveOwner,save_data:snapshot},{onConflict:'user_id'}).select('save_data').single();saved=reply.data;error=reply.error;
+                }
+                if(error)throw error;if(accountUser?.id!==saveOwner)return;
                 // DB trigger returns the server-approved token value; overwrite any locally injected balance.
                 const serverTokens=Number(saved?.save_data?.data?.fm_tokens);
                 if(Number.isSafeInteger(serverTokens)&&serverTokens>=0&&walletRevisionAtStart===tokenWalletRevision){tokenWalletRevision++;tokenWalletBalance=serverTokens;if(serverTokens!==tokens){tokens=serverTokens;localStorage.setItem('fm_tokens',String(serverTokens));updateTokensUI();}}
@@ -3841,7 +3899,7 @@
             if(error) throw error;
             const previousOwner=localStorage.getItem(accountDeviceKey);
             if (data?.save_data) {
-                const remote=canonData(data.save_data.data), remoteAt=data.save_data.at||'', syncAt=localStorage.getItem('yfm_sync_at')||'';
+                const remote=canonData(compactTournamentLogos({...data.save_data.data})), remoteAt=data.save_data.at||'', syncAt=localStorage.getItem('yfm_sync_at')||'';
                 // 계정의 서버 기록을 우선한다. 다른 계정의 로컬 데이터는 업로드하지 않는다.
                 // 시작 과정에서 자동 생성·정리되는 로컬 키가 서버 값과 달라도 복원은 탭당 한 번만 한다.
                 const restoredThisTab=sessionStorage.getItem('yfm_restored_account')===user.id;
@@ -11503,19 +11561,28 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
 <script>
 (()=>{
  const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const A={allowed:false,owner:null,users:[],target:null,detail:null,offset:0,total:0,busy:false,selected:null};
+ const A={allowed:false,owner:null,users:[],target:null,detail:null,offset:0,total:0,busy:false,selected:null,listBusy:false,detailBusy:false,queuedTarget:null,readVersion:0,capabilityAt:0};
  const format=v=>Number(v||0).toLocaleString(),time=v=>v?new Date(v).toLocaleString('ko-KR'):'없음';
  function status(message,error=false){$('yfm-admin-status').textContent=message;$('yfm-admin-status').style.color=error?'#fca5a5':'#c4b5fd';}
  function fail(error){status(error?.code==='PGRST202'?'개발자 기능 SQL을 먼저 적용해 주세요.':`${error?.message||error} ${error?.code?'['+error.code+']':''}`,true);}
- async function rpc(action,payload={}){const {data,error}=await walletRpcWithRetry('yfm_admin_rpc',{p_action:action,p_payload:payload});if(error)throw error;return data;}
- window.yfmResetAdmin=()=>{A.allowed=false;A.owner=null;A.target=null;A.detail=null;A.users=[];$('yfm-admin-modal').style.display='none';$('yfm-admin-detail').replaceChildren();$('yfm-admin-users').replaceChildren();const nav=$('yfm-admin-nav');if(nav)nav.style.display='none';};
- window.yfmCheckAdmin=async()=>{const owner=accountUser?.id;if(!owner)return window.yfmResetAdmin();try{const data=await rpc('capability');if(accountUser?.id!==owner)return;A.allowed=data?.allowed===true;A.owner=owner;const nav=$('yfm-admin-nav');if(nav)nav.style.display=A.allowed?'':'none';if(!A.allowed)$('yfm-admin-modal').style.display='none';}catch(_){if(accountUser?.id===owner)window.yfmResetAdmin();}};
+ async function rpc(action,payload={}){const read=['capability','list','detail','audit'].includes(action);const {data,error}=await walletRpcWithRetry('yfm_admin_rpc',{p_action:action,p_payload:payload},{maxAttempts:read?1:3});if(error)throw error;return data;}
+ window.yfmResetAdmin=()=>{A.allowed=false;A.owner=null;A.target=null;A.detail=null;A.users=[];A.queuedTarget=null;A.readVersion++;A.capabilityAt=0;$('yfm-admin-modal').style.display='none';$('yfm-admin-detail').replaceChildren();$('yfm-admin-users').replaceChildren();const nav=$('yfm-admin-nav');if(nav)nav.style.display='none';};
+ window.yfmCheckAdmin=async()=>{const owner=accountUser?.id;if(owner===A.owner&&Date.now()-A.capabilityAt<30000)return;if(!owner)return window.yfmResetAdmin();try{const data=await rpc('capability');if(accountUser?.id!==owner)return;A.allowed=data?.allowed===true;A.owner=owner;A.capabilityAt=Date.now();const nav=$('yfm-admin-nav');if(nav)nav.style.display=A.allowed?'':'none';if(!A.allowed)$('yfm-admin-modal').style.display='none';}catch(_){if(accountUser?.id===owner)window.yfmResetAdmin();}};
  window.yfmOpenAdmin=async()=>{await window.yfmCheckAdmin();if(!A.allowed){alert('관리자 권한이 없습니다.');return;}$('yfm-admin-modal').style.display='block';A.offset=0;status('조회 중…');try{await loadUsers();}catch(e){fail(e);}};
- async function loadUsers(){const owner=accountUser?.id,data=await rpc('list',{search:$('yfm-admin-search').value.trim(),limit:50,offset:A.offset});if(owner!==accountUser?.id||!A.allowed)return;A.users=data.users||[];A.total=Number(data.total)||0;$('yfm-admin-count').textContent=`총 ${format(A.total)}명 · ${Math.floor(A.offset/50)+1}페이지`;$('yfm-admin-prev').disabled=A.offset===0;$('yfm-admin-next').disabled=A.offset+50>=A.total;
+ async function loadUsers(){if(A.listBusy)return;A.listBusy=true;try{const owner=accountUser?.id,data=await rpc('list',{search:$('yfm-admin-search').value.trim(),limit:50,offset:A.offset});if(owner!==accountUser?.id||!A.allowed)return;A.users=data.users||[];A.total=Number(data.total)||0;$('yfm-admin-count').textContent=`총 ${format(A.total)}명 · ${Math.floor(A.offset/50)+1}페이지`;$('yfm-admin-prev').disabled=A.offset===0;$('yfm-admin-next').disabled=A.offset+50>=A.total;
   $('yfm-admin-users').innerHTML=A.users.map(u=>`<button type="button" data-user="${esc(u.user_id)}" style="display:block;width:100%;text-align:left;border:1px solid #493258;border-radius:9px;padding:9px;margin:6px 0;background:${u.user_id===A.target?'#40205c':'#241831'}"><b>${esc(u.username)}</b> · ${esc(u.owner_name||'구단주')}<div style="font-size:12px;color:#d8cce8">${esc(u.club_name||'새 구단')} · ${format(u.tokens)} T</div></button>`).join('');
   $('yfm-admin-users').querySelectorAll('[data-user]').forEach(el=>el.onclick=()=>selectUser(el.dataset.user));status('계정 목록을 불러왔습니다.');if(!A.target&&A.users.length)await selectUser((A.users.find(u=>u.user_id!==accountUser.id)||A.users[0]).user_id);
+ }finally{A.listBusy=false;}
  }
- async function selectUser(id){if(A.busy)return;A.target=id;A.selected=A.users.find(u=>u.user_id===id)||A.selected;status('유저 데이터 조회 중…');try{const owner=accountUser?.id,data=await rpc('detail',{user_id:id});if(owner!==accountUser?.id||A.target!==id||!A.allowed)return;A.detail=data;drawDetail();status('서버 데이터 조회 완료');}catch(e){fail(e);}}
+ async function selectUser(id){
+  if(A.busy)return;
+  if(A.detailBusy){A.queuedTarget=id;return;}
+  A.detailBusy=true;A.queuedTarget=null;const version=++A.readVersion;A.target=id;A.detail=null;A.selected=A.users.find(u=>u.user_id===id)||null;
+  $('yfm-admin-detail').replaceChildren();status('유저 데이터 조회 중…');
+  try{const owner=accountUser?.id,data=await rpc('detail',{user_id:id});if(owner!==accountUser?.id||A.target!==id||!A.allowed||version!==A.readVersion)return;if(A.queuedTarget&&A.queuedTarget!==id)return;A.detail=data;drawDetail();status('서버 데이터 조회 완료');}
+  catch(e){if(version===A.readVersion)fail(e);}
+  finally{A.detailBusy=false;const next=A.queuedTarget;A.queuedTarget=null;if(next&&next!==id&&A.allowed)selectUser(next);}
+ }
  function drawDetail(){const d=A.detail,u=A.selected||{},records=d.offline||{},labels={league:'리그',career:'챔피언스리그',saudi:'사우디',europa:'유로파',worldcup:'월드컵'};let roster=[];try{roster=JSON.parse(d.save?.data?.fm_players||'[]');}catch(_){}
   const offline=Object.entries(records).filter(([k,v])=>v&&typeof v==='object'&&v.p!==undefined).map(([k,v])=>`<tr><td>${esc(labels[k]||k)}</td><td>${format(v.p)}</td><td>${format(v.w)} / ${format(v.d)} / ${format(v.l)}</td><td>${format(v.gf)} / ${format(v.ga)}</td></tr>`).join('');
   const online=d.online_results||[],summary=d.online_summary||{};
@@ -11529,14 +11596,14 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   <details class="mt-4"><summary class="font-bold cursor-pointer">관리자 변경 기록·수정 전 데이터 (최근 50건)</summary><div>${(d.audit||[]).map(x=>`<button data-audit="${esc(x.request_id)}" class="block w-full text-left p-2 my-1 rounded bg-gray-900 text-xs">${esc(time(x.created_at))} · ${esc(x.action)} · ${esc(x.reason)} ${x.delta!==null?`(${Number(x.delta)>0?'+':''}${format(x.delta)} T)`:''}</button>`).join('')||'기록 없음'}</div><textarea id="yfm-admin-audit-json" readonly style="width:100%;height:220px;background:#0b0711;padding:8px;font:11px monospace;margin-top:8px"></textarea></details>
   <details class="mt-4"><summary class="font-bold cursor-pointer">이전 버전 온라인 기록</summary><pre style="white-space:pre-wrap;word-break:break-all;font-size:11px">${esc(JSON.stringify(d.legacy_online_results||[],null,2))}</pre></details>`;
   $('yfm-admin-suspend').onclick=async()=>{try{const target=A.target,suspended=!A.detail.suspension?.suspended,why=reason();if(!confirm(suspended?'이 계정의 모든 게임 서비스를 정지할까요?':'계정 정지를 해제할까요?'))return;await mutate('suspension',{user_id:target,suspended,reason:why});await selectUser(target);status(suspended?'계정 정지 완료':'정지 해제 완료');}catch(e){fail(e);}};
-  $('yfm-admin-save-json').value=JSON.stringify(d.save,null,2);$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;$('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);$('yfm-admin-ticket-gift').onclick=()=>adjustEventTickets(1);$('yfm-admin-ticket-remove').onclick=()=>adjustEventTickets(-1);
+  const saveArea=$('yfm-admin-save-json');saveArea.closest('details').addEventListener('toggle',()=>{if(saveArea.closest('details').open&&!saveArea.dataset.formatted){saveArea.value=JSON.stringify(d.save,null,2);saveArea.dataset.formatted='1';}});$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;$('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);$('yfm-admin-ticket-gift').onclick=()=>adjustEventTickets(1);$('yfm-admin-ticket-remove').onclick=()=>adjustEventTickets(-1);
   $('yfm-admin-detail').querySelectorAll('[data-match]').forEach(el=>el.querySelector('.admin-score').onclick=()=>editScore(Number(el.dataset.match),el));
   $('yfm-admin-detail').querySelectorAll('[data-audit]').forEach(el=>el.onclick=async()=>{try{const data=await rpc('audit',{user_id:A.target,request_id:el.dataset.audit});$('yfm-admin-audit-json').value=JSON.stringify(data,null,2);}catch(e){fail(e);}});
  }
  function reason(){const v=$('yfm-admin-reason')?.value.trim();if(!v)throw new Error('변경 사유를 입력해 주세요.');return v;}
  function pending(){let p;try{p=JSON.parse(localStorage.getItem('yfm_admin_pending_'+accountUser.id)||'{}');}catch(_){}return p&&typeof p==='object'?p:{};}
  async function mutate(action,payload){
-  if(A.busy)return null;if(!A.allowed||A.owner!==accountUser?.id)throw new Error('관리자 세션을 다시 확인해 주세요.');
+  if(A.busy)return null;if(!A.allowed||A.owner!==accountUser?.id)throw new Error('관리자 세션을 다시 확인해 주세요.');if(A.detailBusy||!A.detail)throw new Error('유저 조회가 끝난 뒤 다시 시도해 주세요.');
   A.busy=true;const owner=accountUser.id;$('yfm-admin-detail').querySelectorAll('[data-admin-write]').forEach(b=>b.disabled=true);status('서버에서 변경 중…');
   try{
    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([action,payload])));
@@ -11592,22 +11659,22 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
  }
  async function editSave(){try{const target=A.target,save=JSON.parse($('yfm-admin-save-json').value),why=reason();if(!confirm('선택한 유저의 게임 저장 데이터를 수정할까요? 변경 전 데이터는 관리자 기록에 보관됩니다.'))return;const result=await mutate('save',{user_id:target,save,expected_at:A.detail.save?.at||null,reason:why});if(!result)return;if(target===accountUser.id){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}await selectUser(target);status('저장 데이터 수정 완료. 유저는 다음 저장·재접속 때 변경 사항을 다시 불러옵니다.');}catch(e){fail(e);}}
  async function editScore(i,el){try{const r=A.detail.online_results[i],h=Number(el.querySelector('.admin-host').value),g=Number(el.querySelector('.admin-guest').value);if(!Number.isInteger(h)||!Number.isInteger(g)||h<0||g<0||h>99||g>99)throw new Error('스코어는 0~99로 입력해 주세요.');const target=A.target,result=await mutate('online_score',{user_id:target,room_id:r.room_id,host_goals:h,guest_goals:g,reason:reason()});if(result){await selectUser(target);status('온라인 전적을 정정했습니다.');}}catch(e){fail(e);}}
- $('yfm-admin-close').onclick=()=>{$('yfm-admin-modal').style.display='none';};$('yfm-admin-reload').onclick=()=>{A.offset=0;loadUsers().catch(fail);};$('yfm-admin-search').onkeydown=e=>{if(e.key==='Enter'){$('yfm-admin-reload').click();}};$('yfm-admin-prev').onclick=()=>{A.offset=Math.max(0,A.offset-50);loadUsers().catch(fail);};$('yfm-admin-next').onclick=()=>{A.offset+=50;loadUsers().catch(fail);};
+ $('yfm-admin-close').onclick=()=>{$('yfm-admin-modal').style.display='none';};$('yfm-admin-reload').onclick=()=>{if(A.listBusy)return;A.offset=0;loadUsers().catch(fail);};$('yfm-admin-search').onkeydown=e=>{if(e.key==='Enter'){$('yfm-admin-reload').click();}};$('yfm-admin-prev').onclick=()=>{if(A.listBusy)return;A.offset=Math.max(0,A.offset-50);loadUsers().catch(fail);};$('yfm-admin-next').onclick=()=>{if(A.listBusy)return;A.offset+=50;loadUsers().catch(fail);};
  if(window.yfmAccountReady)window.yfmCheckAdmin();
 })();
 </script>
 
 
 <script>
-let gameAccessBusy=false,gameBlocked=false;
+let gameAccessBusy=false,gameBlocked=false,gameAccessCheckedAt=0,gameAccessCheckedOwner=null;
 async function checkGameAccess(uid,required=false){
- if(gameAccessBusy&&!required)return !gameBlocked;
+ if(!required&&(gameAccessBusy||(gameAccessCheckedOwner===uid&&Date.now()-gameAccessCheckedAt<28000)))return !gameBlocked;
  gameAccessBusy=true;
  try{
   const {data,error}=await getOwnerRankClient().rpc('yfm_account_status');
   if(error)throw error;
   if(!required&&accountUser?.id!==uid)return false;
-  window.yfmAdminId=data.admin_id;
+  gameAccessCheckedOwner=uid;gameAccessCheckedAt=Date.now();window.yfmAdminId=data.admin_id;
   if(!data.suspended)return true;
   gameBlocked=true;window.yfmAccountReady=false;window.__wiping=true;
   if(typeof currentMatchState!=='undefined'&&currentMatchState)currentMatchState.ended=true;
@@ -11625,12 +11692,13 @@ function supportErrorMessage(e){
  return '관리자 문의 오류 ['+(code||'UNKNOWN')+']: '+message.slice(0,240);
 }
 async function supportRpc(action,payload={}){const {data,error}=await walletRpcWithRetry('yfm_support_rpc',{p_action:action,p_payload:payload});if(error)throw error;return data;}
-let supportRefreshBusy=false;
+let supportRefreshBusy=false,supportCheckedAt=0,supportCheckedOwner=null;
 function showSupportError(e){const box=document.getElementById('social-support-inbox');box.replaceChildren();const p=document.createElement('p');p.style.cssText='padding:12px;border:1px solid #a34d66;border-radius:9px;color:#fca5a5;font-size:13px';p.textContent=supportErrorMessage(e);box.append(p);}
-async function refreshAdminSupport(){
+async function refreshAdminSupport(force=false){
  const uid=accountUser?.id;if(!uid||supportRefreshBusy)return;
+ if(!force&&supportCheckedOwner===uid&&Date.now()-supportCheckedAt<19000)return;
  supportRefreshBusy=true;try{
- const data=await supportRpc('inbox');if(accountUser?.id!==uid)return;
+ const data=await supportRpc('inbox');if(accountUser?.id!==uid)return;supportCheckedOwner=uid;supportCheckedAt=Date.now();
  supportPeers=new Set((data.peers||[]).map(p=>p.user_id));supportUnread=new Set((data.peers||[]).filter(p=>Number(p.unread)>0).map(p=>p.user_id));
  const b=document.getElementById('social-support-button');b.style.display='';
  b.textContent=(data.admin?'📬 관리자 문의함':'관리자에게 문의')+(supportUnread.size?' 🔴':'');
@@ -11639,8 +11707,8 @@ async function refreshAdminSupport(){
  paintSocialDots();
  }catch(e){showSupportError(e);throw e;}finally{supportRefreshBusy=false;}
 }
-async function openAdminSupport(){try{await refreshAdminSupport();const id=window.yfmAdminId;if(!id)throw new Error('관리자 정보를 확인하지 못했습니다. SQL 적용 후 다시 로그인해 주세요.');if(id===accountUser?.id){document.getElementById('social-support-inbox').scrollIntoView?.({block:'nearest',behavior:'smooth'});return;}supportPeers.add(id);await openSocialChat(id,'관리자');}catch(e){socialStatus(e.message||'관리자 문의를 열지 못했습니다.',true);}}
-setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden)checkGameAccess(accountUser.id);},5000);
+async function openAdminSupport(){try{await refreshAdminSupport(true);const id=window.yfmAdminId;if(!id)throw new Error('관리자 정보를 확인하지 못했습니다. SQL 적용 후 다시 로그인해 주세요.');if(id===accountUser?.id){document.getElementById('social-support-inbox').scrollIntoView?.({block:'nearest',behavior:'smooth'});return;}supportPeers.add(id);await openSocialChat(id,'관리자');}catch(e){socialStatus(e.message||'관리자 문의를 열지 못했습니다.',true);}}
+setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden)checkGameAccess(accountUser.id);},30000);
 setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden&&document.querySelector('.screen.active')?.id==='screen-social'){refreshAdminSupport().then(updateSocialNotifications).catch(()=>{});loadSocialMessages();}},5000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.yfmAccountReady&&accountUser)checkGameAccess(accountUser.id);});
 </script>
