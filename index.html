@@ -3307,11 +3307,31 @@
             const el = document.getElementById('owner-rank-status');
             if (el) { el.textContent = message; el.style.color = failed ? '#fca5a5' : '#c4b5fd'; }
         }
+        // 빈 화면 멈춤 방지: 여러 탭이 같은 로그인 잠금을 붙잡거나 서버 응답이 끊기면 Supabase 호출이 영원히 기다리던 문제
+        // → 잠금은 최대 5초만 기다리고, 네트워크 요청은 30초가 지나면 끊어서 오류로 처리한다.
+        async function yfmAuthLock(name, acquireTimeout, fn) {
+            if (!navigator.locks?.request) return await fn();
+            const ctrl = new AbortController(); let acquired = false;
+            const timer = setTimeout(() => ctrl.abort(), 5000);
+            try {
+                return await navigator.locks.request(name, {mode:'exclusive', signal:ctrl.signal}, async () => { acquired = true; clearTimeout(timer); return await fn(); });
+            } catch (e) {
+                clearTimeout(timer);
+                if (!acquired && ctrl.signal.aborted) { console.warn('로그인 잠금 대기 시간 초과 — 잠금 없이 진행합니다.'); return await fn(); }
+                throw e;
+            }
+        }
+        function yfmTimedFetch(input, init = {}) {
+            const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 30000);
+            const outer = init.signal;
+            if (outer) { if (outer.aborted) ctrl.abort(); else outer.addEventListener('abort', () => ctrl.abort(), {once:true}); }
+            return fetch(input, {...init, signal:ctrl.signal}).finally(() => clearTimeout(timer));
+        }
         function getOwnerRankClient() {
             if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(OWNER_RANK_URL)) throw new Error('HTML의 OWNER_RANK_URL에 프로젝트 URL을 입력해줘.');
             if (!OWNER_RANK_PUBLISHABLE_KEY.startsWith('sb_publishable_') && !OWNER_RANK_PUBLISHABLE_KEY.startsWith('eyJ')) throw new Error('HTML의 OWNER_RANK_PUBLISHABLE_KEY에 Supabase Publishable key를 입력해줘.');
             if (!window.supabase?.createClient) throw new Error('Supabase 연결 스크립트를 불러오지 못했어. 인터넷 연결을 확인해줘.');
-            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true},realtime:{params:{eventsPerSecond:30}}});
+            if (!ownerRankClient) ownerRankClient = window.supabase.createClient(OWNER_RANK_URL, OWNER_RANK_PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true,lock:yfmAuthLock},global:{fetch:yfmTimedFetch},realtime:{params:{eventsPerSecond:30}}});
             return ownerRankClient;
         }
         function ownerRankSnapshot() {
@@ -3658,6 +3678,14 @@
             const form = document.getElementById('account-form'); form.style.display = 'none';
             if (window.yfmAccountReady) { finishAccountResume(); gate.style.display = 'none'; return; }
             accountMessage('서버 연결 중...');
+            // 안전장치: 25초가 지나도 게임에 들어가지 못했으면 빈 화면 대신 로그인 창과 안내를 보여준다.
+            clearTimeout(window.yfmGateWatchdog);
+            window.yfmGateWatchdog = setTimeout(() => {
+                if (window.yfmAccountReady || gate.style.display === 'none' || form.style.display !== 'none') return;
+                finishAccountResume();
+                form.style.display = 'block';
+                accountMessage('서버 응답이 늦어지고 있어. 다시 로그인하거나 새로고침해줘. (같은 게임 탭이 여러 개 열려 있으면 하나만 남기고 닫아줘)');
+            }, 25000);
             try {
                 if (!(await waitSupabase())) throw new Error('supabase script timeout');
                 const {data:{session},error} = await retryNet(async () => { const r = await getOwnerRankClient().auth.getSession(); if (r.error) throw r.error; return r; });
