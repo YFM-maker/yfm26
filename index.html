@@ -4224,6 +4224,28 @@
         }
         // 📢 업데이트 소식: 최신 패치가 맨 위. 새 업데이트는 이 배열 앞에 추가한다 (메인 메뉴 빈칸 카드)
         const GAME_UPDATES = [
+            { v: '1.24', date: '2026.10.13', title: '사우디 모드 밸런스 & 디자인 업데이트', sec: [
+                ['사우디 모드 단계별 해금', [
+                    '리그 진행도에 따라 사우디 모드의 상대가 단계별로 해금됩니다. 기존 계정의 리그 진행도도 반영되며, 한 번 해금한 단계는 유지됩니다.',
+                    '1단계 FC 안양: 처음부터 이용 가능 / 2단계 우라와 레즈: K리그1 도달 / 3단계 인터 마이애미: MLS 도달',
+                    '4단계 아약스: 사우디 프로리그 도달 / 5단계 맨체스터 유나이티드: 에레디비시 도달 / 6단계 인테르: 프리메이라리가 도달',
+                    '7단계 파리 생제르맹: 분데스리가 도달 / 8단계 바이에른 뮌헨: 라리가 도달 / 9단계 FC 바르셀로나: 프리미어리그 도달',
+                    '잠긴 단계는 어둡게 비활성화되며, 상대 카드 위에 해금에 필요한 리그를 안내합니다.'
+                ]],
+                ['사우디 모드 보상 조정', [
+                    '사우디 모드의 득실차 보너스를 삭제했습니다. 승리하면 상대별 기본 토큰 보상만 지급됩니다.',
+                    '1~9단계 기본 승리 보상: 80 / 120 / 170 / 230 / 300 / 380 / 470 / 570 / 700 T. 무승부·패배는 보상이 없습니다.'
+                ]],
+                ['버튼 디자인 & 메뉴 이름 변경', [
+                    '버튼의 이모지를 흰색 윤곽선 아이콘으로 통일했습니다. 나중에 생성되는 버튼에도 같은 디자인이 적용됩니다.',
+                    'VAR은 비디오카메라, 오프라인 친선전은 칼, 전술은 전술판 모양의 아이콘으로 변경했습니다.',
+                    '미션 메뉴의 이름을 ‘미션&쿠폰’으로 변경했습니다.'
+                ]],
+                ['전술·교체 체력 버그 수정', [
+                    '전술·교체 화면에서 확인 전에 선수를 뺐다가 다시 넣으면 체력이 회복되던 문제를 수정했습니다. 재투입 시 빠지기 직전의 경기 체력을 유지합니다.',
+                    '같은 전술창에서 재투입하는 선수의 골·어시스트, 카드, 부상 상태와 출전 시간 기록을 보존하며, 중복된 OUT 기록을 제거했습니다.'
+                ]]
+            ] },
             { v: '1.23', date: '2026.10.12', title: '멘탈 & 리더십 업데이트', sec: [
                 ['🔥 여론 시스템 개편', [
                     '연패·연속 무승이 길어질수록 팬 지지도·언론 평판·라커룸 분위기가 더 가파르게 떨어집니다 (3연패부터 하락 폭 가중).',
@@ -4970,11 +4992,23 @@
             const st = currentMatchState, i = st.homePlayers.findIndex(x => x.id === outId), o = st.homePlayers[i], n = players.find(x => x.id === inId);
             const correctionSub = !!st.tacSessionEntered?.has(outId);
             if (!o || !n || (st.subsLeft <= 0 && !correctionSub) || o.isRedCarded || (o.role === 'GK' ? n.position !== 'GK' : n.position === 'GK') || pOut(n, st.mode)) return;
-            const stamina = Math.min(100, matchStartStam(n, st.mode) + (st.mode === 'rogue' && rogueHas('r_sub') ? 10 : 0));
+            // 확인 전 교체를 되돌릴 때는 해당 선수의 경기 상태를 복원한다.
+            const returning = st.tacSessionAvailable?.has(inId)
+                ? [...st.homeOut].reverse().find(p => p.id === inId) : null;
+            const stamina = returning ? (returning.stam ?? 100)
+                : Math.min(100, matchStartStam(n, st.mode) + (st.mode === 'rogue' && rogueHas('r_sub') ? 10 : 0));
             const np = { ...o, wireId: String(n.id), id: n.id, name: n.name, ovr: Math.round(getCalculatedOvr(n) * aptitude(n, o.det) * moraleF(n)), attr: matchAttrs(n, o.det), rl: roleFor(effAttrs(n), o.det), enter: st.time, cards: 0, subIn: true, mk: 1, mkF: 1, mkA: 1, injured: 0, injLabel: null, recDone: false, trait: ensure(n).trait, stam: stamina, stam0: stamina, tiredWarned: false, vx: 0, vy: 0 };
+            if (returning) {
+                for (const key of ['stam0', 'enter', 'cards', 'subIn', 'mk', 'mkF', 'mkA', 'injured', 'injLabel', 'recDone', 'tiredWarned', 'pi', 'mood', 'confidence']) {
+                    if (Object.prototype.hasOwnProperty.call(returning, key)) np[key] = returning[key];
+                }
+                // 재투입 선수의 OUT 기록을 제거하여 출전 기록이 중복되지 않도록 한다.
+                st.homeOut = st.homeOut.filter(p => p !== returning);
+                st.tacSessionAvailable.delete(inId);
+            }
             np.displayOvr = Math.round(np.ovr); if (o.teamMean) { np.teamMean = o.teamMean; starCompress(np, o.teamMean); } if (o.gapShift) { np.gapShift = o.gapShift; shiftPlayer(np, o.gapShift); }
             if (o.sideF && o.sideF !== 1) { np.sideF = o.sideF; np.ovr = Math.round(np.ovr * o.sideF * 10) / 10; Object.keys(np.attr).forEach(k => np.attr[k] = Math.round(np.attr[k] * o.sideF)); }
-            np.rlBase = null; applyPI(np); o.exitTime = st.time; st.homePlayers[i] = np; st.homeOut.push(o); if (st.tacSessionAvailable) st.tacSessionAvailable.add(o.id); st.playerStats[n.id] = { goals: 0 };
+            np.rlBase = null; applyPI(np); o.exitTime = st.time; st.homePlayers[i] = np; st.homeOut.push(o); if (st.tacSessionAvailable) st.tacSessionAvailable.add(o.id); if (!returning) st.playerStats[n.id] = { goals: 0 };
             (st.subMap ||= {})[o.id] = np.id;   // 코너킥 수비 잔류 등 개인 역할을 교체 선수가 이어받음
             np.isCaptain = false; if (o.isCaptain) passArmband(st, o);
             np.mF = st.pressure != null && typeof matchMentalF === 'function' ? matchMentalF(st, n) : 1;
