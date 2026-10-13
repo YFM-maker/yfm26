@@ -3627,7 +3627,7 @@
             finally{send.disabled=false;}
         }
         // 대화·문의·알림은 아래의 5초 소셜 갱신으로 함께 처리합니다.
-        setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)refreshSocial();},30000);
+        setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)refreshSocial();},60000);
         setInterval(updateSocialNotifications,20000);
         document.addEventListener('visibilitychange',()=>{if(!document.hidden && document.querySelector('.screen.active')?.id==='screen-social'){refreshSocial();loadSocialMessages();}});
         document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateSocialNotifications();});
@@ -3657,6 +3657,15 @@
             document.getElementById('account-eye').setAttribute('aria-label', input.type === 'password' ? '비밀번호 표시' : '비밀번호 숨기기');
         }
         function accountMessage(message) { document.getElementById('account-error').textContent = message; }
+        let accountLoginStage='로그인 준비';
+        function accountLoginFailure(error,message){
+            const raw=String(error?.code||''),text=String(error?.message||''),name=String(error?.name||'');
+            const code=/^[A-Za-z0-9_]{1,48}$/.test(raw)?raw
+                : /timeout|timed out/i.test(text)||name==='AbortError'?'CLIENT_TIMEOUT'
+                : /fetch|network|Load failed/i.test(text)?'NETWORK_ERROR':'UNKNOWN_ERROR';
+            const status=Number(error?.status||error?.statusCode),http=Number.isInteger(status)&&status>=100&&status<=599?` · HTTP ${status}`:'';
+            accountMessage(`${message} [단계: ${accountLoginStage} · 코드: ${code}${http}]`);
+        }
         // 로그인 안정화: Supabase 스크립트(defer)가 늦게 뜨는 기기에서 '서버 연결 실패'로 로그인을 여러 번 해야 하던 문제 → 최대 12초 기다렸다가 진행
         function waitSupabase(ms = 12000) { return new Promise(res => { const t0 = Date.now(); (function chk() { if (window.supabase && window.supabase.createClient) return res(true); if (Date.now() - t0 > ms) return res(false); setTimeout(chk, 120); })(); }); }
         async function retryNet(fn, n = 3) { let e; for (let i = 0; i < n; i++) { try { return await fn(); } catch (err) { e = err; if (/invalid login|invalid_credentials|already registered|User already/i.test(String(err && (err.message || err.code) || ''))) throw err; await new Promise(r => setTimeout(r, 600 * (i + 1))); } } throw e; }
@@ -3678,10 +3687,12 @@
             const form = document.getElementById('account-form');form.style.display='block';
             if(accountGateBusy)return;accountGateBusy=true;const submit=document.getElementById('account-submit');submit.disabled=true;
             if (window.yfmAccountReady) { finishAccountResume();gate.style.display='none';accountGateBusy=false;submit.disabled=false;return; }
-            accountMessage('서버 연결 중...');
+            accountLoginStage='Supabase 라이브러리 로딩';accountMessage('서버 연결 중...');
             try {
-                if (!(await waitSupabase())) throw new Error('supabase script timeout');
-                const {data:{session},error}=await startupTimeout(getOwnerRankClient().auth.getSession());
+                if (!(await waitSupabase())) throw {code:'LIBRARY_TIMEOUT',message:'supabase script timeout'};
+                accountLoginStage='Supabase 클라이언트 초기화';const client=getOwnerRankClient();
+                accountLoginStage='기존 로그인 세션 확인';
+                const {data:{session},error}=await startupTimeout(client.auth.getSession());
                 if (error) throw error;
                 accountMessage('');
                 if (session?.user && !session.user.is_anonymous) {
@@ -3695,12 +3706,12 @@
                         accountMessage('기존 진행도를 유지하면서 아이디·새 비밀번호·구단주명을 등록해줘.');
                         return;
                     }
-                    try { await enterGameAccount(session.user); } catch (e) { console.warn(e); finishAccountResume(); form.style.display = 'block'; accountMessage('서버가 혼잡하거나 응답이 지연되고 있어. 기록은 유지돼. 잠시 후 로그인 버튼을 눌러 다시 시도해줘.'); }
+                    try { await enterGameAccount(session.user); } catch (e) { console.warn(e); finishAccountResume(); form.style.display = 'block'; accountLoginFailure(e,'자동 로그인 중 게임 진입에 실패했어. 기록은 유지돼. 로그인 버튼을 눌러 다시 시도해줘.'); }
                     return;
                 }
                 finishAccountResume();
                 form.style.display = 'block';
-            } catch (error) { finishAccountResume();form.style.display='block';accountMessage('서버 응답을 확인하지 못했어. 잠시 후 다시 로그인해줘.'); }finally{accountGateBusy=false;submit.disabled=false;}
+            } catch (error) { finishAccountResume();form.style.display='block';accountLoginFailure(error,'서버 응답을 확인하지 못했어. 잠시 후 다시 로그인해줘.'); }finally{accountGateBusy=false;submit.disabled=false;}
         }
         async function submitGameAccount(event) {
             event.preventDefault();
@@ -3710,11 +3721,13 @@
             if (accountMode === 'signup' && (ownerName.length < 2 || ownerName.length > 16)) return accountMessage('구단주명은 2~16자로 입력해줘.');
             if (!/^[A-Za-z0-9!@#^*]{3,10}$/.test(id) || !/^[A-Za-z0-9!@#^*]{7,15}$/.test(password)) return accountMessage('아이디·비밀번호의 길이와 허용 문자를 확인해줘.');
             const button=document.getElementById('account-submit');if(button.disabled||accountGateBusy)return;button.disabled=true;
-            accountMessage('계정 확인 중...');
+            accountLoginStage='Supabase 라이브러리 로딩';accountMessage('계정 확인 중...');
             try {
-                if (!(await waitSupabase())) throw new Error('supabase script timeout');
+                if (!(await waitSupabase())) throw {code:'LIBRARY_TIMEOUT',message:'supabase script timeout'};
+                accountLoginStage='Supabase 클라이언트 초기화';
                 const client = getOwnerRankClient(), email = accountEmail(id);
                 if (accountLegacyUser && accountMode === 'signup' && accountLegacyUser.user_metadata?.username?.toLowerCase() === id.toLowerCase()) {
+                    accountLoginStage='기존 계정 정보 변경';
                     const {data,error} = await client.auth.updateUser({password,data:{username:id,owner_name:ownerName}});
                     if (error) throw error;
                     accountLegacyUser=null;
@@ -3722,17 +3735,21 @@
                     return;
                 }
                 if (accountLegacyUser && accountMode === 'signup' && !accountMigrationSave) {
+                    accountLoginStage='기존 계정 저장 기록 조회';
                     const old=await client.from('game_progress').select('save_data').eq('user_id',accountLegacyUser.id).maybeSingle();
                     if (old.error) throw old.error;
                     accountMigrationSave=old.data?.save_data || accountSnapshot();
                 }
+                accountLoginStage=accountMode==='signup'?'회원가입 인증 요청':'아이디·비밀번호 인증 요청';
                 const result = accountMode === 'signup'
                     ? await client.auth.signUp({email,password,options:{data:{username:id,owner_name:ownerName}}})
                     : await retryNet(async () => { const r = await client.auth.signInWithPassword({email,password}); if (r.error && !/invalid/i.test(r.error.message || '') && (r.error.status === 0 || r.error.status >= 500 || /fetch|network/i.test(r.error.message || ''))) throw r.error; return r; },1);
                 if (result.error) throw result.error;
+                accountLoginStage='인증 세션 응답 확인';
                 if (!result.data.session) throw new Error('Supabase Auth의 이메일 확인을 꺼야 아이디 가입 후 바로 로그인할 수 있어.');
                 if (accountLegacyUser && accountMode === 'signup') {
                     const migration=accountMigrationSave;
+                    accountLoginStage='기존 계정 저장 기록 이전';
                     const copied=await client.from('game_progress').upsert({user_id:result.data.user.id,save_data:migration},{onConflict:'user_id'});
                     if (copied.error) throw copied.error;
                     restoreAccountSnapshot(migration);
@@ -3747,7 +3764,7 @@
                 console.warn('게임 계정 로그인 실패:',error);
                 const msg = String(error && (error.message || error.code) || '');
                 finishAccountResume();
-                accountMessage(accountMode === 'signup' ? '가입에 실패했어. 이미 쓰는 아이디이거나 설정을 확인해야 해.'
+                accountLoginFailure(error,accountMode === 'signup' ? '가입에 실패했어. 이미 쓰는 아이디이거나 설정을 확인해야 해.'
                     : /invalid/i.test(msg) ? '아이디 또는 비밀번호가 맞지 않아.'
                     : /timeout|fetch|network|Failed/i.test(msg) ? '서버 연결이 불안정해. 잠시 후 다시 시도해줘.' : '로그인에 실패했어. 잠시 후 다시 시도해줘.');
             } finally { button.disabled = false; }
@@ -3934,23 +3951,29 @@
             }catch(error){console.warn('관리자 변경 사항 불러오기 실패:',error);}
         }
         async function enterGameAccount(user) {
-            accountMessage('계정 이용 상태와 저장 기록을 확인하는 중...');
+            accountLoginStage='게임 진입 준비';accountMessage('계정 이용 상태와 저장 기록을 확인하는 중...');
             let data,balance;
             if(startupBundleAvailable!==false){
                 try{
+                    accountLoginStage='계정 상태·저장 기록 통합 조회 (yfm_startup_bundle)';
                     const reply=await walletRpcWithRetry('yfm_startup_bundle',{}, {maxAttempts:1,timeoutMs:10000});
                     if(!reply.data?.status)throw new Error('로그인 서버 응답이 올바르지 않습니다.');
                     startupBundleAvailable=true;
+                    accountLoginStage='계정 이용 가능 여부 확인';
                     if(!(await checkGameAccess(user.id,true,reply.data.status)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
+                    accountLoginStage='통합 응답 토큰 잔액 검증';
                     if(!Number.isSafeInteger(Number(reply.data.balance))||Number(reply.data.balance)<0)throw new Error('토큰 잔액을 확인하지 못했습니다.');
                     data={save_data:reply.data.save_data};balance=Number(reply.data.balance);
                 }catch(e){if(['PGRST202','42883'].includes(String(e.code)))startupBundleAvailable=false;else throw e;}
             }
             if(startupBundleAvailable===false){
+                accountLoginStage='계정 이용 상태 조회';
                 if(!(await checkGameAccess(user.id,true)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
                 accountMessage('저장 기록을 불러오는 중...');
+                accountLoginStage='게임 저장 기록 조회 (game_progress)';
                 data=(await boundedProgressRead(user.id)).data;
             }
+            accountLoginStage='게임 저장 기록 복원·기기 저장소 처리';
             const previousOwner=localStorage.getItem(accountDeviceKey);
             if (data?.save_data) {
                 const remote=canonData(compactTournamentLogos({...data.save_data.data})), remoteAt=data.save_data.at||'', syncAt=localStorage.getItem('yfm_sync_at')||'';
@@ -3977,12 +4000,15 @@
                     localStorage.setItem(accountDeviceKey,user.id); reloadForAccountRestore(); return;
                 }
                 accountUser=user;accountDirty=true;
+                accountLoginStage='첫 클라우드 저장';
                 await uploadAccountSnapshot(true,true);
                 if (accountDirty) throw new Error('첫 클라우드 저장에 실패했어.');
             }
             localStorage.setItem(accountDeviceKey,user.id);
             accountUser=user;
+            accountLoginStage=balance!==undefined?'서버 토큰 잔액 적용':'서버 토큰 잔액 조회 (yfm_wallet_get)';
             if(balance!==undefined)applyServerWallet(balance);else await loadServerWallet({maxAttempts:1,timeoutMs:10000,force:true});
+            accountLoginStage='게임 화면 초기화';
             window.yfmAccountReady=true;
             setTimeout(()=>{if(accountUser?.id!==user.id||!window.yfmAccountReady)return;if(typeof window.yfmCheckAdmin==='function')window.yfmCheckAdmin();settleLeagueRewards();},2000);
             finishAccountResume();
@@ -3996,7 +4022,7 @@
             if(localStorage.getItem('fm_need_star')!=='1'&&restoreSavedMatch())return;
             maybeStartTutorial();
         }
-        setInterval(()=>uploadAccountSnapshot(true),60000);
+        setInterval(()=>uploadAccountSnapshot(true),120000);
         document.addEventListener('visibilitychange',()=>{if(document.hidden)uploadAccountSnapshot(true);});
         window.addEventListener('pagehide',()=>{if(accountDirty)uploadAccountSnapshot(true);});
         async function signOutGameAccount() {
@@ -11613,12 +11639,12 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
 <script>
 (()=>{
  const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const A={allowed:false,owner:null,users:[],target:null,detail:null,offset:0,total:0,busy:false,selected:null,listBusy:false,detailBusy:false,queuedTarget:null,readVersion:0,capabilityAt:0};
+ const A={allowed:false,owner:null,users:[],target:null,detail:null,offset:0,total:0,busy:false,selected:null,listBusy:false,detailBusy:false,queuedTarget:null,readVersion:0,capabilityAt:0,detailBasic:true,fullRead:null};
  const format=v=>Number(v||0).toLocaleString(),time=v=>v?new Date(v).toLocaleString('ko-KR'):'없음';
  function status(message,error=false){$('yfm-admin-status').textContent=message;$('yfm-admin-status').style.color=error?'#fca5a5':'#c4b5fd';}
  function fail(error){status(error?.code==='PGRST202'?'개발자 기능 SQL을 먼저 적용해 주세요.':`${error?.message||error} ${error?.code?'['+error.code+']':''}`,true);}
  async function rpc(action,payload={}){const read=['capability','list','detail','audit'].includes(action);const {data,error}=await walletRpcWithRetry('yfm_admin_rpc',{p_action:action,p_payload:payload},{maxAttempts:read?1:3});if(error)throw error;return data;}
- window.yfmResetAdmin=()=>{A.allowed=false;A.owner=null;A.target=null;A.detail=null;A.users=[];A.queuedTarget=null;A.readVersion++;A.capabilityAt=0;$('yfm-admin-modal').style.display='none';$('yfm-admin-detail').replaceChildren();$('yfm-admin-users').replaceChildren();const nav=$('yfm-admin-nav');if(nav)nav.style.display='none';};
+ window.yfmResetAdmin=()=>{A.allowed=false;A.owner=null;A.target=null;A.detail=null;A.users=[];A.queuedTarget=null;A.readVersion++;A.capabilityAt=0;A.detailBasic=true;$('yfm-admin-modal').style.display='none';$('yfm-admin-detail').replaceChildren();$('yfm-admin-users').replaceChildren();const nav=$('yfm-admin-nav');if(nav)nav.style.display='none';};
  window.yfmCheckAdmin=async()=>{const owner=accountUser?.id;if(owner===A.owner&&Date.now()-A.capabilityAt<30000)return;if(!owner)return window.yfmResetAdmin();try{const data=await rpc('capability');if(accountUser?.id!==owner)return;A.allowed=data?.allowed===true;A.owner=owner;A.capabilityAt=Date.now();const nav=$('yfm-admin-nav');if(nav)nav.style.display=A.allowed?'':'none';if(!A.allowed)$('yfm-admin-modal').style.display='none';}catch(_){if(accountUser?.id===owner)window.yfmResetAdmin();}};
  window.yfmOpenAdmin=async()=>{await window.yfmCheckAdmin();if(!A.allowed){alert('관리자 권한이 없습니다.');return;}$('yfm-admin-modal').style.display='block';A.offset=0;status('조회 중…');try{await loadUsers();}catch(e){fail(e);}};
  async function loadUsers(){if(A.listBusy)return;A.listBusy=true;try{const owner=accountUser?.id,data=await rpc('list',{search:$('yfm-admin-search').value.trim(),limit:50,offset:A.offset});if(owner!==accountUser?.id||!A.allowed)return;A.users=data.users||[];A.total=Number(data.total)||0;$('yfm-admin-count').textContent=`총 ${format(A.total)}명 · ${Math.floor(A.offset/50)+1}페이지`;$('yfm-admin-prev').disabled=A.offset===0;$('yfm-admin-next').disabled=A.offset+50>=A.total;
@@ -11628,14 +11654,56 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
  }
  async function selectUser(id){
   if(A.busy)return;
-  if(A.detailBusy){A.queuedTarget=id;return;}
-  A.detailBusy=true;A.queuedTarget=null;const version=++A.readVersion;A.target=id;A.detail=null;A.selected=A.users.find(u=>u.user_id===id)||null;
-  $('yfm-admin-detail').replaceChildren();status('유저 데이터 조회 중…');
-  try{const owner=accountUser?.id,data=await rpc('detail',{user_id:id});if(owner!==accountUser?.id||A.target!==id||!A.allowed||version!==A.readVersion)return;if(A.queuedTarget&&A.queuedTarget!==id)return;A.detail=data;drawDetail();status('서버 데이터 조회 완료');}
-  catch(e){if(version===A.readVersion)fail(e);}
-  finally{A.detailBusy=false;const next=A.queuedTarget;A.queuedTarget=null;if(next&&next!==id&&A.allowed)selectUser(next);}
+  A.target=id;A.readVersion++;A.detailBasic=true;A.selected=A.users.find(u=>u.user_id===id)||null;
+  A.detail={tokens:Number(A.selected?.tokens)||0};
+  drawDetail();status('기본 정보 표시 완료 · 상세 항목은 펼칠 때 조회합니다.');
  }
- function drawDetail(){const d=A.detail,u=A.selected||{},records=d.offline||{},labels={league:'리그',career:'챔피언스리그',saudi:'사우디',europa:'유로파',worldcup:'월드컵'};let roster=[];try{roster=JSON.parse(d.save?.data?.fm_players||'[]');}catch(_){}
+ async function ensureFullDetail(target=A.target){
+  const owner=accountUser?.id,version=A.readVersion;
+  if(!A.allowed||target!==A.target)return null;
+  if(!A.detailBasic)return A.detail;
+  while(A.fullRead){
+   try{await A.fullRead.promise;}catch(_){}
+   if(owner!==accountUser?.id||target!==A.target||version!==A.readVersion||!A.allowed)return null;
+   if(!A.detailBasic)return A.detail;
+  }
+  A.detailBusy=true;status('상세 데이터를 조회 중…');
+  const record={target,owner,version,promise:null};A.fullRead=record;
+  record.promise=(async()=>{
+   try{
+    const data=await rpc('detail',{user_id:target});
+    if(owner!==accountUser?.id||target!==A.target||version!==A.readVersion||!A.allowed)return null;
+    A.detail=data;A.detailBasic=false;status('상세 데이터 조회 완료');return data;
+   }finally{if(A.fullRead===record){A.fullRead=null;A.detailBusy=false;}}
+  })();
+  return record.promise;
+ }
+ async function openAdminDetail(section){
+  const target=A.target,values={};
+  for(const id of ['yfm-admin-reason','yfm-admin-amount','yfm-admin-evo-amount','yfm-admin-ticket-amount'])values[id]=$(id)?.value||'';
+  try{
+   if(!await ensureFullDetail(target))return;
+   if(A.target!==target)return;
+   drawDetail();
+   for(const [id,value] of Object.entries(values))if($(id))$(id).value=value;
+   const panel=$('yfm-admin-section-'+section);
+   if(panel){panel.open=true;panel.scrollIntoView?.({block:'nearest'});}
+   else if(section==='suspension')$('yfm-admin-suspend')?.scrollIntoView?.({block:'nearest'});
+  }catch(e){if(A.target===target)fail(e);}
+ }
+ function drawBasicDetail(){
+  const u=A.selected||{},d=A.detail||{};
+  $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div class="my-3 p-3 rounded-xl bg-gray-900"><b>${esc(u.club_name||'새 구단')}</b><br>목록에서 조회한 토큰 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b><br><small>진화토큰·뽑기권 보유량과 정지 상태는 상세 조회 후 표시됩니다.</small></div>
+<div class="p-3 mb-4 rounded-xl bg-purple-950 border border-purple-700"><label class="block text-sm mb-2">변경 사유 (모든 변경에 필수)</label><input id="yfm-admin-reason" maxlength="500" class="w-full rounded-lg p-2 bg-gray-900 border border-gray-600" placeholder="보상 지급 / 비정상 획득 회수 / 기록 정정"><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-amount" type="number" min="1" max="1000000000" step="1" placeholder="토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">지급</button><button id="yfm-admin-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">회수·차감</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-evo-amount" type="number" min="1" max="1000000000" step="1" placeholder="진화토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-evo-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">진화토큰 지급</button><button id="yfm-admin-evo-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">진화토큰 압수</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-ticket-amount" type="number" min="1" max="1000000000" step="1" placeholder="이벤트 뽑기권 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-ticket-gift" data-admin-write class="px-3 py-2 rounded-lg bg-orange-700 font-bold">🎟 뽑기권 지급</button><button id="yfm-admin-ticket-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">뽑기권 압수</button></div></div>
+ <button id="yfm-admin-load-inventory" class="w-full px-3 py-2 mb-3 rounded-lg bg-purple-700 font-bold">진화토큰·뽑기권 보유량 조회</button>
+ ${[['suspension','계정 정지 관리'],['matches','오프라인·온라인 전적 조회 및 점수 정정'],['save','전체 게임 저장 데이터 조회·수정'],['transactions','토큰 거래 내역'],['audit','관리자 변경 기록·수정 전 데이터'],['legacy','이전 버전 온라인 기록']].map(([key,title])=>`<details data-admin-lazy="${key}" class="mt-3 p-3 rounded-xl border border-purple-800"><summary class="font-bold cursor-pointer">${title}</summary><p class="text-sm text-gray-400 mt-2">서버에서 상세 정보를 불러옵니다…</p></details>`).join('')}`;
+  $('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);
+  $('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);
+  $('yfm-admin-ticket-gift').onclick=()=>adjustEventTickets(1);$('yfm-admin-ticket-remove').onclick=()=>adjustEventTickets(-1);
+  $('yfm-admin-load-inventory').onclick=()=>openAdminDetail('inventory');
+  $('yfm-admin-detail').querySelectorAll('[data-admin-lazy]').forEach(el=>el.addEventListener('toggle',()=>{if(el.open)openAdminDetail(el.dataset.adminLazy);}));
+ }
+ function drawDetail(){if(A.detailBasic)return drawBasicDetail();const d=A.detail,u=A.selected||{},records=d.offline||{},labels={league:'리그',career:'챔피언스리그',saudi:'사우디',europa:'유로파',worldcup:'월드컵'};let roster=[];try{roster=JSON.parse(d.save?.data?.fm_players||'[]');}catch(_){}
   const offline=Object.entries(records).filter(([k,v])=>v&&typeof v==='object'&&v.p!==undefined).map(([k,v])=>`<tr><td>${esc(labels[k]||k)}</td><td>${format(v.p)}</td><td>${format(v.w)} / ${format(v.d)} / ${format(v.l)}</td><td>${format(v.gf)} / ${format(v.ga)}</td></tr>`).join('');
   const online=d.online_results||[],summary=d.online_summary||{};
   $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div style="margin:12px 0;padding:14px;border:2px solid #9d60d5;border-radius:12px;background:#2a1438"><h4 style="font-weight:900;font-size:18px;margin-bottom:8px">계정 정지 관리</h4><p>현재 상태: <b>${d.suspension?.suspended?'정지':'정상'}</b>${d.suspension?.suspended?` · ${esc(d.suspension.reason)}`:''}</p><p style="font-size:12px;color:#dfc7ef;margin:8px 0">아래 변경 사유를 입력한 뒤 정지하거나 해제하세요.</p>${!d.suspension?'<p style="color:#fca5a5;font-size:12px;margin:8px 0">추가 정지·문의 SQL이 적용되지 않았습니다. 서버 SQL을 먼저 적용해 주세요.</p>':''}<button id="yfm-admin-suspend" data-admin-write ${A.target===accountUser.id||!d.suspension?'disabled':''} style="padding:10px 18px;border-radius:8px;background:${d.suspension?.suspended?'#167652':'#a32d43'};font-weight:900;opacity:${A.target===accountUser.id||!d.suspension?'.5':'1'}">${A.target===accountUser.id?'관리자 계정은 정지 불가':d.suspension?.suspended?'정지 해제':'이 계정 정지'}</button></div><div class="my-3 p-3 rounded-xl bg-gray-900">서버 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b> · 🧬 진화토큰 <b class="text-purple-300">${format(d.save?.data?.fm_evo_tokens)}개</b> · 🎟 이벤트 뽑기권 <b>${format(d.save?.data?.fm_halloween_tickets)}장</b> · 보유 선수 ${format(roster.length)}명<br><small>가입 ${esc(time(u.created_at))} · 마지막 로그인 ${esc(time(u.last_sign_in_at))}</small></div>
@@ -11643,10 +11711,10 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
 
   <h4 class="font-black mb-2">오프라인 전적</h4><div style="overflow:auto"><table class="w-full text-sm"><thead><tr><th>모드</th><th>경기</th><th>승 / 무 / 패</th><th>득점 / 실점</th></tr></thead><tbody>${offline||'<tr><td colspan="4">기록 없음</td></tr>'}</tbody></table></div>
   <h4 class="font-black mt-5 mb-2">온라인 친선전</h4><p class="text-sm mb-3">${format(summary.games)}경기 · ${format(summary.wins)}승 ${format(summary.draws)}무 ${format(summary.losses)}패 · 최근 100경기</p><div>${online.map((r,i)=>`<div data-match="${i}" class="my-2 p-2 rounded-lg bg-gray-900"><div class="text-xs text-purple-200">${esc(time(r.ended_at))} · ${r.kind==='friend'?'친구 친선':'코드 친선'} · ${esc(r.method)}</div><div class="flex flex-wrap items-center gap-2 mt-2"><label class="text-xs">방장 <input class="admin-host w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.host_goals)||0}"></label><span>:</span><label class="text-xs">참가자 <input class="admin-guest w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.guest_goals)||0}"></label><button data-admin-write class="admin-score px-2 py-1 rounded bg-purple-700 text-sm">점수 정정</button></div></div>`).join('')||'<p class="text-sm text-gray-400">기록 없음</p>'}</div>
-  <details class="mt-4"><summary class="font-bold cursor-pointer">전체 게임 저장 데이터 조회·수정</summary><p class="text-xs text-gray-400 my-2">선수·리그·오프라인 기록을 수정할 수 있습니다. 토큰은 위 지급·회수로 변경하세요. 다른 저장이 반영되면 다시 조회해야 합니다.</p><textarea id="yfm-admin-save-json" spellcheck="false" style="width:100%;height:300px;background:#0b0711;padding:10px;border:1px solid #584073;border-radius:8px;font:12px monospace"></textarea><button id="yfm-admin-save" data-admin-write class="mt-2 px-4 py-2 rounded-lg bg-red-800 font-bold">게임 데이터 수정 적용</button></details>
-  <details class="mt-4"><summary class="font-bold cursor-pointer">토큰 거래 내역 (최근 50건)</summary><div style="overflow:auto"><table class="w-full text-xs"><tbody>${(d.transactions||[]).map(x=>`<tr><td>${esc(time(x.created_at))}</td><td>${esc(x.source)}</td><td>${Number(x.amount)>0?'+':''}${format(x.amount)} T</td><td>잔액 ${format(x.balance_after)}</td></tr>`).join('')||'<tr><td>기록 없음</td></tr>'}</tbody></table></div></details>
-  <details class="mt-4"><summary class="font-bold cursor-pointer">관리자 변경 기록·수정 전 데이터 (최근 50건)</summary><div>${(d.audit||[]).map(x=>`<button data-audit="${esc(x.request_id)}" class="block w-full text-left p-2 my-1 rounded bg-gray-900 text-xs">${esc(time(x.created_at))} · ${esc(x.action)} · ${esc(x.reason)} ${x.delta!==null?`(${Number(x.delta)>0?'+':''}${format(x.delta)} T)`:''}</button>`).join('')||'기록 없음'}</div><textarea id="yfm-admin-audit-json" readonly style="width:100%;height:220px;background:#0b0711;padding:8px;font:11px monospace;margin-top:8px"></textarea></details>
-  <details class="mt-4"><summary class="font-bold cursor-pointer">이전 버전 온라인 기록</summary><pre style="white-space:pre-wrap;word-break:break-all;font-size:11px">${esc(JSON.stringify(d.legacy_online_results||[],null,2))}</pre></details>`;
+  <details id="yfm-admin-section-save" class="mt-4"><summary class="font-bold cursor-pointer">전체 게임 저장 데이터 조회·수정</summary><p class="text-xs text-gray-400 my-2">선수·리그·오프라인 기록을 수정할 수 있습니다. 토큰은 위 지급·회수로 변경하세요. 다른 저장이 반영되면 다시 조회해야 합니다.</p><textarea id="yfm-admin-save-json" spellcheck="false" style="width:100%;height:300px;background:#0b0711;padding:10px;border:1px solid #584073;border-radius:8px;font:12px monospace"></textarea><button id="yfm-admin-save" data-admin-write class="mt-2 px-4 py-2 rounded-lg bg-red-800 font-bold">게임 데이터 수정 적용</button></details>
+  <details id="yfm-admin-section-transactions" class="mt-4"><summary class="font-bold cursor-pointer">토큰 거래 내역 (최근 50건)</summary><div style="overflow:auto"><table class="w-full text-xs"><tbody>${(d.transactions||[]).map(x=>`<tr><td>${esc(time(x.created_at))}</td><td>${esc(x.source)}</td><td>${Number(x.amount)>0?'+':''}${format(x.amount)} T</td><td>잔액 ${format(x.balance_after)}</td></tr>`).join('')||'<tr><td>기록 없음</td></tr>'}</tbody></table></div></details>
+  <details id="yfm-admin-section-audit" class="mt-4"><summary class="font-bold cursor-pointer">관리자 변경 기록·수정 전 데이터 (최근 50건)</summary><div>${(d.audit||[]).map(x=>`<button data-audit="${esc(x.request_id)}" class="block w-full text-left p-2 my-1 rounded bg-gray-900 text-xs">${esc(time(x.created_at))} · ${esc(x.action)} · ${esc(x.reason)} ${x.delta!==null?`(${Number(x.delta)>0?'+':''}${format(x.delta)} T)`:''}</button>`).join('')||'기록 없음'}</div><textarea id="yfm-admin-audit-json" readonly style="width:100%;height:220px;background:#0b0711;padding:8px;font:11px monospace;margin-top:8px"></textarea></details>
+  <details id="yfm-admin-section-legacy" class="mt-4"><summary class="font-bold cursor-pointer">이전 버전 온라인 기록</summary><pre style="white-space:pre-wrap;word-break:break-all;font-size:11px">${esc(JSON.stringify(d.legacy_online_results||[],null,2))}</pre></details>`;
   $('yfm-admin-suspend').onclick=async()=>{try{const target=A.target,suspended=!A.detail.suspension?.suspended,why=reason();if(!confirm(suspended?'이 계정의 모든 게임 서비스를 정지할까요?':'계정 정지를 해제할까요?'))return;await mutate('suspension',{user_id:target,suspended,reason:why});await selectUser(target);status(suspended?'계정 정지 완료':'정지 해제 완료');}catch(e){fail(e);}};
   const saveArea=$('yfm-admin-save-json');saveArea.closest('details').addEventListener('toggle',()=>{if(saveArea.closest('details').open&&!saveArea.dataset.formatted){saveArea.value=JSON.stringify(d.save,null,2);saveArea.dataset.formatted='1';}});$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;$('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);$('yfm-admin-ticket-gift').onclick=()=>adjustEventTickets(1);$('yfm-admin-ticket-remove').onclick=()=>adjustEventTickets(-1);
   $('yfm-admin-detail').querySelectorAll('[data-match]').forEach(el=>el.querySelector('.admin-score').onclick=()=>editScore(Number(el.dataset.match),el));
@@ -11666,12 +11734,13 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
    const p=pending();delete p[key];localStorage.setItem('yfm_admin_pending_'+owner,JSON.stringify(p));return data.result;
   }finally{A.busy=false;$('yfm-admin-detail').querySelectorAll('[data-admin-write]').forEach(b=>b.disabled=b.id==='yfm-admin-suspend'&&(A.target===accountUser?.id||!A.detail?.suspension));}
  }
- async function adjustTokens(sign){try{const amount=Number($('yfm-admin-amount').value);if(!Number.isSafeInteger(amount)||amount<1||amount>1000000000)throw new Error('토큰 수량을 올바르게 입력해 주세요.');const target=A.target,result=await mutate('tokens',{user_id:target,delta:sign*amount,reason:reason()});if(!result)return;if(target===accountUser.id){applyServerWallet(result.balance);saveData();}await selectUser(target);if(target===accountUser.id&&A.detail)applyServerWallet(A.detail.tokens);status(`변경 완료 · 서버 잔액 ${format(result.balance)} T. 유저 화면은 다음 저장·재접속 때 반영됩니다.`);}catch(e){fail(e);}}
+ async function adjustTokens(sign){try{const amount=Number($('yfm-admin-amount').value);if(!Number.isSafeInteger(amount)||amount<1||amount>1000000000)throw new Error('토큰 수량을 올바르게 입력해 주세요.');const target=A.target,result=await mutate('tokens',{user_id:target,delta:sign*amount,reason:reason()});if(!result)return;const listed=A.users.find(u=>u.user_id===target);if(listed)listed.tokens=Number(result.balance);if(target===accountUser.id){applyServerWallet(result.balance);saveData();}await selectUser(target);if(target===accountUser.id&&A.detail)applyServerWallet(A.detail.tokens);status(`변경 완료 · 서버 잔액 ${format(result.balance)} T. 유저 화면은 다음 저장·재접속 때 반영됩니다.`);}catch(e){fail(e);}}
  async function adjustEvoTokens(sign){
   try{
    if(A.busy)return;
    const amount=Number($('yfm-admin-evo-amount').value),why=reason(),target=A.target,owner=accountUser?.id;
    if(!Number.isSafeInteger(amount)||amount<1||amount>1000000000)throw new Error('진화토큰 수량을 올바르게 입력해 주세요.');
+   if(!await ensureFullDetail(target))return;
    const detail=A.detail,save=JSON.parse(JSON.stringify(detail.save||null));
    if(!save?.data||save.app!=='YFM')throw new Error('유저의 게임 저장 데이터가 없습니다. 게임을 한 번 저장한 뒤 다시 조회해 주세요.');
    const before=Number(save.data.fm_evo_tokens||0);
@@ -11693,6 +11762,7 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
    if(A.busy)return;
    const amount=Number($('yfm-admin-ticket-amount').value),why=reason(),target=A.target,owner=accountUser?.id;
    if(!Number.isSafeInteger(amount)||amount<1||amount>1000000000)throw new Error('이벤트 뽑기권 수량을 올바르게 입력해 주세요.');
+   if(!await ensureFullDetail(target))return;
    const detail=A.detail,save=JSON.parse(JSON.stringify(detail.save||null));
    if(!save?.data||save.app!=='YFM')throw new Error('유저의 게임 저장 데이터가 없습니다. 게임을 한 번 저장한 뒤 다시 조회해 주세요.');
    const before=Number(save.data.fm_halloween_tickets||0);
