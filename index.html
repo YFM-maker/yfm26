@@ -3957,6 +3957,129 @@
                 try{result[key]=JSON.stringify(JSON.parse(result[key]),(_,v)=>v==='yfm:club-logo'?logo:v);}catch(_){}
             }return result;
         }
+        // League progress is monotonic across devices, independent of save timestamps.
+        let accountPendingRemote = null, cloudProgressReading = false, accountSyncSetupWarned = false;
+        function parseLeagueSnapshot(snapshot) {
+            try {
+                const value=snapshot?.data?.fm_league_v2, l=typeof value==='string'?JSON.parse(value):value;
+                if(!l || !Number.isInteger(l.li) || l.li<0 || l.li>=LG.length || !Number.isInteger(l.season) || l.season<1 || !Array.isArray(l.schedule) || !['playing','playoff','finished'].includes(l.status))return null;
+                return l;
+            }catch(_){return null;}
+        }
+        function leagueSnapshotRank(snapshot) {
+            const l=parseLeagueSnapshot(snapshot);if(!l)return [-1,-1,-1,-1,-1,-1];
+            const integer=v=>Number.isInteger(v)&&v>=0&&v<=999999999?v:0;
+            let highest=Math.max(l.li,Math.min(LG.length-1,integer(l.highestReachedLi)));
+            if(l.status==='finished')highest=Math.max(highest,Math.min(LG.length-1,integer(l.nextLi)));
+            for(const h of Array.isArray(l.history)?l.history:[]){const i=LG.findIndex(x=>x.n===h.l);if(i>=0)highest=Math.max(highest,Math.min(LG.length-1,i+(h.up===true?1:0)));}
+            return [highest,l.li,l.season,integer(l.myPlayed),integer(l.round),l.status==='finished'?2:l.status==='playoff'?1:0];
+        }
+        function compareLeagueSnapshots(a,b) {
+            const x=leagueSnapshotRank(a),y=leagueSnapshotRank(b);
+            for(let i=0;i<x.length;i++)if(x[i]!==y[i])return x[i]>y[i]?1:-1;
+            return 0;
+        }
+        function leagueSnapshotStats(snapshot) {
+            try{const v=snapshot?.data?.fm_stats;const parsed=typeof v==='string'?JSON.parse(v):v;return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};}catch(_){return {};}
+        }
+        function mergeAdvancedLeague(candidate,reference) {
+            const revision=candidate?.data?.fm_admin_revision;
+            if(revision!=null&&revision!==reference?.data?.fm_admin_revision)return candidate;
+            if(compareLeagueSnapshots(reference,candidate)<=0)return candidate;
+            const data={...(candidate?.data||{}),fm_league_v2:JSON.stringify(parseLeagueSnapshot(reference))};
+            const stats={...leagueSnapshotStats(candidate)},ref=leagueSnapshotStats(reference);
+            for(const k of ['league','leagueTitles','awards'])if(Object.prototype.hasOwnProperty.call(ref,k))stats[k]=ref[k];
+            if(JSON.stringify(stats)!==JSON.stringify(leagueSnapshotStats(candidate)))data.fm_stats=JSON.stringify(stats);
+            delete data.fm_league_pending;
+            try{if(JSON.parse(data.fm_active_match_v1||'null')?.mode==='league')delete data.fm_active_match_v1;}catch(_){delete data.fm_active_match_v1;}
+            return {...candidate,app:'YFM',data};
+        }
+        function readLeagueCheckpoint(owner) {
+            try{const saved=JSON.parse(localStorage.getItem('yfm_league_best_'+owner)||'null');return saved?.owner===owner?saved.snapshot:null;}catch(_){return null;}
+        }
+        function rememberLeagueProgress(owner=accountUser?.id,snapshot=null) {
+            if(!owner)return;
+            try{
+                snapshot ||= accountSnapshot();if(!parseLeagueSnapshot(snapshot))return;
+                const old=readLeagueCheckpoint(owner),changedByAdmin=snapshot.data.fm_admin_revision!=null&&snapshot.data.fm_admin_revision!==old?.data?.fm_admin_revision,best=!changedByAdmin&&compareLeagueSnapshots(old,snapshot)>0?old:snapshot,stats=leagueSnapshotStats(best),subset={};
+                for(const key of ['league','leagueTitles','awards'])if(Object.prototype.hasOwnProperty.call(stats,key))subset[key]=stats[key];
+                const checkpoint={app:'YFM',at:best.at,data:{fm_league_v2:best.data.fm_league_v2,fm_stats:JSON.stringify(subset)}};
+                if(best.data.fm_admin_revision!=null)checkpoint.data.fm_admin_revision=best.data.fm_admin_revision;
+                localStorage.setItem('yfm_league_best_'+owner,JSON.stringify({owner,snapshot:checkpoint}));
+            }catch(e){console.warn('리그 복구 기록 저장 실패:',e);}
+        }
+        function cloudSnapshotFingerprint(snapshot) {
+            // Save timestamps, wallet refreshes and JSON key ordering are not new game progress.
+            const sorted=value=>Array.isArray(value)?value.map(sorted):value&&typeof value==='object'
+                ?Object.fromEntries(Object.keys(value).sort().map(k=>[k,sorted(value[k])])):value;
+            const data={};
+            for(const key of Object.keys(snapshot?.data||{}).sort()) {
+                if(key==='fm_tokens'||key==='fm_completed_match_at')continue;
+                let value=snapshot.data[key];
+                if(typeof value==='string'&&/^[\[{]/.test(value.trim())){try{value=JSON.parse(value);}catch(_){}}
+                data[key]=sorted(value);
+            }
+            const canonical=JSON.stringify(data);
+            return `${canonical.length}:${hash(canonical)}:${hash('cloud-restore:'+canonical)}`;
+        }
+        function readCloudRestoreReceipt(owner) {
+            try{const saved=JSON.parse(sessionStorage.getItem('yfm_cloud_restore_receipt')||'null');return saved?.owner===owner?saved:null;}catch(_){return null;}
+        }
+        function rememberCloudRestore(owner,snapshot) {
+            try{sessionStorage.setItem('yfm_cloud_restore_receipt',JSON.stringify({owner,fingerprint:cloudSnapshotFingerprint(snapshot),at:snapshot.at||'',revision:Number.isSafeInteger(snapshot.sync_revision)?snapshot.sync_revision:0}));}catch(_){}
+            sessionStorage.setItem('yfm_restored_account',owner);
+        }
+        function shouldRestoreCloudAtLogin(owner,snapshot,needed) {
+            if(!needed)return false;
+            // One automatic restore/reload per login sequence, even if another device is writing.
+            if(window.yfmResumingAccount&&sessionStorage.getItem('yfm_restored_account')===owner)return false;
+            return readCloudRestoreReceipt(owner)?.fingerprint!==cloudSnapshotFingerprint(snapshot);
+        }
+        function adoptHigherLeagueAtLogin(snapshot) {
+            const local=accountSnapshot();
+            const merged=mergeAdvancedLeague(local,snapshot);
+            if(merged===local)return false;
+            const league=parseLeagueSnapshot(merged);if(!league)return false;
+            leagueState=league;
+            const stats=leagueSnapshotStats(merged);
+            for(const key of ['league','leagueTitles','awards'])if(Object.prototype.hasOwnProperty.call(stats,key))S[key]=stats[key];
+            localStorage.setItem('fm_league_v2',JSON.stringify(leagueState));
+            localStorage.setItem('fm_stats',JSON.stringify(S));
+            localStorage.removeItem('fm_league_pending');
+            if(!merged.data.fm_active_match_v1)localStorage.removeItem('fm_active_match_v1');
+            return true;
+        }
+        function cloudMatchInProgress() { return !!(currentMatchState&&!currentMatchState.ended&&!currentMatchState.resultProcessed); }
+        function restoreSyncedAccount(owner,snapshot) {
+            if(accountUser?.id!==owner)return false;
+            rememberLeagueProgress(owner);
+            snapshot=mergeAdvancedLeague(snapshot,readLeagueCheckpoint(owner));
+            rememberCloudRestore(owner,snapshot);
+            window.__wiping=true;
+            restoreAccountSnapshot(snapshot);
+            localStorage.setItem('yfm_sync_at',snapshot.at||'');
+            localStorage.setItem('yfm_sync_revision',String(Number.isSafeInteger(snapshot.sync_revision)?snapshot.sync_revision:0));
+            sessionStorage.setItem('yfm_restored_account',owner);
+            accountPendingRemote=null;reloadForAccountRestore();return true;
+        }
+        async function pollCloudProgress() {
+            const owner=accountUser?.id;
+            if(!owner||!window.yfmAccountReady||window.__wiping||accountSaving||cloudProgressReading||document.hidden||cloudMatchInProgress())return;
+            if(accountPendingRemote&&accountPendingRemote.owner!==owner)accountPendingRemote=null;
+            if(accountPendingRemote){restoreSyncedAccount(owner,accountPendingRemote.snapshot);return;}
+            if(accountDirty){await uploadAccountSnapshot(true);return;}
+            cloudProgressReading=true;
+            try{
+                const result=await boundedProgressRead(owner);if(result.error)throw result.error;
+                if(accountUser?.id!==owner||accountSaving||cloudMatchInProgress()||accountDirty)return;
+                const remote=result.data?.save_data;if(!remote)return;
+                const observedRevision=localStorage.getItem('yfm_sync_revision');
+                const revision=Number.isSafeInteger(remote.sync_revision)?String(remote.sync_revision):null;
+                const knownVersion=revision!==null?revision===observedRevision:remote.at===localStorage.getItem('yfm_sync_at');
+                if(!knownVersion&&cloudSnapshotFingerprint(remote)!==cloudSnapshotFingerprint(accountSnapshot())){restoreSyncedAccount(owner,remote);return;}
+                localStorage.setItem('yfm_sync_at',remote.at||'');localStorage.setItem('yfm_sync_revision',String(Number.isSafeInteger(remote.sync_revision)?remote.sync_revision:0));accountLastSnapshot=canonData(remote.data);
+            }catch(e){console.warn('다른 기기 진행도 확인 실패:',e);}finally{cloudProgressReading=false;}
+        }
         function accountSnapshot() {
             const data = {};
             for (let i=0;i<localStorage.length;i++) {
@@ -3975,31 +4098,43 @@
             if (!accountUser || accountSaving || window.__wiping || (!window.yfmAccountReady&&!initialSave)) return;
             if (!force && (!accountDirty || Date.now()-accountLastWrite<55000)) return;
             if(tokenWalletPending>0){accountDirty=true;return;}
+            if(accountPendingRemote&&accountPendingRemote.owner!==accountUser.id)accountPendingRemote=null;
+            if(accountPendingRemote){
+                if(cloudMatchInProgress())return;
+                restoreSyncedAccount(accountUser.id,accountPendingRemote.snapshot);return;
+            }
             accountSaving=true;const saveOwner=accountUser.id;
             try {
                 if(window.yfmAccountReady)await optimizeAccountLogo(saveOwner);if(accountUser?.id!==saveOwner)return;
                 if(tokenWalletPending>0){accountDirty=true;return;}
                 const walletRevisionAtStart=tokenWalletRevision,snapshot=accountSnapshot(), serialized=canonData(snapshot.data);
                 if (serialized===accountLastSnapshot) {accountDirty=false;return;}
-                let saved,error;
-                if(lightSaveAvailable!==false){
-                    try{
-                        const reply=await walletRpcWithRetry('yfm_save_progress_light',{p_snapshot:snapshot},{maxAttempts:1});
-                        lightSaveAvailable=true;
-                        if(!reply.data?.ok||!Number.isSafeInteger(Number(reply.data.balance))||Number(reply.data.balance)<0||typeof reply.data.at!=='string')throw new Error('서버 저장 응답을 확인하지 못했습니다.');
-                        saved={save_data:{...snapshot,at:reply.data.at,data:{...snapshot.data,fm_tokens:String(reply.data.balance)}}};
-                    }catch(e){if(['PGRST202','42883'].includes(String(e.code)))lightSaveAvailable=false;else throw e;}
+                let reply;
+                try{
+                    reply=await walletRpcWithRetry('yfm_save_progress_synced',{p_snapshot:snapshot,p_base_at:localStorage.getItem('yfm_sync_at')||null,p_base_revision:localStorage.getItem('yfm_sync_revision')||null},{maxAttempts:2});
+                }catch(e){
+                    if(['PGRST202','42883'].includes(String(e.code))&&!accountSyncSetupWarned){
+                        accountSyncSetupWarned=true;
+                        if(typeof managerToast==='function')managerToast('진행도 동기화 SQL을 먼저 적용해 주세요. 기기 저장은 유지됩니다.');
+                    }
+                    throw e;
                 }
-                if(lightSaveAvailable===false){
-                    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
-                    try{const reply=await getOwnerRankClient().from('game_progress').upsert({user_id:saveOwner,save_data:snapshot},{onConflict:'user_id'}).select('save_data').abortSignal(controller.signal).single();saved=reply.data;error=reply.error;}finally{clearTimeout(timer);}
-                }
+                if(!reply.data?.ok||!Number.isSafeInteger(Number(reply.data.balance))||Number(reply.data.balance)<0||typeof reply.data.at!=='string'||!reply.data.save_data?.data||!Number.isSafeInteger(reply.data.save_data.sync_revision)||reply.data.save_data.sync_revision<0)throw new Error('서버 저장 결과를 확인하지 못했습니다.');
+                const saved={save_data:reply.data.save_data},error=null;
                 if(error)throw error;if(accountUser?.id!==saveOwner)return;
                 // DB trigger returns the server-approved token value; overwrite any locally injected balance.
                 const serverTokens=Number(saved?.save_data?.data?.fm_tokens);
                 if(Number.isSafeInteger(serverTokens)&&serverTokens>=0&&walletRevisionAtStart===tokenWalletRevision){tokenWalletRevision++;tokenWalletBalance=serverTokens;if(serverTokens!==tokens){tokens=serverTokens;localStorage.setItem('fm_tokens',String(serverTokens));updateTokensUI();}}
                 const acceptedData=saved?.save_data?.data||snapshot.data;
                 accountLastSnapshot=canonData(acceptedData);accountLastWrite=Date.now();accountDirty=canonData(accountSnapshot().data)!==accountLastSnapshot;localStorage.setItem('yfm_sync_at', saved?.save_data?.at||snapshot.at);
+                localStorage.setItem('yfm_sync_revision',String(saved.save_data.sync_revision));
+                rememberLeagueProgress(saveOwner,saved.save_data);
+                const needsConflictRestore=reply.data.conflict&&cloudSnapshotFingerprint(saved.save_data)!==cloudSnapshotFingerprint(snapshot);
+                if(needsConflictRestore || compareLeagueSnapshots(saved.save_data,accountSnapshot())>0){
+                    accountPendingRemote={owner:saveOwner,snapshot:saved.save_data};
+                    if(!cloudMatchInProgress())restoreSyncedAccount(saveOwner,saved.save_data);
+                    else if(typeof managerToast==='function')managerToast('다른 기기의 최신 기록을 확인했습니다. 경기 종료 후 동기화합니다.');
+                }
             } catch(error) {accountDirty=true; console.warn('클라우드 저장 실패:',error);if(String(error?.message||'').includes('ADMIN_SAVE_UPDATED'))await refreshAdminEditedSave();}
             finally {accountSaving=false;}
         }
@@ -4039,23 +4174,42 @@
             }
             accountLoginStage='게임 저장 기록 복원·기기 저장소 처리';
             const previousOwner=localStorage.getItem(accountDeviceKey);
+            const serverBeforeMerge=data?.save_data?canonData(data.save_data.data):'';
+            if(data?.save_data){
+                localStorage.setItem('yfm_sync_revision',String(Number.isSafeInteger(data.save_data.sync_revision)?data.save_data.sync_revision:0));
+                if(previousOwner===user.id&&window.yfmHadLocalProgress){
+                    rememberLeagueProgress(user.id,accountSnapshot());
+                    data.save_data=mergeAdvancedLeague(data.save_data,accountSnapshot());
+                }
+                data.save_data=mergeAdvancedLeague(data.save_data,readLeagueCheckpoint(user.id));
+            }
             if (data?.save_data) {
                 const remote=canonData(compactTournamentLogos({...data.save_data.data})), remoteAt=data.save_data.at||'', syncAt=localStorage.getItem('yfm_sync_at')||'';
                 // 계정의 서버 기록을 우선한다. 다른 계정의 로컬 데이터는 업로드하지 않는다.
-                // 시작 과정에서 자동 생성·정리되는 로컬 키가 서버 값과 달라도 복원은 탭당 한 번만 한다.
-                const restoredThisTab=sessionStorage.getItem('yfm_restored_account')===user.id;
+                // 실제 서버 버전을 기준으로 복원한다. 같은 저장 시각의 초기 정리 작업은 업로드로 반영한다.
                 // 같은 계정의 로컬 진행도가 있으면, 서버 쪽이 마지막 동기화 이후 더 새로울 때(다른 기기에서 플레이)만 서버 기록으로 덮어씀
                 const sameOwnerLocal = previousOwner === user.id && window.yfmHadLocalProgress, localDiff = canonData(accountSnapshot().data) !== remote;
-                const needRestore = !sameOwnerLocal || (localDiff && (!syncAt || remoteAt > syncAt));
-                if (!restoredThisTab && needRestore) {
+                const leagueNeedsRestore=compareLeagueSnapshots(data.save_data,accountSnapshot())>0;
+                const needRestore = !sameOwnerLocal || leagueNeedsRestore || (localDiff && (!Number.isFinite(Date.parse(syncAt)) || Date.parse(remoteAt) > Date.parse(syncAt)));
+                if (shouldRestoreCloudAtLogin(user.id,data.save_data,needRestore)) {
+                    rememberCloudRestore(user.id,data.save_data);
                     restoreAccountSnapshot(data.save_data);
                     if (remoteAt) localStorage.setItem('yfm_sync_at', remoteAt);
                     sessionStorage.setItem('yfm_restored_account',user.id);
                     localStorage.setItem(accountDeviceKey,user.id);
                     reloadForAccountRestore(); return;
                 }
-                accountLastSnapshot=remote;
-                accountDirty=canonData(accountSnapshot().data)!==remote;
+                // A resumed login must enter the game, rather than repeatedly restore boot-normalised data.
+                if(leagueNeedsRestore)adoptHigherLeagueAtLogin(data.save_data);
+                const receipt=readCloudRestoreReceipt(user.id);
+                const restoredSame=receipt?.fingerprint===cloudSnapshotFingerprint(data.save_data);
+                if(window.yfmResumingAccount&&receipt&&!restoredSame){
+                    // Keep the version actually loaded; the save RPC will rebase a genuine concurrent change.
+                    localStorage.setItem('yfm_sync_at',receipt.at||'');
+                    localStorage.setItem('yfm_sync_revision',String(receipt.revision));
+                }else if(remoteAt)localStorage.setItem('yfm_sync_at',remoteAt);
+                accountLastSnapshot=serverBeforeMerge;
+                accountDirty=canonData(accountSnapshot().data)!==serverBeforeMerge;
                 if (accountDirty) { accountUser=user; setTimeout(()=>uploadAccountSnapshot(true),1500); }
             } else {
                 if (previousOwner && previousOwner!==user.id) {
@@ -4086,7 +4240,9 @@
             if(localStorage.getItem('fm_need_star')!=='1'&&restoreSavedMatch())return;
             maybeStartTutorial();
         }
-        setInterval(()=>uploadAccountSnapshot(true),120000);
+        setInterval(()=>{if(accountDirty)uploadAccountSnapshot(true);else pollCloudProgress();},30000);
+        window.addEventListener('online',()=>pollCloudProgress());
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollCloudProgress();});
         document.addEventListener('visibilitychange',()=>{if(document.hidden)uploadAccountSnapshot(true);});
         window.addEventListener('pagehide',()=>{if(accountDirty)uploadAccountSnapshot(true);});
         async function signOutGameAccount() {
@@ -4095,7 +4251,8 @@
             await uploadAccountSnapshot(true);
             await getOwnerRankClient().auth.signOut();
             sessionStorage.removeItem('yfm_restored_account');
-            accountUser=null;tokenWalletBalance=null;window.yfmAccountReady=false;
+            sessionStorage.removeItem('yfm_cloud_restore_receipt');
+            accountUser=null;accountPendingRemote=null;tokenWalletBalance=null;window.yfmAccountReady=false;
             ownerRankRegistered=false;ownerRankLastSent='';
             socialFriendId=null;socialFriends=[];
             document.getElementById('social-search-result').replaceChildren();
@@ -4147,6 +4304,7 @@
             updateTokensUI(); 
             queueOwnerRankSync();
             accountDirty = true;
+            if(accountUser?.id&&window.yfmAccountReady)rememberLeagueProgress(accountUser.id);
             if(accountUser?.id && tokenWalletBalance!==null && Number(tokens)!==tokenWalletBalance && !tokenWalletRefreshQueued){tokenWalletRefreshQueued=true;queueWalletOperation(async()=>{try{await loadServerWallet();}finally{tokenWalletRefreshQueued=false;}});}
             updateTeamNameUI();
         }
@@ -4287,6 +4445,21 @@
         }
         // 📢 업데이트 소식: 최신 패치가 맨 위. 새 업데이트는 이 배열 앞에 추가한다 (메인 메뉴 빈칸 카드)
         const GAME_UPDATES = [
+            { v: '1.31', date: '2026.10.13', title: '로그인 저장 기록 복원 반복 수정', sec: [
+                ['저장 기록 불러오기 반복 수정', [
+                    '로그인 중 같은 서버 저장 기록을 반복해서 복원하고 새로고침하던 문제를 수정했습니다.',
+                    '저장 시각·토큰 조회·JSON 순서 차이만으로 같은 기록을 다시 복원하지 않습니다. 자동 복원 후에는 게임 진입을 우선합니다.',
+                    '더 진행한 리그 기록을 유지하는 동기화 기능은 계속 적용되며, 필요한 경우 로그인 중 최신 리그 기록을 바로 반영합니다.'
+                ]]
+            ] },
+            { v: '1.30', date: '2026.10.13', title: '기기 간 리그 진행도 동기화 수정', sec: [
+                ['리그 진행도 되돌아감 방지', [
+                    '브라우저·기기마다 다른 리그 기록이 남아 있으면 도달 리그·시즌·경기 진행량을 비교하여 가장 많이 진행한 기록을 우선합니다.',
+                    '오래된 기기의 저장이 더 진행한 리그 기록을 덮어쓰지 않도록 서버 저장 검증을 추가했습니다. 오래된 저장은 최신 선수·다른 모드 데이터도 덮어쓰지 못합니다.',
+                    '리그 최고 진행 기록을 계정별로 보관하고, 기기에 남아 있는 더 진행한 기록도 같은 계정으로 접속하면 복구에 반영합니다.',
+                    '30초 간격 및 게임 화면 복귀 시 서버 기록을 확인합니다. 진행 중인 경기와 충돌하면 경기 종료 후 최신 기록을 불러옵니다.'
+                ]]
+            ] },
             { v: '1.29', date: '2026.10.13', title: '리그 퇴장 징계 & 대회 상대 중복 방지', sec: [
                 ['리그 퇴장 후 1경기 출전정지', [
                     '리그에서 직접 퇴장 또는 경고 누적으로 퇴장한 선수는 다음 리그 경기 1경기에 출전할 수 없습니다. 승격 플레이오프도 리그 경기로 계산합니다.',
