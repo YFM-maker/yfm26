@@ -2232,6 +2232,24 @@
             3: { GK: ['조형진', '서태환', '조성용'], DF: ['서예호', '김준현', '정미누', '우주원', '홍성민', '이창준'], MF: ['오한음', '장유진', '이주환', '김예휘', '김진성'], FW: ['우지우', '김현', '석동연', '박이안', '권영탁', '김준성', '이재원'] }
         };
 
+        // 원래 포지션은 선수별 고정. 내부 엔진의 CAM/CDM을 화면에서는 AM/DM으로 표시한다.
+        const FIXED_PLAYER_POSITIONS = {"백정원": "CB", "최요단": "LB", "이동규": "RB", "이윤관": "RB", "고성일": "CB", "김건우": "RB", "임유현": "CB", "강민석": "CB", "김상수": "CB", "김민우": "RB", "박성준": "CB", "이현준": "LB", "정진서": "RB", "최현준": "CB", "옥승원": "CB", "김태원": "LB", "김범준": "RB", "이채원": "RB", "윤현명": "LB", "김민재(5)": "LB", "조정원": "CB", "전재오": "LB", "임정우": "LB", "김정현": "CB", "김용준": "RB", "김민재(6)": "LB", "박준혁": "RB", "한지성": "CB", "임평하": "CB", "이주진": "RB", "이윤건": "CB", "진재원": "AM", "황민우": "CM", "이정훈": "CM", "신하준": "LW", "이현성": "ST", "박종현": "ST", "김세현": "ST", "강준명": "ST", "김운찬": "LW", "황윤태": "RW", "하선우": "RW", "김선호": "LW", "다니엘": "LW", "김중근": "ST", "구태휴": "ST", "김건희": "ST", "박영준": "ST", "정상명": "RW", "김시현": "LW", "김태영": "RB", "이강물": "CB", "김현우": "CB", "김건호": "CB", "소병준": "RB", "송의태": "RB", "류제현": "LB", "손호석": "LB", "김서후": "LB", "이동건": "CB", "조한음": "CM", "정승환": "CM", "성찬": "DM", "김사헌": "CM", "이재민": "CM", "박리명": "CM", "김노아": "DM", "김연준": "AM", "박성찬": "CM", "목진영": "CM", "김민혁": "AM", "윤준상": "ST", "신정민": "LW", "이창현": "ST", "장일운": "ST", "정민재": "RW", "채영주": "RW", "탁정훈": "RW", "류성진": "ST", "이윤석": "ST", "박병주": "LW", "정명진": "LW", "조은호": "LW", "이은찬": "ST", "이도우": "LW", "김민성": "RW", "정승재": "LW", "서예호": "CB", "김준현": "RB", "정미누": "CB", "우주원": "CB", "홍성민": "RB", "이창준": "LB", "오한음": "AM", "장유진": "DM", "이주환": "CM", "김예휘": "DM", "김진성": "CM", "우지우": "LW", "김현": "RW", "석동연": "ST", "박이안": "LW", "권영탁": "RW", "김준성": "ST", "이재원": "ST"};
+        function positionLabel(position) { return position === 'CAM' ? 'AM' : position === 'CDM' ? 'DM' : position; }
+        function fixedPlayerPosition(p) {
+            if (!p || p.tf || p.eventSeason || p.position === 'GK') return null;
+            return FIXED_PLAYER_POSITIONS[String(p.name || '').replace(/ \d+세$/, '')] || null;
+        }
+        function applyFixedPlayerPosition(p) {
+            const pos = fixedPlayerPosition(p);
+            if (pos) p.pos2 = pos === 'AM' ? 'CAM' : pos === 'DM' ? 'CDM' : pos;
+            return p;
+        }
+        function originalPlayerPosition(p) {
+            if (!p) return '';
+            applyFixedPlayerPosition(p);
+            return positionLabel(p.position === 'GK' ? 'GK' : (p.pos2 || p.position || p.role || ''));
+        }
+
         // 고정 기본 OVR. 강화·진화·감독 효과는 getCalculatedOvr에서 별도로 적용합니다.
         const FIXED_OVR = {
             '루이스':61, '조영준':60, '고호영':61, '정재영':63,
@@ -3156,7 +3174,7 @@
         function playerCardMarkup(p, options = {}) {
             const name = String(options.name ?? p?.name ?? '');
             const ovr = String(options.ovrLabel ?? options.ovr ?? (p && typeof p.position === 'string' ? getCalculatedOvr(p) : (p?.displayOvr ?? p?.ovr ?? '')));
-            const pos = String(options.position ?? p?.position ?? p?.role ?? '');
+            const pos = String(fixedPlayerPosition(p) || options.position || originalPlayerPosition(p));
             const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
             const length = [...name].length;
             const nameClass = length <= 2 ? 'short-name' : length === 3 ? '' : length === 4 ? 'long-name' : 'extra-long-name';
@@ -3276,6 +3294,7 @@
             if (typeof p.pot === 'number') p.pot += delta;
             p.ovr = value;
         });
+        players.forEach(applyFixedPlayerPosition);
         syncRealAges();
         localStorage.setItem('fm_players', JSON.stringify(players));
         localStorage.setItem('fm_has_reset_tokens_v29', 'true');
@@ -4074,7 +4093,7 @@
         // 뽑기 선수(실제 친구들)는 실제 나이: 2026년에 17세로 시작해 실제 연도가 바뀔 때마다 한 살씩 (리그 시즌과 무관)
         function isGachaPlayer(p) { return p && !p.tf && fixedOvr(String(p.name || '')) !== undefined; }
         function syncRealAges() { const y = new Date(Date.now() + 9 * 3600000).getUTCFullYear(), age = 17 + Math.max(0, y - 2026); players.forEach(p => { if (isGachaPlayer(p)) p.age = age; }); }
-        function saveData() { if (window.__wiping) return; try { syncRealAges(); } catch (e) {} if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.removeItem('fm_items'); 
+        function saveData() { if (window.__wiping) return; players.forEach(applyFixedPlayerPosition); try { syncRealAges(); } catch (e) {} if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.removeItem('fm_items'); 
             localStorage.setItem('fm_players', JSON.stringify(players)); 
             localStorage.setItem('fm_tokens', tokens); 
             localStorage.setItem('fm_formation', currentFormation); 
@@ -4224,6 +4243,17 @@
         }
         // 📢 업데이트 소식: 최신 패치가 맨 위. 새 업데이트는 이 배열 앞에 추가한다 (메인 메뉴 빈칸 카드)
         const GAME_UPDATES = [
+            { v: '1.25', date: '2026.10.13', title: '선수별 고정 포지션 업데이트', sec: [
+                ['선수 원래 포지션 고정', [
+                    '일반 선수 105명의 세부 포지션을 선수별로 고정했습니다. 같은 선수는 영입 시점과 카드에 관계없이 같은 원래 포지션을 가집니다.',
+                    '기존에 보유한 카드도 업데이트 후 접속하면 새 포지션이 자동 적용되며, 저장 시 서버 기록에도 반영됩니다. 골키퍼와 이벤트 카드의 원래 포지션은 유지됩니다.'
+                ]],
+                ['팀관리 포지션 표시 개선', [
+                    '팀관리 카드 위에는 선수의 원래 포지션이 표시됩니다. 선수를 다른 위치로 이동해도 카드의 포지션은 바뀌지 않습니다.',
+                    '카드 아래 이름 왼쪽에는 현재 배치된 위치의 포지션을 표시합니다. 공격형·수비형 미드필더는 AM·DM으로 안내합니다.',
+                    '포지션 적성에 따른 능력치 보정은 새 원래 포지션을 기준으로 계산됩니다.'
+                ]]
+            ] },
             { v: '1.24', date: '2026.10.13', title: '사우디 모드 밸런스 & 디자인 업데이트', sec: [
                 ['사우디 모드 단계별 해금', [
                     '리그 진행도에 따라 사우디 모드의 상대가 단계별로 해금됩니다. 기존 계정의 리그 진행도도 반영되며, 한 번 해금한 단계는 유지됩니다.',
@@ -5376,7 +5406,7 @@
         function rnd(seed, i) { let x = (seed + i * 374761393) >>> 0; x = Math.imul(x ^ (x >>> 13), 1274126177) >>> 0; return ((x ^ (x >>> 16)) >>> 0) / 4294967296; }
         function genAttr(ovr, pos, seed) { const h = hash(seed), a = {}; ATTRS.forEach((k, i) => { a[k] = Math.max(20, Math.round(ovr + PROF[pos][k] + (rnd(h, i) - 0.5) * 10)); }); return a; }
         function natPos(pos, seed) { const r = rnd(hash(seed), 20); if (pos === 'GK') return 'GK'; if (pos === 'DF') return r < 0.6 ? 'CB' : r < 0.8 ? 'LB' : 'RB'; if (pos === 'MF') return r < 0.35 ? 'CM' : r < 0.55 ? 'CDM' : r < 0.75 ? 'CAM' : r < 0.875 ? 'LM' : 'RM'; return r < 0.5 ? 'ST' : r < 0.75 ? 'LW' : 'RW'; }
-        function ensure(p) { if (p.trait === undefined) p.trait = traitOf(p.id, p.position); if (p.traitV !== 2) { if (p.trait == null) p.trait = traitOf(p.id + '#v2', p.position); p.traitV = 2; } if (!p.attr) { p.attr = genAttr(p.ovr, p.position, p.id); p.pot = p.ovr + Math.round(3 + rnd(hash(p.id), 30) * 12); } if (p.name === '이주진') p.attr = { pac: 100, sho: 65, pas: 75, dri: 75, def: 10, sta: 72, phy: 72 }; if (!p.pos2) p.pos2 = natPos(p.position, p.id); return p; }
+        function ensure(p) { applyFixedPlayerPosition(p); if (p.trait === undefined) p.trait = traitOf(p.id, p.position); if (p.traitV !== 2) { if (p.trait == null) p.trait = traitOf(p.id + '#v2', p.position); p.traitV = 2; } if (!p.attr) { p.attr = genAttr(p.ovr, p.position, p.id); p.pot = p.ovr + Math.round(3 + rnd(hash(p.id), 30) * 12); } if (p.name === '이주진') p.attr = { pac: 100, sho: 65, pas: 75, dri: 75, def: 10, sta: 72, phy: 72 }; if (!p.pos2) p.pos2 = natPos(p.position, p.id); return p; }
         function effAttrs(p) { ensure(p); const d = getCalculatedOvr(p) - p.ovr, o = {}; ATTRS.forEach(k => o[k] = p.attr[k] + d); return o; }
         function actF(p) { const st = currentMatchState; return st && st.samun && p.isHome && st.time >= st.samun ? 1.08 : 1; }   // 서포터즈 응원: 활동량 +8%
         function talkF(p) { const st = currentMatchState; return st && p.isHome && st.talkF && st.htDone ? st.talkF : 1; }                // 하프타임 팀 토크
@@ -5400,6 +5430,7 @@
         const MID_FREE = /^(LM|CM|RM)$/;                                      // LM·CM·RM 끼리는 적성 차이 없음
         const WIDE_UP = { LM: 'LW', RM: 'RW' };                              // LM→LW, RM→RW 는 라인이 달라도 95%
         function aptitude(p, det) {
+            if (p) applyFixedPlayerPosition(p);
             const playerGroup = positionGroup(p && p.position), slotGroup = positionGroup(det);
             if (p && det && playerGroup === 'MF' && slotGroup === 'FW') { const nat = p.pos2 || natPos(p.position, p.id); if (WIDE_UP[nat] === det) return 0.95; }
             if (playerGroup === slotGroup) {                                   // 같은 라인 안에서도 세부 포지션을 따짐
@@ -5697,7 +5728,7 @@
             const a = effAttrs(p), o = getCalculatedOvr(p), pot = Math.max(p.pot, o), rec = p.recent || [], m = mor(p);
             const bars = ATTRS.map(k => `<div class="flex items-center gap-2 text-sm"><span class="w-14 text-gray-400">${ATTR_KO[k]}</span><div class="flex-1 h-2 bg-gray-700 rounded"><div class="h-2 rounded ${a[k] >= 85 ? 'bg-yellow-400' : a[k] >= 70 ? 'bg-green-500' : 'bg-blue-500'}" style="width:${Math.min(100, a[k])}%"></div></div><span class="w-9 text-right font-black">${a[k]}</span></div>`).join('');
             const msg = m < 50 ? '최근 출전 시간이 부족해 불만을 느끼고 있습니다.' : m >= 85 ? '팀 내 입지에 만족하며 최상의 컨디션입니다.' : m >= 70 ? '팀 분위기에 잘 적응하고 있습니다.' : '평범한 컨디션입니다.';
-            document.getElementById('player-modal-body').innerHTML = `<div class="flex justify-between items-start mb-4"><div><h2 class="text-3xl font-black">${p.name}${p.age ? ` <span class="text-lg text-gray-400 font-bold">${p.age}세</span>` : ''}</h2>${S.ace === p.id ? '<p class="text-yellow-400 font-black">⭐ 팀 에이스 · 경기에서 능력치 +8% (75분 이후 +4% 추가)</p>' : ''}<p class="text-gray-400 font-bold">${p.pos2} · 역할: ${roleName(a, p.pos2)}${p.level ? ' · +' + p.level : ''}${p.evo ? ' · <span class="text-yellow-400">★' + p.evo + '</span>' : ''}</p>${p.trait ? `<p class="text-sm text-sky-300 font-bold mt-1">성향: ${TRAITS[p.trait].n} <span class="text-gray-400 font-normal">— ${TRAITS[p.trait].d}</span></p>` : ''}<p class="text-sm font-bold mt-1" style="color:${mentalTag(p).c}">${mentalTag(p).e} 멘탈 ${mentalOf(p)}/20 · ${mentalTag(p).t} <span class="text-gray-400 font-normal">— ${mentalOf(p) <= 10 ? '언론 평판·팬 여론·라커룸 분위기가 나쁘면 경기력이 떨어집니다' : mentalOf(p) >= 16 ? '여론의 압박에도 거의 흔들리지 않습니다' : '압박을 받으면 조금 흔들립니다'}</span></p></div><button onclick="closePlayerInfo()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
+            document.getElementById('player-modal-body').innerHTML = `<div class="flex justify-between items-start mb-4"><div><h2 class="text-3xl font-black">${p.name}${p.age ? ` <span class="text-lg text-gray-400 font-bold">${p.age}세</span>` : ''}</h2>${S.ace === p.id ? '<p class="text-yellow-400 font-black">⭐ 팀 에이스 · 경기에서 능력치 +8% (75분 이후 +4% 추가)</p>' : ''}<p class="text-gray-400 font-bold">${originalPlayerPosition(p)} · 역할: ${roleName(a, p.pos2)}${p.level ? ' · +' + p.level : ''}${p.evo ? ' · <span class="text-yellow-400">★' + p.evo + '</span>' : ''}</p>${p.trait ? `<p class="text-sm text-sky-300 font-bold mt-1">성향: ${TRAITS[p.trait].n} <span class="text-gray-400 font-normal">— ${TRAITS[p.trait].d}</span></p>` : ''}<p class="text-sm font-bold mt-1" style="color:${mentalTag(p).c}">${mentalTag(p).e} 멘탈 ${mentalOf(p)}/20 · ${mentalTag(p).t} <span class="text-gray-400 font-normal">— ${mentalOf(p) <= 10 ? '언론 평판·팬 여론·라커룸 분위기가 나쁘면 경기력이 떨어집니다' : mentalOf(p) >= 16 ? '여론의 압박에도 거의 흔들리지 않습니다' : '압박을 받으면 조금 흔들립니다'}</span></p></div><button onclick="closePlayerInfo()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
                 <div class="player-card-slot">${playerCardMarkup(p,{ovr:o})}</div><div class="flex gap-4 mb-4"><div class="flex-1 bg-gray-900 rounded-xl p-3 text-center"><div class="text-xs text-gray-400">현재 능력</div><div class="text-4xl font-black text-white">${o}</div></div><div class="flex-1 bg-gray-900 rounded-xl p-3 text-center"><div class="text-xs text-gray-400">잠재 능력</div><div class="text-4xl font-black text-purple-400">${pot}</div></div></div>
                 <div class="flex flex-col gap-2 mb-4">${bars}</div>
                 <div class="bg-gray-900 rounded-xl p-3 mb-2 flex justify-between"><span class="font-black">🔋 체력 ${Math.round(p.cond ?? 100)}%</span><span class="${p.inj > 0 ? 'text-red-400' : 'text-emerald-400'} font-bold">${p.inj > 0 ? '🚑 부상(' + (p.injLabel || '') + ') · ' + p.inj + '경기 결장' : '출전 가능'}</span></div><div class="bg-gray-900 rounded-xl p-3"><div class="font-black">${moodEmoji(p)} 사기: ${moodText(p)} (${m})</div><div class="text-sm text-gray-400 mt-1">최근 5경기 선발 ${rec.filter(x => x === 'S').length}회 · 교체 ${rec.filter(x => x === 'B').length}회<br>${msg}</div></div>`;
@@ -9511,7 +9542,7 @@
                 if (p && slot.pos !== 'GK') makeDraggable(node, container, (px, py) => { node.classList.add('dragging'); node.style.left = px + '%'; node.style.top = py + '%'; const n = nearestStarterSlot(idx, px, py, container), z = zoneAt(Math.min(85, py), px); showZones(true, n.near ? null : z && z.d); }, openIt, (px, py) => { showZones(false); const n = nearestStarterSlot(idx, px, py, container); if (n.near) { swapStarterByDrop(idx, px, py, container); renderPitch(); } else moveSlotToZone(idx, px, py); });
                 else if (p) makeDraggable(node, container, () => {}, openIt, (px, py) => swapStarterByDrop(idx, px, py, container)); else node.onclick = openIt;
                 
-                if (p) { const lvlTag = p.level > 0 ? `<div class="level-badge">+${p.level}</div>` : ''; const injuryTag = p.inj > 0 ? `<div class="inj-badge">🚑${p.inj}</div>` : ''; const energy = Math.max(0, Math.min(100, Math.round(p.cond ?? 100))); node.innerHTML = `${playerCardMarkup(p, {position:slotDetail(slot), condition:p.cond, className:'orb-card-manager'})}${injuryTag}${lvlTag}<div class="player-name-tag">${moodEmoji(p)} ${S.ace === p.id ? '⭐' : ''}${teamRoles.captain === p.id ? '<span style="color:#fbbf24">©</span> ' : ''}${p.evo ? '<span style="color:#fbbf24">★' + p.evo + '</span> ' : ''}${p.name}${positionPenaltyMarkup(p, slotDetail(slot))}</div><span class="manager-energy" title="체력 ${energy}%"><i style="width:${energy}%;background:${stamColor(energy)}"></i></span>`; } 
+                if (p) { const lvlTag = p.level > 0 ? `<div class="level-badge">+${p.level}</div>` : ''; const injuryTag = p.inj > 0 ? `<div class="inj-badge">🚑${p.inj}</div>` : ''; const energy = Math.max(0, Math.min(100, Math.round(p.cond ?? 100))); node.innerHTML = `${playerCardMarkup(p, {position:originalPlayerPosition(p), condition:p.cond, className:'orb-card-manager'})}${injuryTag}${lvlTag}<div class="player-name-tag"><span class="manager-slot-position" style="color:#c4b5fd;font-weight:900;margin-right:4px">${positionLabel(slotDetail(slot))}</span>${moodEmoji(p)} ${S.ace === p.id ? '⭐' : ''}${teamRoles.captain === p.id ? '<span style="color:#fbbf24">©</span> ' : ''}${p.evo ? '<span style="color:#fbbf24">★' + p.evo + '</span> ' : ''}${p.name}${positionPenaltyMarkup(p, slotDetail(slot))}</div><span class="manager-energy" title="체력 ${energy}%"><i style="width:${energy}%;background:${stamColor(energy)}"></i></span>`; } 
                 else { node.innerHTML = `<span class="text-gray-300">+</span>`; } 
                 container.appendChild(node); 
             }); 
