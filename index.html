@@ -2250,6 +2250,41 @@
             return positionLabel(p.position === 'GK' ? 'GK' : (p.pos2 || p.position || p.role || ''));
         }
 
+        const ELITE_PLAYER_PROFILES = {"조형진": {"trait": "reflex", "delta": {"def": 18, "sho": 16, "pas": -25}}, "서태환": {"trait": "penSaver", "delta": {"def": 12, "sho": 12, "sta": 12, "dri": 12, "pas": -32}}, "조성용": {"trait": "sweeperK", "delta": {"pac": 6, "sho": 6, "pas": 6, "dri": 6, "def": 6, "sta": 6, "phy": -36}}, "서예호": {"trait": "speedster", "delta": {"pac": 35, "def": 14, "phy": -22}}, "김준현": {"trait": "speedster", "delta": {"pac": 14, "pas": 14, "def": -20}}, "정미누": {"trait": "aerial", "delta": {"phy": 18, "pas": -18}}, "우주원": {"trait": "wall", "delta": {"def": 18, "pac": -18}}, "홍성민": {"trait": "crosser", "delta": {"sho": 18, "dri": 10, "pas": 8, "pac": 8, "def": -22}}, "이창준": {"trait": "playmaker", "delta": {"pas": 14, "dri": 14, "pac": -20}}, "오한음": {"trait": "fk", "delta": {"pas": 18, "sho": 18, "pac": -18, "sta": -18}}, "장유진": {"trait": "playmaker", "delta": {"pas": 17, "sho": 14, "phy": 17, "pac": -32, "sta": -16}}, "이주환": {"trait": "hothead", "delta": {"def": 14, "pac": 14, "sho": -20}}, "김예휘": {"trait": "clutch", "delta": {"def": 14, "phy": 14, "dri": -20}}, "김진성": {"trait": "dribbler", "delta": {"dri": 14, "pas": 14, "sho": -20}}, "우지우": {"trait": "glass", "delta": {"pac": 14, "pas": 14, "sho": -20}}, "김현": {"trait": "trickster", "delta": {"dri": 14, "pas": 14, "sho": -20}}, "석동연": {"trait": "selfish", "delta": {"pac": 16, "sho": 16, "dri": 16, "pas": -34}}, "박이안": {"trait": "bigGame", "delta": {"pac": 14, "dri": 14, "sho": -20}}, "권영탁": {"trait": "trickster", "delta": {"dri": 14, "pas": 14, "phy": -20}}, "김준성": {"trait": "clutch", "delta": {"sho": 16, "phy": 16, "pac": 16, "pas": -26}}, "이재원": {"trait": "finisher", "delta": {"sho": 14, "dri": 14, "phy": -20}}};
+        const PLAYER_PROFILE_VERSION = '20261013-elite-v1';
+        const GK_STAT_KEYS = ['def', 'sho', 'sta', 'dri', 'phy', 'pas', 'pac'];
+        const GK_STAT_LABELS = { def:'반사신경', sho:'다이빙', sta:'위치선정', dri:'볼처리', phy:'공중볼', pas:'배급', pac:'순발력' };
+        function balancedPlayerStats(ovr, deltas = {}) {
+            const keys = ['pac','sho','pas','dri','def','sta','phy'];
+            const base = Math.max(20, Math.round(Number.isFinite(Number(ovr)) ? Number(ovr) : 60)), mean = keys.reduce((n,k) => n + (deltas[k] || 0), 0) / keys.length;
+            const result = Object.fromEntries(keys.map(k => [k, Math.max(20, Math.round(base + (deltas[k] || 0) - mean))]));
+            // 반올림 오차를 보정하여 7개 능력치 평균을 기본 OVR에 맞춘다.
+            let remainder = base * keys.length - keys.reduce((n,k) => n + result[k], 0);
+            while (remainder !== 0) {
+                let changed = false;
+                for (const k of keys) {
+                    if (!remainder) break;
+                    const step = remainder > 0 ? 1 : -1;
+                    if (result[k] + step < 20) continue;
+                    result[k] += step; remainder -= step; changed = true;
+                }
+                if (!changed) break;
+            }
+            return result;
+        }
+        function applyPlayerProfile(p) {
+            if (!p || p.eventSeason) return p;
+            const profile = !p.tf && ELITE_PLAYER_PROFILES[String(p.name || '').replace(/ \d+세$/, '')];
+            if (!profile && p.position !== 'GK') return p;
+            if (p.playerProfileVersion !== PLAYER_PROFILE_VERSION || p.playerProfileBase !== p.ovr || !p.attr) {
+                p.attr = balancedPlayerStats(p.ovr, profile?.delta || {def:3,sho:1,sta:3,dri:0,phy:-1,pas:-5,pac:-1});
+                p.playerProfileVersion = PLAYER_PROFILE_VERSION; p.playerProfileBase = p.ovr;
+            }
+            if (profile) { p.trait = profile.trait; p.traitV = 2; }
+            if (!Number.isFinite(p.pot)) p.pot = (Number(p.ovr) || 60) + 8;
+            return p;
+        }
+
         // 고정 기본 OVR. 강화·진화·감독 효과는 getCalculatedOvr에서 별도로 적용합니다.
         const FIXED_OVR = {
             '루이스':61, '조영준':60, '고호영':61, '정재영':63,
@@ -3295,6 +3330,7 @@
             p.ovr = value;
         });
         players.forEach(applyFixedPlayerPosition);
+        players.forEach(applyPlayerProfile);
         syncRealAges();
         localStorage.setItem('fm_players', JSON.stringify(players));
         localStorage.setItem('fm_has_reset_tokens_v29', 'true');
@@ -4093,7 +4129,7 @@
         // 뽑기 선수(실제 친구들)는 실제 나이: 2026년에 17세로 시작해 실제 연도가 바뀔 때마다 한 살씩 (리그 시즌과 무관)
         function isGachaPlayer(p) { return p && !p.tf && fixedOvr(String(p.name || '')) !== undefined; }
         function syncRealAges() { const y = new Date(Date.now() + 9 * 3600000).getUTCFullYear(), age = 17 + Math.max(0, y - 2026); players.forEach(p => { if (isGachaPlayer(p)) p.age = age; }); }
-        function saveData() { if (window.__wiping) return; players.forEach(applyFixedPlayerPosition); try { syncRealAges(); } catch (e) {} if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.removeItem('fm_items'); 
+        function saveData() { if (window.__wiping) return; players.forEach(applyFixedPlayerPosition); players.forEach(applyPlayerProfile); try { syncRealAges(); } catch (e) {} if (leagueState) localStorage.setItem('fm_league_v2', JSON.stringify(leagueState)); localStorage.setItem('fm_evo_tokens', String(evoTokens)); localStorage.removeItem('fm_items'); 
             localStorage.setItem('fm_players', JSON.stringify(players)); 
             localStorage.setItem('fm_tokens', tokens); 
             localStorage.setItem('fm_formation', currentFormation); 
@@ -4243,6 +4279,18 @@
         }
         // 📢 업데이트 소식: 최신 패치가 맨 위. 새 업데이트는 이 배열 앞에 추가한다 (메인 메뉴 빈칸 카드)
         const GAME_UPDATES = [
+            { v: '1.26', date: '2026.10.13', title: '종건급 선수 개성 & 골키퍼 능력 업데이트', sec: [
+                ['종건급 선수 특성·능력치 고정', [
+                    '종건급 21명의 특성과 세부능력치를 선수별로 고정했습니다. 기존 보유 카드와 새 영입 카드에 모두 적용됩니다.',
+                    '선수별 강점·약점을 수치에 반영했습니다. 7개 능력치의 산술평균은 강화·진화·감독 보너스를 포함한 최종 OVR에 맞춥니다.',
+                    '서예호의 압도적인 속도, 장유진의 낮은 속도, 석동연의 낮은 패스 등 선수별 차이를 반영했습니다. 김준성은 슈팅·피지컬·속도에 강점, 패스에 약점을 가집니다.'
+                ]],
+                ['골키퍼 전용 세부능력', [
+                    '골키퍼 세부능력을 반사신경·다이빙·위치선정·볼처리·공중볼·배급·순발력으로 분리했습니다.',
+                    '근거리·중거리·페널티킥 선방, 크로스·코너킥 처리, 선방 후 세컨드볼에 전용 능력치를 반영합니다. 배급과 순발력은 패스와 이동에 반영됩니다.',
+                    '조형진: 반사신경 특성·반사신경과 다이빙 강점 / 서태환: PK 킬러·선방 능력 강점 / 조성용: 스위퍼 키퍼·공중볼 약점, 나머지 능력 강점.'
+                ]]
+            ] },
             { v: '1.25', date: '2026.10.13', title: '선수별 고정 포지션 업데이트', sec: [
                 ['선수 원래 포지션 고정', [
                     '일반 선수 105명의 세부 포지션을 선수별로 고정했습니다. 같은 선수는 영입 시점과 카드에 관계없이 같은 원래 포지션을 가집니다.',
@@ -5404,9 +5452,9 @@
         const PROF = { FW: { pac: 4, sho: 8, pas: -2, dri: 4, def: -25, sta: 0, phy: 0 }, MF: { pac: 0, sho: -4, pas: 8, dri: 4, def: -6, sta: 6, phy: -2 }, DF: { pac: -2, sho: -25, pas: -4, dri: -8, def: 10, sta: 2, phy: 6 }, GK: { pac: -20, sho: -30, pas: -8, dri: -25, def: 12, sta: -5, phy: 4 } };
         function hash(str) { let h = 2166136261; for (const c of String(str)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
         function rnd(seed, i) { let x = (seed + i * 374761393) >>> 0; x = Math.imul(x ^ (x >>> 13), 1274126177) >>> 0; return ((x ^ (x >>> 16)) >>> 0) / 4294967296; }
-        function genAttr(ovr, pos, seed) { const h = hash(seed), a = {}; ATTRS.forEach((k, i) => { a[k] = Math.max(20, Math.round(ovr + PROF[pos][k] + (rnd(h, i) - 0.5) * 10)); }); return a; }
+        function genAttr(ovr, pos, seed) { if (pos === 'GK') { const keys = ['pac','sho','pas','dri','def','sta','phy'], h = hash(seed), delta = Object.fromEntries(keys.map((k,i) => [k, (rnd(h,i) - .5) * 10])); return balancedPlayerStats(ovr,delta); } const h = hash(seed), a = {}; ATTRS.forEach((k, i) => { a[k] = Math.max(20, Math.round(ovr + PROF[pos][k] + (rnd(h, i) - 0.5) * 10)); }); return a; }
         function natPos(pos, seed) { const r = rnd(hash(seed), 20); if (pos === 'GK') return 'GK'; if (pos === 'DF') return r < 0.6 ? 'CB' : r < 0.8 ? 'LB' : 'RB'; if (pos === 'MF') return r < 0.35 ? 'CM' : r < 0.55 ? 'CDM' : r < 0.75 ? 'CAM' : r < 0.875 ? 'LM' : 'RM'; return r < 0.5 ? 'ST' : r < 0.75 ? 'LW' : 'RW'; }
-        function ensure(p) { applyFixedPlayerPosition(p); if (p.trait === undefined) p.trait = traitOf(p.id, p.position); if (p.traitV !== 2) { if (p.trait == null) p.trait = traitOf(p.id + '#v2', p.position); p.traitV = 2; } if (!p.attr) { p.attr = genAttr(p.ovr, p.position, p.id); p.pot = p.ovr + Math.round(3 + rnd(hash(p.id), 30) * 12); } if (p.name === '이주진') p.attr = { pac: 100, sho: 65, pas: 75, dri: 75, def: 10, sta: 72, phy: 72 }; if (!p.pos2) p.pos2 = natPos(p.position, p.id); return p; }
+        function ensure(p) { applyFixedPlayerPosition(p); applyPlayerProfile(p); if (p.trait === undefined) p.trait = traitOf(p.id, p.position); if (p.traitV !== 2) { if (p.trait == null) p.trait = traitOf(p.id + '#v2', p.position); p.traitV = 2; } if (!p.attr) { p.attr = genAttr(p.ovr, p.position, p.id); p.pot = p.ovr + Math.round(3 + rnd(hash(p.id), 30) * 12); } if (p.name === '이주진') p.attr = { pac: 100, sho: 65, pas: 75, dri: 75, def: 10, sta: 72, phy: 72 }; if (!p.pos2) p.pos2 = natPos(p.position, p.id); return p; }
         function effAttrs(p) { ensure(p); const d = getCalculatedOvr(p) - p.ovr, o = {}; ATTRS.forEach(k => o[k] = p.attr[k] + d); return o; }
         function actF(p) { const st = currentMatchState; return st && st.samun && p.isHome && st.time >= st.samun ? 1.08 : 1; }   // 서포터즈 응원: 활동량 +8%
         function talkF(p) { const st = currentMatchState; return st && p.isHome && st.talkF && st.htDone ? st.talkF : 1; }                // 하프타임 팀 토크
@@ -5726,7 +5774,7 @@
         function showPlayerInfo(id) {
             const p = players.find(x => x.id === id); if (!p) return; ensure(p);
             const a = effAttrs(p), o = getCalculatedOvr(p), pot = Math.max(p.pot, o), rec = p.recent || [], m = mor(p);
-            const bars = ATTRS.map(k => `<div class="flex items-center gap-2 text-sm"><span class="w-14 text-gray-400">${ATTR_KO[k]}</span><div class="flex-1 h-2 bg-gray-700 rounded"><div class="h-2 rounded ${a[k] >= 85 ? 'bg-yellow-400' : a[k] >= 70 ? 'bg-green-500' : 'bg-blue-500'}" style="width:${Math.min(100, a[k])}%"></div></div><span class="w-9 text-right font-black">${a[k]}</span></div>`).join('');
+            const bars = (p.position === 'GK' ? GK_STAT_KEYS : ATTRS).map(k => `<div class="flex items-center gap-2 text-sm"><span class="w-20 shrink-0 text-gray-400">${p.position === 'GK' ? GK_STAT_LABELS[k] : ATTR_KO[k]}</span><div class="flex-1 h-2 bg-gray-700 rounded"><div class="h-2 rounded ${a[k] >= 85 ? 'bg-yellow-400' : a[k] >= 70 ? 'bg-green-500' : 'bg-blue-500'}" style="width:${Math.min(100, a[k])}%"></div></div><span class="w-9 text-right font-black">${a[k]}</span></div>`).join('');
             const msg = m < 50 ? '최근 출전 시간이 부족해 불만을 느끼고 있습니다.' : m >= 85 ? '팀 내 입지에 만족하며 최상의 컨디션입니다.' : m >= 70 ? '팀 분위기에 잘 적응하고 있습니다.' : '평범한 컨디션입니다.';
             document.getElementById('player-modal-body').innerHTML = `<div class="flex justify-between items-start mb-4"><div><h2 class="text-3xl font-black">${p.name}${p.age ? ` <span class="text-lg text-gray-400 font-bold">${p.age}세</span>` : ''}</h2>${S.ace === p.id ? '<p class="text-yellow-400 font-black">⭐ 팀 에이스 · 경기에서 능력치 +8% (75분 이후 +4% 추가)</p>' : ''}<p class="text-gray-400 font-bold">${originalPlayerPosition(p)} · 역할: ${roleName(a, p.pos2)}${p.level ? ' · +' + p.level : ''}${p.evo ? ' · <span class="text-yellow-400">★' + p.evo + '</span>' : ''}</p>${p.trait ? `<p class="text-sm text-sky-300 font-bold mt-1">성향: ${TRAITS[p.trait].n} <span class="text-gray-400 font-normal">— ${TRAITS[p.trait].d}</span></p>` : ''}<p class="text-sm font-bold mt-1" style="color:${mentalTag(p).c}">${mentalTag(p).e} 멘탈 ${mentalOf(p)}/20 · ${mentalTag(p).t} <span class="text-gray-400 font-normal">— ${mentalOf(p) <= 10 ? '언론 평판·팬 여론·라커룸 분위기가 나쁘면 경기력이 떨어집니다' : mentalOf(p) >= 16 ? '여론의 압박에도 거의 흔들리지 않습니다' : '압박을 받으면 조금 흔들립니다'}</span></p></div><button onclick="closePlayerInfo()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
                 <div class="player-card-slot">${playerCardMarkup(p,{ovr:o})}</div><div class="flex gap-4 mb-4"><div class="flex-1 bg-gray-900 rounded-xl p-3 text-center"><div class="text-xs text-gray-400">현재 능력</div><div class="text-4xl font-black text-white">${o}</div></div><div class="flex-1 bg-gray-900 rounded-xl p-3 text-center"><div class="text-xs text-gray-400">잠재 능력</div><div class="text-4xl font-black text-purple-400">${pot}</div></div></div>
@@ -5744,6 +5792,26 @@
         const PITCH_V = `<svg class="pitch-svg" viewBox="0 0 68 105" preserveAspectRatio="none"><g fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2"><rect x="2.72" y="3.15" width="62.56" height="98.7"/><line x1="2.72" y1="52.5" x2="65.28" y2="52.5"/><rect x="15.5" y="3.15" width="37" height="15.5"/><rect x="15.5" y="86.35" width="37" height="15.5"/><rect x="25.6" y="3.15" width="16.8" height="5.2"/><rect x="25.6" y="96.65" width="16.8" height="5.2"/></g></svg>`;
         function stamColor(v) { return v >= 60 ? '#22c55e' : v >= 35 ? '#eab308' : '#ef4444'; }
         function stamF(p) { const v = p.stam === undefined ? 100 : p.stam; return v >= 70 ? 1 : 0.8 + 0.2 * v / 70; }
+        function goalkeeperValue(gk, situation = 'normal') {
+            if (!gk) return 45;
+            const weights = situation === 'pk' ? {def:.45,sho:.3,sta:.25}
+                : situation === 'aerial' ? {phy:.4,dri:.3,sta:.2,pac:.1}
+                : situation === 'close' ? {def:.5,sta:.3,pac:.2}
+                : situation === 'long' ? {sho:.5,sta:.35,def:.15}
+                : {def:.35,sho:.3,sta:.25,dri:.1};
+            return Object.entries(weights).reduce((n,[k,w]) => n + A(gk,k) * w, 0) * (gk.trait === 'reflex' ? 1.05 : 1);
+        }
+        function goalkeeperShotValue(gk, shooter) {
+            const distance = shooter ? Math.hypot(Math.abs((shooter.isHome ? 97 : 3) - shooter.x) * 1.117, Math.abs(50 - shooter.y) * .739) : 14;
+            return goalkeeperValue(gk, distance < 10 ? 'close' : distance >= 20 ? 'long' : 'normal');
+        }
+        function goalkeeperClaimFactor(gk) {
+            return Math.max(.5, Math.min(1.8, goalkeeperValue(gk,'aerial') / Math.max(20, (gk?.ovr || 60) * stamF(gk))));
+        }
+        function goalkeeperReboundChance(gk) {
+            const handling = A(gk,'dri');
+            return Math.max(.02, Math.min(.65, REB_P * Math.exp(((gk.ovr || 60) - handling) / 35)));
+        }
         function rawA(p, k) { return p.attr ? p.attr[k] : p.ovr; }
         function allOf(st) { return [...st.homePlayers, ...st.awayPlayers]; }
 
@@ -5857,8 +5925,8 @@
         function penKick(st) {
             if (currentMatchState !== st || !st.pens) return;
             const P = st.pens, home = P.i % 2 === 0, L = home ? P.oh : P.oa, tk = L[Math.floor(P.i / 2) % L.length];
-            const gk = (home ? st.awayPlayers : st.homePlayers).find(p => p.role === 'GK' && !p.isRedCarded), gkv = gk ? gk.ovr : 45;
-            const ok = Math.random() < Math.max(0.55, Math.min(0.92, 0.76 * Math.exp((A(tk, 'sho') - gkv) / 60)));
+            const gk = (home ? st.awayPlayers : st.homePlayers).find(p => p.role === 'GK' && !p.isRedCarded), gkv = goalkeeperValue(gk, 'pk');
+            const ok = Math.random() < Math.max(0.55, Math.min(0.92, 0.76 * Math.exp((A(tk, 'sho') - gkv) / 60) * (tr(gk,'penSaver') ? .82 : 1) * (tr(tk,'pk') ? 1.1 : 1)));
             (home ? P.h : P.a).push(ok); P.i++;
             if (ok) SFX.playTone(880, 'triangle', 0.25, 0.15); else SFX.playTone(220, 'sawtooth', 0.35, 0.12);
             const H = P.h.filter(Boolean).length, Aw = P.a.filter(Boolean).length, nh = P.h.length, na = P.a.length;
@@ -6183,7 +6251,7 @@
             tk.x = sp.x - (sp.team ? 0.8 : -0.8); tk.y = sp.y; st.ball.x = sp.x; st.ball.y = sp.y;
             st.ball.ownerId = tk.id; st.lastPoss = tk.isHome; lastAssistId = null;
             const enemies = all.filter(p => p.isHome !== tk.isHome), allies = all.filter(p => p.isHome === tk.isHome);
-            const gk = enemies.find(e => e.role === 'GK'), gkv = gk ? gk.ovr * stamF(gk) : 45, damp = st.damp && st.fav === (tk.isHome ? 'home' : 'away') ? st.damp : 1;
+            const gk = enemies.find(e => e.role === 'GK'), gkv = sp.kind === 'pen' ? goalkeeperValue(gk,'pk') : goalkeeperShotValue(gk,tk), damp = st.damp && st.fav === (tk.isHome ? 'home' : 'away') ? st.damp : 1;
             const shotStat = q => { if (tk.isHome) { st.stats.homeShots++; st.stats.homeXG += q; } else { st.stats.awayShots++; st.stats.awayXG += q; } };
             if (sp.kind === 'corner') { deliverCorner(st, tk, all, sp); return; }
             if (sp.kind === 'pen') {
@@ -6378,9 +6446,9 @@
         // 코너킥 도착: 골키퍼 펀칭 → 공중볼 경합 → 헤더
         function resolveCornerHeader(st, r, all) {
             st.cornerHold = null;
-            const enemies = all.filter(e => e.isHome !== r.isHome && !e.isRedCarded), gk = enemies.find(e => e.role === 'GK'), gkv = gk ? gk.ovr * stamF(gk) : 45;
+            const enemies = all.filter(e => e.isHome !== r.isHome && !e.isRedCarded), gk = enemies.find(e => e.role === 'GK'), gkv = goalkeeperValue(gk,'aerial');
             const taker = all.find(p => p.id === lastAssistId);
-            const rt = r.isHome ? st.cornerRt : null; if (gk && Math.random() < (rt === 'near' ? 0.07 : rt === 'far' ? 0.17 : 0.12) * (tr(gk, 'sweeperK') ? 1.6 : 1)) { gkClaim(st, gk, r.x, r.y); comm(st, `🧤 ${josa(gk.name, '가')} 뛰어나와 코너킥을 잡아냅니다`); return; }
+            const rt = r.isHome ? st.cornerRt : null; if (gk && Math.random() < (rt === 'near' ? 0.07 : rt === 'far' ? 0.17 : 0.12) * (tr(gk, 'sweeperK') ? 1.6 : 1) * goalkeeperClaimFactor(gk)) { gkClaim(st, gk, r.x, r.y); comm(st, `🧤 ${josa(gk.name, '가')} 뛰어나와 코너킥을 잡아냅니다`); return; }
             const d = enemies.filter(e => e.role !== 'GK').reduce((b, e) => !b || getDistance(e, r) < getDistance(b, r) ? e : b, null);
             if (d && getDistance(d, r) < 3.5 && Math.random() > 1 / (1 + Math.exp(-((A(r, 'phy') - A(d, 'phy')) / 12 + 0.1 + (rt === 'near' ? 0.35 : 0) + (tr(r, 'aerial') ? 0.6 : 0) - (tr(d, 'aerial') ? 0.6 : 0))))) { addStat(st, d, 'aerialWon'); clearBall(st, d, r); comm(st, `🛡️ ${josa(d.name, '가')} 헤더로 걷어냅니다`); return; }
             const dm = Math.hypot(((r.isHome ? 97 : 3) - r.x) * MX, (50 - r.y) * MY), df = dm < 7 ? 1.25 : dm > 12 ? 0.65 : 1;
@@ -6429,7 +6497,7 @@
                 const sx = gk.x, sy = Math.max(43.5, Math.min(56.5, aimY + (gk.y - aimY) * 0.25));
                 fl = { ex: sx, ey: sy, n: n(sx, sy, 9), kind: 'shot', dive: { id: gk.id, x: sx, y: sy }, to: gk.id, txt: `🧤 ${gk.name}의 선방! ${sh.name}의 슈팅을 잡아냅니다` };
                 if (corner) { fl.to = null; fl.txt = `🧤 ${josa(gk.name, '가')} 몸을 날려 쳐냅니다! 코너킥`; fl.next = outToCorner(sx, sy); }
-                else if (Math.random() < REB_P) { fl.to = null; fl.txt = `🧤 ${josa(gk.name, '가')} 쳐냅니다! 공이 흘러나옵니다`; fl.next = { ex: lineX - dir * (5 + Math.random() * 7), ey: 50 + (sy < 50 ? -1 : 1) * (5 + Math.random() * 12), n: 4, kind: 'pass', to: null }; }
+                else if (Math.random() < goalkeeperReboundChance(gk)) { fl.to = null; fl.txt = `🧤 ${josa(gk.name, '가')} 쳐냅니다! 공이 흘러나옵니다`; fl.next = { ex: lineX - dir * (5 + Math.random() * 7), ey: 50 + (sy < 50 ? -1 : 1) * (5 + Math.random() * 12), n: 4, kind: 'pass', to: null }; }
             } else if (res === 'block' && bl) {
                 const t = Math.min(1, 3 / Math.max(1, getDistance(bl, sh))), bx = getDistance(bl, sh) < 7 ? bl.x : sh.x + dir * 3, by = getDistance(bl, sh) < 7 ? bl.y : sh.y + (bl.y - sh.y) * t;
                 fl = { ex: bx, ey: by, n: 2, kind: 'shot', blocker: bl.id, txt: `${sh.name}의 슈팅, ${josa(bl.name, '가')} 몸으로 막아냅니다` };
@@ -7115,12 +7183,12 @@
         }
         // 크로스·컷백을 받아 바로 때리는 원터치 마무리
         function firstTime(st, p, fin, all) {
-            const enemies = all.filter(e => e.isHome !== p.isHome), gk = enemies.find(e => e.role === 'GK'), gkv = gk ? gk.ovr * stamF(gk) : 45;
+            const enemies = all.filter(e => e.isHome !== p.isHome), gk = enemies.find(e => e.role === 'GK'), gkv = goalkeeperValue(gk,'aerial');
             st.ball.x = p.x; st.ball.y = p.y;
             let how = 'cut', q;
             if (fin === 'cross') {
                 const u = p.isHome ? 97 - p.x : p.x - 3;
-                if (gk && u < 7 && Math.random() < (styleOf(st, p.isHome) === 'wing' ? 0.1 : 0.15) * (tr(gk, 'sweeperK') ? 1.6 : 1)) { gkClaim(st, gk, p.x, p.y); comm(st, `🧤 ${josa(gk.name, '가')} 뛰어나와 크로스를 잡아냅니다`); return; }
+                if (gk && u < 7 && Math.random() < (styleOf(st, p.isHome) === 'wing' ? 0.1 : 0.15) * (tr(gk, 'sweeperK') ? 1.6 : 1) * goalkeeperClaimFactor(gk)) { gkClaim(st, gk, p.x, p.y); comm(st, `🧤 ${josa(gk.name, '가')} 뛰어나와 크로스를 잡아냅니다`); return; }
                 const d = enemies.filter(e => e.role !== 'GK').reduce((b, e) => !b || getDistance(e, p) < getDistance(b, p) ? e : b, null);
                 if (d && getDistance(d, p) < 3.5) {
                     const win = 1 / (1 + Math.exp(-((A(p, 'phy') - A(d, 'phy')) / 12 + (styleOf(st, p.isHome) === 'wing' ? 1.0 : 0.4) + (tr(p, 'aerial') ? 0.6 : 0) - (tr(d, 'aerial') ? 0.6 : 0))));
@@ -7605,7 +7673,7 @@
                 const avg = L => L.reduce((x, p) => x + p.ovr, 0) / Math.max(1, L.length), ha = avg(st0.homePlayers), aa = avg(st0.awayPlayers);
                 [...st0.homePlayers, ...st0.awayPlayers].forEach(p => {   // 성향: 빅매치 체질(강팀 상대 +5%) · 반사신경 골키퍼(+5%)
                     const under = p.isHome ? aa - ha >= 4 : ha - aa >= 4; p.tF = tr(p, 'bigGame') && under ? 1.05 : 1;
-                    if (tr(p, 'reflex') && p.role === 'GK') p.ovr = Math.round(p.ovr * 1.05 * 10) / 10;
+                    // 반사신경 특성의 +5%는 goalkeeperValue에서 선방 능력에 적용한다.
                 });
                 const bg = st0.homePlayers.filter(p => p.tF > 1).map(p => p.name); if (bg.length) setTimeout(() => comm(st0, `🏟️ 빅매치 체질 ${bg.join(', ')}의 눈빛이 달라졌습니다!`, 'info'), 0); } { const sb = document.getElementById('samun-badge'); if (sb) sb.classList.add('hidden'); }
             if (mode === 'league') { currentMatchState.leagueRound = leagueState.round; currentMatchState.leagueSeason = leagueState.season; currentMatchState.leaguePlayoff = !!enemyData.playoff; }
@@ -7774,7 +7842,7 @@
             }
 
             // 슈팅 판단: 기대득점(xG) 기반 + 성향
-            const gk = enemies.find(e => e.role === 'GK'), gkv = gk ? gk.ovr * stamF(gk) : 45;
+            const gk = enemies.find(e => e.role === 'GK'), gkv = goalkeeperShotValue(gk,owner);
             const pressure = minEnmD < 2 ? 0.55 : minEnmD < 4 ? 0.78 : 1;
             const { q, d } = shotQ(owner, pressure, gkv);
             // 1대1: 골문 쪽에 막아설 수비수가 없고 골키퍼만 남은 상황
