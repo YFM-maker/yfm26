@@ -10997,20 +10997,24 @@
         const EX_TAC = [['🔁 게겐프레싱', 'gegen', GEGEN], ['🧱 빌드업', 'build', BUILD], ['🧭 공격 방향', 'focus', FOCUS], ['📐 크로스', 'cross', CROSSS], ['🔒 마킹', 'mark', MARK], ['⭐ 에이스 활용', 'acef', ACEF]];
         const EX_TAC_DEF = { gegen: 'off', build: 'mixed', focus: 'mix', cross: 'mixed', mark: 'zone', acef: 'off' };
         const PRESETS = {
-            tiki: { n: '🎯 티키타카', d: '짧은 패스 · 점유율 · 게겐프레싱', v: { atk: 'poss', def: 'press', tempo: 'normal', width: 'narrow', pass: 'short', build: 'short', gegen: 'on', lineh: 'high', cross: 'low', focus: 'center' } },
-            gegen: { n: '⚡ 게겐프레싱', d: '높은 압박 · 빠른 템포 · 즉시 탈환', v: { atk: 'counter', def: 'press', tempo: 'fast', lineh: 'high', gegen: 'on', tackle: 'hard', build: 'mixed', pass: 'normal' } },
-            park: { n: '🚌 버스 주차', d: '내려앉아 지키고 시간 끌기', v: { atk: 'counter', def: 'deep', tempo: 'slow', lineh: 'low', tackle: 'soft', shoot: 'box', twaste: 'on', gegen: 'off', width: 'narrow', build: 'long' } },
-            target: { n: '🗼 타깃맨 롱볼', d: '후방에서 장신 공격수 머리로', v: { atk: 'long', build: 'long', cross: 'high', pass: 'long', tempo: 'normal', def: 'mid', focus: 'mix' } },
-            wing: { n: '📐 측면 공략', d: '측면 넓게 · 오버랩 · 크로스', v: { atk: 'wing', width: 'wide', cross: 'high', focus: 'mix', tempo: 'normal', def: 'mid' } },
-            counter: { n: '🏃 역습 한 방', d: '라인 내리고 빼앗으면 뒷공간으로', v: { atk: 'counter', def: 'deep', lineh: 'low', tempo: 'fast', build: 'long', gegen: 'off', shoot: 'normal' } }
+            tiki: { n: '티키타카', d: '짧은 패스 · 점유율 · 게겐프레싱', v: { atk: 'poss', def: 'press', tempo: 'normal', width: 'narrow', pass: 'short', build: 'short', gegen: 'on', lineh: 'high', cross: 'low', focus: 'center' } },
+            gegen: { n: '게겐프레싱', d: '높은 압박 · 빠른 템포 · 즉시 탈환', v: { atk: 'counter', def: 'press', tempo: 'fast', lineh: 'high', gegen: 'on', tackle: 'hard', build: 'mixed', pass: 'normal' } },
+            park: { n: '버스 주차', d: '내려앉아 지키고 시간 끌기', v: { atk: 'counter', def: 'deep', tempo: 'slow', lineh: 'low', tackle: 'soft', shoot: 'box', twaste: 'on', gegen: 'off', width: 'narrow', build: 'long' } },
+            target: { n: '타깃맨 롱볼', d: '후방에서 장신 공격수 머리로', v: { atk: 'long', build: 'long', cross: 'high', pass: 'long', tempo: 'normal', def: 'mid', focus: 'mix' } },
+            wing: { n: '측면 공략', d: '측면 넓게 · 오버랩 · 크로스', v: { atk: 'wing', width: 'wide', cross: 'high', focus: 'mix', tempo: 'normal', def: 'mid' } },
+            counter: { n: '역습 한 방', d: '라인 내리고 빼앗으면 뒷공간으로', v: { atk: 'counter', def: 'deep', lineh: 'low', tempo: 'fast', build: 'long', gegen: 'off', shoot: 'normal' } }
         };
+        function tacticPresetIcon(key) {
+            const paths = {"tiki": "M3 7h17m-4-4 4 4-4 4M21 17H4m4-4-4 4 4 4", "gegen": "M4 21V7m-3 3 3-3 3 3M12 18V3m-3 3 3-3 3 3M20 21V7m-3 3 3-3 3 3", "park": "M6 3h12a3 3 0 0 1 3 3v13H3V6a3 3 0 0 1 3-3ZM3 11h18M12 3v8M6 15h1m10 0h1M6 19v3m12-3v3", "target": "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m0 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12m0 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4", "wing": "M4 21v-3c0-6 14-3 14-11V3m-4 4 4-4 4 4", "counter": "M15 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4M5 10l6-3 4 3 5 1M11 7l-2 7 5 3 1 5M9 14l-4 4H2"};
+            return `<svg class="yfm-outline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-tactic-preset-icon="${key}"><path d="${paths[key] || paths.tiki}"/></svg>`;
+        }
         function exFixInstr(o) { if (!o) return; Object.entries(EX_TAC_DEF).forEach(([k, v]) => { const T = EX_TAC.find(x => x[1] === k)[2]; if (!T[o[k]]) o[k] = v; }); }
         const _exFixInstr = fixInstr; fixInstr = function () { const r = _exFixInstr.apply(this, arguments); exFixInstr(instr); return r; };
         const _exInstrHTML = instrHTML;
         instrHTML = function (obj, fn) {
             exFixInstr(obj);
             const grp = (t, key, tb) => `<div class="mb-2"><div class="text-xs text-gray-400 mb-1">${t}</div><div class="flex flex-wrap gap-1">${Object.entries(tb).map(([k, v]) => `<button onclick="${fn}('${key}','${k}')" title="${exEsc(v.d || '')}" class="px-2 py-1 rounded-lg text-xs font-bold ${obj[key] === k ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}">${v.n}</button>`).join('')}</div></div>`;
-            const pre = `<div class="mb-1 w-full ex-presets"><div class="text-xs text-gray-400 mb-1">⚡ 전술 프리셋 <span class="text-gray-500">— 한 번에 여러 지시를 맞춥니다</span></div><div class="flex flex-wrap gap-1">${Object.entries(PRESETS).map(([k, p]) => `<button onclick="exPreset('${k}','${fn}')" title="${exEsc(p.d)}" class="px-2 py-1 rounded-lg text-xs font-bold bg-violet-700/60 hover:bg-violet-600">${p.n}</button>`).join('')}</div></div>`;
+            const pre = `<div class="mb-1 w-full ex-presets"><div class="text-xs text-gray-400 mb-1">⚡ 전술 프리셋 <span class="text-gray-500">— 한 번에 여러 지시를 맞춥니다</span></div><div class="flex flex-wrap gap-1">${Object.entries(PRESETS).map(([k, p]) => `<button onclick="exPreset('${k}','${fn}')" title="${exEsc(p.d)}" class="px-2 py-1 rounded-lg text-xs font-bold bg-violet-700/60 hover:bg-violet-600">${tacticPresetIcon(k)} ${p.n}</button>`).join('')}</div></div>`;
             return pre + _exInstrHTML.apply(this, arguments) + `<div class="w-full pt-2 border-t border-gray-700 ex-detail"><div class="text-xs font-black text-violet-300 mb-1">🧠 세부 전술</div><div class="flex flex-wrap gap-x-6">${EX_TAC.map(([t, k, tb]) => grp(t, k, tb)).join('')}</div></div>`;
         };
         function exPreset(k, fn) {
