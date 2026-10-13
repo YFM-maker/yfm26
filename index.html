@@ -2227,13 +2227,13 @@
 
         // 전역 데이터 초기화
         const tierData = {
-            1: { GK: ['루이스', '조영준', '고호영', '정재영'], DF: ['백정원', '최요단', '이동규', '이윤관', '고성일', '김건우', '임유현', '강민석', '김상수', '김민우', '박성준', '이현준', '정진서', '최현준', '옥승원', '김태원', '김범준', '이채원', '윤현명', '김민재(5)', '조정원', '전재오', '임정우', '김정현', '김용준', '김민재(6)', '박준혁', '한지성', '임평하', '이주진', '이윤건'], MF: ['진재원', '황민우', '이정훈'], FW: ['신하준', '이현성', '박종현', '김세현', '강준명', '김운찬', '황윤태', '하선우', '김선호', '다니엘', '김중근', '구태휴', '김건희', '박영준', '정상명', '김시현'] },
-            2: { GK: ['원준석', '이성원', '장윤성', '권하진'], DF: ['김태영', '이강물', '김현우', '김건호', '소병준', '송의태', '류제현', '손호석', '김서후', '이동건'], MF: ['조한음', '정승환', '성찬', '김사헌', '이재민', '박리명', '김노아', '김연준', '박성찬', '목진영', '김민혁'], FW: ['윤준상', '신정민', '이창현', '장일운', '정민재', '채영주', '탁정훈', '류성진', '이윤석', '박병주', '정명진', '조은호', '이은찬', '이도우', '김민성', '정승재'] },
-            3: { GK: ['조형진', '서태환', '조성용'], DF: ['서예호', '김준현', '정미누', '우주원', '홍성민', '이창준'], MF: ['오한음', '장유진', '이주환', '김예휘', '김진성'], FW: ['우지우', '김현', '석동연', '박이안', '권영탁', '김준성', '이재원'] }
+            1: { GK: ['루이스', '조영준', '고호영', '정재영'], DF: ['백정원', '최요단', '이동규', '이윤관', '고성일', '김건우', '임유현', '강민석', '김상수', '김민우', '박성준', '이현준', '정진서', '최현준', '옥승원', '김태원', '김범준', '이채원', '윤현명', '김민재(5)', '조정원', '전재오', '임정우', '김정현', '김용준', '김민재(6)', '박준혁', '한지성', '임평하', '이주진', '이윤건'], MF: ['진재원', '황민우', '이정훈', '강은준', '김동욱'], FW: ['신하준', '이현성', '박종현', '김세현', '강준명', '김운찬', '황윤태', '하선우', '김선호', '다니엘', '김중근', '구태휴', '김건희', '박영준', '정상명', '김시현'] },
+            2: { GK: ['원준석', '이성원', '장윤성', '권하진'], DF: ['김태영', '이강물', '김현우', '김건호', '소병준', '송의태', '류제현', '손호석', '김서후', '이동건'], MF: ['조한음', '정승환', '성찬', '김사헌', '이재민', '박리명', '김노아', '김연준', '박성찬', '목진영', '김민혁', '백준우'], FW: ['윤준상', '신정민', '이창현', '장일운', '정민재', '채영주', '탁정훈', '류성진', '이윤석', '박병주', '정명진', '조은호', '이은찬', '이도우', '김민성', '정승재', '이성언'] },
+            3: { GK: ['조형진', '서태환', '조성용'], DF: ['서예호', '김준현', '정미누', '우주원', '홍성민', '이창준'], MF: ['오한음', '장유진', '이주환', '김예휘', '김진성', '김원이'], FW: ['우지우', '김현', '석동연', '박이안', '권영탁', '김준성', '이재원'] }
         };
 
         // 원래 포지션은 선수별 고정. 내부 엔진의 CAM/CDM을 화면에서는 AM/DM으로 표시한다.
-        const FIXED_PLAYER_POSITIONS = {"백정원": "CB", "최요단": "LB", "이동규": "RB", "이윤관": "RB", "고성일": "CB", "김건우": "RB", "임유현": "CB", "강민석": "CB", "김상수": "CB", "김민우": "RB", "박성준": "CB", "이현준": "LB", "정진서": "RB", "최현준": "CB", "옥승원": "CB", "김태원": "LB", "김범준": "RB", "이채원": "RB", "윤현명": "LB", "김민재(5)": "LB", "조정원": "CB", "전재오": "LB", "임정우": "LB", "김정현": "CB", "김용준": "RB", "김민재(6)": "LB", "박준혁": "RB", "한지성": "CB", "임평하": "CB", "이주진": "RB", "이윤건": "CB", "진재원": "AM", "황민우": "CM", "이정훈": "CM", "신하준": "LW", "이현성": "ST", "박종현": "ST", "김세현": "ST", "강준명": "ST", "김운찬": "LW", "황윤태": "RW", "하선우": "RW", "김선호": "LW", "다니엘": "LW", "김중근": "ST", "구태휴": "ST", "김건희": "ST", "박영준": "ST", "정상명": "RW", "김시현": "LW", "김태영": "RB", "이강물": "CB", "김현우": "CB", "김건호": "CB", "소병준": "RB", "송의태": "RB", "류제현": "LB", "손호석": "LB", "김서후": "LB", "이동건": "CB", "조한음": "CM", "정승환": "CM", "성찬": "DM", "김사헌": "CM", "이재민": "CM", "박리명": "CM", "김노아": "DM", "김연준": "AM", "박성찬": "CM", "목진영": "CM", "김민혁": "AM", "윤준상": "ST", "신정민": "LW", "이창현": "ST", "장일운": "ST", "정민재": "RW", "채영주": "RW", "탁정훈": "RW", "류성진": "ST", "이윤석": "ST", "박병주": "LW", "정명진": "LW", "조은호": "LW", "이은찬": "ST", "이도우": "LW", "김민성": "RW", "정승재": "LW", "서예호": "CB", "김준현": "RB", "정미누": "CB", "우주원": "CB", "홍성민": "RB", "이창준": "LB", "오한음": "AM", "장유진": "DM", "이주환": "CM", "김예휘": "DM", "김진성": "CM", "우지우": "LW", "김현": "RW", "석동연": "ST", "박이안": "LW", "권영탁": "RW", "김준성": "ST", "이재원": "ST"};
+        const FIXED_PLAYER_POSITIONS = {"백정원": "CB", "최요단": "LB", "이동규": "RB", "이윤관": "RB", "고성일": "CB", "김건우": "RB", "임유현": "CB", "강민석": "CB", "김상수": "CB", "김민우": "RB", "박성준": "CB", "이현준": "LB", "정진서": "RB", "최현준": "CB", "옥승원": "CB", "김태원": "LB", "김범준": "RB", "이채원": "RB", "윤현명": "LB", "김민재(5)": "LB", "조정원": "CB", "전재오": "LB", "임정우": "LB", "김정현": "CB", "김용준": "RB", "김민재(6)": "LB", "박준혁": "RB", "한지성": "CB", "임평하": "CB", "이주진": "RB", "이윤건": "CB", "진재원": "AM", "황민우": "CM", "이정훈": "CM", "신하준": "LW", "이현성": "ST", "박종현": "ST", "김세현": "ST", "강준명": "ST", "김운찬": "LW", "황윤태": "RW", "하선우": "RW", "김선호": "LW", "다니엘": "LW", "김중근": "ST", "구태휴": "ST", "김건희": "ST", "박영준": "ST", "정상명": "RW", "김시현": "LW", "김태영": "RB", "이강물": "CB", "김현우": "CB", "김건호": "CB", "소병준": "RB", "송의태": "RB", "류제현": "LB", "손호석": "LB", "김서후": "LB", "이동건": "CB", "조한음": "CM", "정승환": "CM", "성찬": "DM", "김사헌": "CM", "이재민": "CM", "박리명": "CM", "김노아": "DM", "김연준": "AM", "박성찬": "CM", "목진영": "CM", "김민혁": "AM", "윤준상": "ST", "신정민": "LW", "이창현": "ST", "장일운": "ST", "정민재": "RW", "채영주": "RW", "탁정훈": "RW", "류성진": "ST", "이윤석": "ST", "박병주": "LW", "정명진": "LW", "조은호": "LW", "이은찬": "ST", "이도우": "LW", "김민성": "RW", "정승재": "LW", "서예호": "CB", "김준현": "RB", "정미누": "CB", "우주원": "CB", "홍성민": "RB", "이창준": "LB", "오한음": "AM", "장유진": "DM", "이주환": "CM", "김예휘": "DM", "김진성": "CM", "우지우": "LW", "김현": "RW", "석동연": "ST", "박이안": "LW", "권영탁": "RW", "김준성": "ST", "이재원": "ST", "강은준": "CM", "김동욱": "CM", "백준우": "DM", "김원이": "CM", "이성언": "ST"};
         function positionLabel(position) { return position === 'CAM' ? 'AM' : position === 'CDM' ? 'DM' : position; }
         function fixedPlayerPosition(p) {
             if (!p || p.tf || p.eventSeason || p.position === 'GK') return null;
@@ -2298,7 +2298,8 @@
             '조형진':91, '서태환':94, '조성용':99,
             '서예호':99, '김준현':92, '정미누':82, '우주원':81, '홍성민':80,
             '오한음':99, '장유진':90, '이주환':81, '이창준':93, '김예휘':88, '김진성':85,
-            '우지우':86, '김현':83, '석동연':99, '박이안':85, '권영탁':85, '김준성':99, '이재원':84
+            '우지우':86, '김현':83, '석동연':99, '박이안':85, '권영탁':85, '김준성':99, '이재원':84,
+            '강은준':68, '김동욱':65, '백준우':74, '김원이':99, '이성언':74
         };
         function fixedOvr(name) { return FIXED_OVR[name.replace(/ \d+세$/, '')]; }
         // ===== 리그 사다리 데이터 =====
@@ -2865,6 +2866,7 @@
             });
             if (!st.forfeit) [...st.homePlayers, ...st.homeOut].forEach(p => { const s = st.playerStats[p.id] || {}; if (s.goals) addPS('user', p.name, 'g', s.goals); if (s.assists) addPS('user', p.name, 'a', s.assists); });
             if (!st.forfeit) [...st.awayPlayers, ...(st.awayOut || [])].forEach(p => { const s = st.playerStats[p.id] || {}; if (s.goals) addPS(st.enemy.id, p.name, 'g', s.goals); if (s.assists) addPS(st.enemy.id, p.name, 'a', s.assists); });
+            settleLeagueSuspensions(st);
             l.round++; l.myPlayed++;
             let reward = st.forfeit ? 0 : LG[l.li].m, evo = 0, text = `${l.myPlayed}/${lgTotal()}경기 · 경기 보상 +${reward} T`;
             skipByes();
@@ -4285,6 +4287,27 @@
         }
         // 📢 업데이트 소식: 최신 패치가 맨 위. 새 업데이트는 이 배열 앞에 추가한다 (메인 메뉴 빈칸 카드)
         const GAME_UPDATES = [
+            { v: '1.29', date: '2026.10.13', title: '리그 퇴장 징계 & 대회 상대 중복 방지', sec: [
+                ['리그 퇴장 후 1경기 출전정지', [
+                    '리그에서 직접 퇴장 또는 경고 누적으로 퇴장한 선수는 다음 리그 경기 1경기에 출전할 수 없습니다. 승격 플레이오프도 리그 경기로 계산합니다.',
+                    '리그 경기 전 선발에서 출전정지 선수를 자동 제외하고 대체 선수를 배치합니다. 경기 중 교체 투입도 제한됩니다.',
+                    '다른 모드에는 리그 징계가 적용되지 않으며, 다른 모드를 플레이해도 징계가 소진되지 않습니다. 같은 선수의 다른 카드에도 적용됩니다.',
+                    '팀관리와 선수 정보에 리그 징계가 표시되며, 시즌을 넘어도 다음 리그 경기까지 유지됩니다.'
+                ]],
+                ['대회 상대 중복 방지', [
+                    '챔피언스리그·유로파·월드컵에서 이번 도전 중 이미 만난 팀이 다음 라운드 상대로 다시 배정되지 않도록 수정했습니다.',
+                    '같은 라운드의 1·2차전은 같은 상대와 진행합니다. 기존 진행 중인 대회의 상대 기록도 반영합니다.'
+                ]],
+                ['선수 포지션 수정', ['이성언의 원래 포지션을 LW에서 ST로 변경했습니다. 기존 보유 카드와 새 영입 카드에 모두 적용됩니다.']]
+            ] },
+            { v: '1.28', date: '2026.10.13', title: '일반 선수 5명 추가', sec: [
+                ['신규 선수 영입', [
+                    '천민급: 강은준 CM 68 · 김동욱 CM 65 / 노말급: 백준우 DM 74 · 이성언 LW 74 / 종건급: 김원이 CM 99.',
+                    '신규 선수는 이벤트 카드가 아닌 일반 카드로 각 등급 뽑기에 등장하며, 세부 포지션은 선수별로 고정됩니다.',
+                    '신규 선수를 포함해 등급별 전체 뽑기 확률을 다시 계산합니다. OVR이 높을수록 낮은 확률로 등장하는 기존 가중치 규칙은 유지됩니다.',
+                    '선수별 확률 안내에는 고정 세부 포지션과 재계산된 등장 확률이 표시됩니다.'
+                ]]
+            ] },
             { v: '1.27', date: '2026.10.13', title: '리그 시즌 종료 체력 회복', sec: [
                 ['시즌 종료 휴식 추가', [
                     '리그 시즌이 끝나면 선발·벤치·미등록 선수를 포함한 보유 선수 전원의 체력이 100%로 회복됩니다.',
@@ -4727,6 +4750,7 @@
             const continuing=europaState&&europaState.status!=='finished';
             if(!continuing&&!beginDailyChallenge('europa'))return;
             if(!continuing){const field=shuffleCup([...europaTeams,{name:teamName,ovr:userCupOvr(80,110),logo:teamLogoData,user:true}]),pool=field.filter(t=>!t.user),enemy=shuffleCup(pool)[0];europaState={mode:'europa',status:'playing',round:16,leg:1,aggUser:0,aggEnemy:0,currentEnemy:enemy,used:[enemy.name],field};localStorage.setItem('fm_europa_tournament',JSON.stringify(europaState));}
+            if (repairCurrentCupOpponent(europaState,[...(europaState.field||[]),...europaTeams])) localStorage.setItem('fm_europa_tournament',JSON.stringify(europaState));
             activeCup='europa';renderCup();switchScreen('screen-cup');
         }
         function initWorldCup(){
@@ -4777,9 +4801,35 @@
         }
         function startCupMatch(){const s=activeCup==='europa'?europaState:worldCupState,e=s&&s.currentEnemy;if(e)openPrematch(activeCup,{id:e.code||e.name,name:e.name,ovr:e.ovr,logo:e.logo||(e.code?cupFlag(e.code):clubLogoUrl(e.name))||'',logoFallback:e.logoFallback,cupRound:s.round});}
         function simulateCupScore(a,b){const d=(a-b)/25;return [Math.max(0,Math.min(5,Math.floor(Math.random()*2.2+1+d*.35))),Math.max(0,Math.min(5,Math.floor(Math.random()*2.2+1-d*.35)))];}
-        function finishEuropaMatch(st){const s=europaState;s.aggUser+=st.scoreHome;s.aggEnemy+=st.scoreAway;if(s.round!==2&&s.leg===1){s.leg=2;return '1차전 종료 · 2차전을 진행하세요.';}const won=s.round===2?(st.scoreHome>st.scoreAway||(st.scoreHome===st.scoreAway&&st.penWinner==='home')):(s.aggUser>s.aggEnemy||(s.aggUser===s.aggEnemy&&st.penWinner==='home'));if(!won){s.status='finished';return `합산 ${s.aggUser}:${s.aggEnemy} · 유로파 대회가 종료되었습니다.`;}if(s.round===2){s.status='finished';s.champion=true;awardTokens(700,'competition_reward');evoTokens+=5;achAdd('evoEarned',5);st.evoGain=5;saveCupState();updateTokensUI();saveData();return '🏆 유로파 리그 우승! +700 토큰 · 🧬 진화 토큰 +5';}const award=s.round===16?150:s.round===8?250:400;awardTokens(award,'competition_reward');s.round/=2;s.leg=1;s.aggUser=0;s.aggEnemy=0;const pool=s.field.filter(t=>!t.user&&!s.used.includes(t.name));s.currentEnemy=shuffleCup(pool)[0]||shuffleCup(europaTeams)[0];s.used.push(s.currentEnemy.name);saveCupState();updateTokensUI();saveData();return `합산 승리! ${s.round===2?'결승전':`${s.round}강`} 진출 · +${award} 토큰`;}
+        function finishEuropaMatch(st){const s=europaState;s.aggUser+=st.scoreHome;s.aggEnemy+=st.scoreAway;if(s.round!==2&&s.leg===1){s.leg=2;return '1차전 종료 · 2차전을 진행하세요.';}const won=s.round===2?(st.scoreHome>st.scoreAway||(st.scoreHome===st.scoreAway&&st.penWinner==='home')):(s.aggUser>s.aggEnemy||(s.aggUser===s.aggEnemy&&st.penWinner==='home'));if(!won){s.status='finished';return `합산 ${s.aggUser}:${s.aggEnemy} · 유로파 대회가 종료되었습니다.`;}if(s.round===2){s.status='finished';s.champion=true;awardTokens(700,'competition_reward');evoTokens+=5;achAdd('evoEarned',5);st.evoGain=5;saveCupState();updateTokensUI();saveData();return '🏆 유로파 리그 우승! +700 토큰 · 🧬 진화 토큰 +5';}const award=s.round===16?150:s.round===8?250:400;awardTokens(award,'competition_reward');s.round/=2;s.leg=1;s.aggUser=0;s.aggEnemy=0;s.currentEnemy=selectUniqueCupOpponent(s,[...(s.field||[]),...europaTeams]);saveCupState();updateTokensUI();saveData();return `합산 승리! ${s.round===2?'결승전':`${s.round}강`} 진출 · +${award} 토큰`;}
         function wcGroupTable(s,g){const teams=s.groups[g],rows=teams.map(team=>({team,p:0,mp:0,w:0,d:0,l:0,gf:0,ga:0}));for(let i=0;i<4;i++)for(let j=i+1;j<4;j++){const a=teams[i],b=teams[j],key=[a.name,b.name].sort().join('|');let score=s.results[key];if(!score)continue;const flip=a.name!==key.split('|')[0],h=flip?score[1]:score[0],v=flip?score[0]:score[1],ra=rows[i],rb=rows[j];ra.mp++;rb.mp++;ra.gf+=h;ra.ga+=v;rb.gf+=v;rb.ga+=h;if(h>v){ra.w++;rb.l++;ra.p+=3;}else if(h<v){rb.w++;ra.l++;rb.p+=3;}else{ra.d++;rb.d++;ra.p++;rb.p++;}}return rows.sort((a,b)=>b.p-a.p||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf);}
-        function wcPrepareKnockout(s, entrants, avoidGroup=false){let pairs=[];for(let n=0;n<40;n++){const draw=shuffleCup(entrants);pairs=Array.from({length:draw.length/2},(_,i)=>[draw[i*2],draw[i*2+1]]);if(!avoidGroup||pairs.every(([a,b])=>!a.group||!b.group||a.group!==b.group))break;}s.bracketWinners=[];let userPair=null;pairs.forEach(([a,b])=>{if(a.user||b.user)userPair=[a,b];else{const [x,y]=simulateCupScore(a.ovr,b.ovr);s.bracketWinners.push(x===y?(Math.random()<a.ovr/(a.ovr+b.ovr)?a:b):x>y?a:b);}});s.currentEnemy=userPair&&userPair.find(t=>!t.user);}
+        function wcPrepareKnockout(s, entrants, avoidGroup=false) {
+            const seen = new Set(), field = entrants.filter(t => { const k=t.user?'user':cupOpponentKey(t.name); if(seen.has(k))return false;seen.add(k);return true; });
+            const user = field.find(t => t.user), played = cupFacedKeys(s);
+            const allowed = field.filter(t => !t.user && !played.has(cupOpponentKey(t.name)) && (!avoidGroup || !t.group || !user?.group || t.group!==user.group));
+            const enemy = shuffleCup(allowed)[0];
+            if (!user || !enemy) throw new Error('중복 없이 월드컵 상대를 배정할 수 없습니다.');
+            const remaining = shuffleCup(field.filter(t => t!==user && t!==enemy));
+            // 이전 상대끼리 맞붙지 않게 배치하면 다음 라운드에도 새 상대가 남는다.
+            const pairs = [];
+            while (remaining.length) {
+                const a = remaining.shift();
+                let index = remaining.findIndex(b => (!played.has(cupOpponentKey(a.name)) || !played.has(cupOpponentKey(b.name))) && (!avoidGroup || !a.group || !b.group || a.group!==b.group));
+                if(index<0)index=remaining.findIndex(b => !played.has(cupOpponentKey(a.name)) || !played.has(cupOpponentKey(b.name)));
+                if(index<0)index=0;
+                const b=remaining.splice(index,1)[0]; if(!b)throw new Error('월드컵 대진 인원이 올바르지 않습니다.'); pairs.push([a,b]);
+            }
+            s.bracketWinners = [];
+            pairs.forEach(([a,b]) => {
+                const [x,y] = simulateCupScore(a.ovr,b.ovr);
+                let winner=x===y?(Math.random()<a.ovr/(a.ovr+b.ovr)?a:b):x>y?a:b;
+                // 이전에 만난 팀은 다른 팀과의 경기에서 탈락시켜 재대결을 방지한다.
+                if(played.has(cupOpponentKey(winner.name))) { const other=winner===a?b:a; if(!played.has(cupOpponentKey(other.name)))winner=other; }
+                s.bracketWinners.push(winner);
+            });
+            s.used = [...new Set([...(s.used||[]), ...(s.aw?.faced||[]), s.currentEnemy?.name, enemy.name].filter(Boolean))];
+            s.currentEnemy = enemy;
+        }
         function finishWorldCupMatch(st){
             const s=worldCupState,e=s.currentEnemy;
             if(s.status==='groups'){
@@ -4850,13 +4900,41 @@
             });
         }
 
+        function cupOpponentKey(name) {
+            const key = String(name || '').normalize('NFKC').replace(/\s+/g,'').toLowerCase().replace(/^fc/, '');
+            return ({'맨체스터시티':'맨시티'})[key] || key;
+        }
+        function cupFacedKeys(state) {
+            return new Set([...(state.used || []), ...(state.aw?.faced || []), state.currentEnemy?.name].filter(Boolean).map(cupOpponentKey));
+        }
+        function selectUniqueCupOpponent(state, candidates) {
+            const used = cupFacedKeys(state), seen = new Set();
+            const pool = candidates.filter(t => {
+                const key = cupOpponentKey(t.name);
+                if (!key || t.user || used.has(key) || seen.has(key)) return false;
+                seen.add(key); return true;
+            });
+            const enemy = shuffleCup(pool)[0];
+            if (!enemy) throw new Error('새 대회 상대를 배정할 수 없습니다.');
+            state.used = [...new Set([...(state.used || []), ...(state.aw?.faced || []), state.currentEnemy?.name, enemy.name].filter(Boolean))];
+            return enemy;
+        }
+        function repairCurrentCupOpponent(state, candidates) {
+            if (!state || state.status === 'finished' || state.leg !== 1 || !state.currentEnemy) return false;
+            const played = new Set((state.aw?.faced || []).map(cupOpponentKey));
+            if (!played.has(cupOpponentKey(state.currentEnemy.name))) return false;
+            const next = selectUniqueCupOpponent(state,candidates);
+            state.currentEnemy = state === careerState ? {name:next.name,ovr:getCareerEnemyOvr(state.round,next.name)} : next;
+            return true;
+        }
         function initCareer() {
             if (!careerState || careerState.status === 'finished') {
                 if (!beginDailyChallenge('cl')) return;
                 let enemies = [...careerTeamsList].sort(() => Math.random() - 0.5);
-                careerState = { status: 'playing', round: 16, leg: 1, aggUser: 0, aggEnemy: 0, currentEnemy: { name: enemies[0], ovr: getCareerEnemyOvr(16, enemies[0]) } };
+                careerState = { status: 'playing', round: 16, leg: 1, aggUser: 0, aggEnemy: 0, currentEnemy: { name: enemies[0], ovr: getCareerEnemyOvr(16, enemies[0]) }, used:[enemies[0]] };
                 localStorage.setItem('fm_career', JSON.stringify(careerState));
             }
+            if (repairCurrentCupOpponent(careerState,careerTeamsList.map(name => ({name})))) localStorage.setItem('fm_career',JSON.stringify(careerState));
             switchScreen('screen-career'); updateCareerUI();
         }
 
@@ -5789,7 +5867,7 @@
             const a = effAttrs(p), o = getCalculatedOvr(p), pot = Math.max(p.pot, o), rec = p.recent || [], m = mor(p);
             const bars = (p.position === 'GK' ? GK_STAT_KEYS : ATTRS).map(k => `<div class="flex items-center gap-2 text-sm"><span class="w-20 shrink-0 text-gray-400">${p.position === 'GK' ? GK_STAT_LABELS[k] : ATTR_KO[k]}</span><div class="flex-1 h-2 bg-gray-700 rounded"><div class="h-2 rounded ${a[k] >= 85 ? 'bg-yellow-400' : a[k] >= 70 ? 'bg-green-500' : 'bg-blue-500'}" style="width:${Math.min(100, a[k])}%"></div></div><span class="w-9 text-right font-black">${a[k]}</span></div>`).join('');
             const msg = m < 50 ? '최근 출전 시간이 부족해 불만을 느끼고 있습니다.' : m >= 85 ? '팀 내 입지에 만족하며 최상의 컨디션입니다.' : m >= 70 ? '팀 분위기에 잘 적응하고 있습니다.' : '평범한 컨디션입니다.';
-            document.getElementById('player-modal-body').innerHTML = `<div class="flex justify-between items-start mb-4"><div><h2 class="text-3xl font-black">${p.name}${p.age ? ` <span class="text-lg text-gray-400 font-bold">${p.age}세</span>` : ''}</h2>${S.ace === p.id ? '<p class="text-yellow-400 font-black">⭐ 팀 에이스 · 경기에서 능력치 +8% (75분 이후 +4% 추가)</p>' : ''}<p class="text-gray-400 font-bold">${originalPlayerPosition(p)} · 역할: ${roleName(a, p.pos2)}${p.level ? ' · +' + p.level : ''}${p.evo ? ' · <span class="text-yellow-400">★' + p.evo + '</span>' : ''}</p>${p.trait ? `<p class="text-sm text-sky-300 font-bold mt-1">성향: ${TRAITS[p.trait].n} <span class="text-gray-400 font-normal">— ${TRAITS[p.trait].d}</span></p>` : ''}<p class="text-sm font-bold mt-1" style="color:${mentalTag(p).c}">${mentalTag(p).e} 멘탈 ${mentalOf(p)}/20 · ${mentalTag(p).t} <span class="text-gray-400 font-normal">— ${mentalOf(p) <= 10 ? '언론 평판·팬 여론·라커룸 분위기가 나쁘면 경기력이 떨어집니다' : mentalOf(p) >= 16 ? '여론의 압박에도 거의 흔들리지 않습니다' : '압박을 받으면 조금 흔들립니다'}</span></p></div><button onclick="closePlayerInfo()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
+            document.getElementById('player-modal-body').innerHTML = `<div class="flex justify-between items-start mb-4"><div><h2 class="text-3xl font-black">${p.name}${p.age ? ` <span class="text-lg text-gray-400 font-bold">${p.age}세</span>` : ''}</h2>${S.ace === p.id ? '<p class="text-yellow-400 font-black">⭐ 팀 에이스 · 경기에서 능력치 +8% (75분 이후 +4% 추가)</p>' : ''}<p class="text-gray-400 font-bold">${originalPlayerPosition(p)}${leagueBanRemaining(p) > 0 ? ` · <span style="color:#f87171">리그 출전정지 ${leagueBanRemaining(p)}경기</span>` : ''} · 역할: ${roleName(a, p.pos2)}${p.level ? ' · +' + p.level : ''}${p.evo ? ' · <span class="text-yellow-400">★' + p.evo + '</span>' : ''}</p>${p.trait ? `<p class="text-sm text-sky-300 font-bold mt-1">성향: ${TRAITS[p.trait].n} <span class="text-gray-400 font-normal">— ${TRAITS[p.trait].d}</span></p>` : ''}<p class="text-sm font-bold mt-1" style="color:${mentalTag(p).c}">${mentalTag(p).e} 멘탈 ${mentalOf(p)}/20 · ${mentalTag(p).t} <span class="text-gray-400 font-normal">— ${mentalOf(p) <= 10 ? '언론 평판·팬 여론·라커룸 분위기가 나쁘면 경기력이 떨어집니다' : mentalOf(p) >= 16 ? '여론의 압박에도 거의 흔들리지 않습니다' : '압박을 받으면 조금 흔들립니다'}</span></p></div><button onclick="closePlayerInfo()" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
                 <div class="player-card-slot">${playerCardMarkup(p,{ovr:o})}</div><div class="flex gap-4 mb-4"><div class="flex-1 bg-gray-900 rounded-xl p-3 text-center"><div class="text-xs text-gray-400">현재 능력</div><div class="text-4xl font-black text-white">${o}</div></div><div class="flex-1 bg-gray-900 rounded-xl p-3 text-center"><div class="text-xs text-gray-400">잠재 능력</div><div class="text-4xl font-black text-purple-400">${pot}</div></div></div>
                 <div class="flex flex-col gap-2 mb-4">${bars}</div>
                 <div class="bg-gray-900 rounded-xl p-3 mb-2 flex justify-between"><span class="font-black">🔋 체력 ${Math.round(p.cond ?? 100)}%</span><span class="${p.inj > 0 ? 'text-red-400' : 'text-emerald-400'} font-bold">${p.inj > 0 ? '🚑 부상(' + (p.injLabel || '') + ') · ' + p.inj + '경기 결장' : '출전 가능'}</span></div><div class="bg-gray-900 rounded-xl p-3"><div class="font-black">${moodEmoji(p)} 사기: ${moodText(p)} (${m})</div><div class="text-sm text-gray-400 mt-1">최근 5경기 선발 ${rec.filter(x => x === 'S').length}회 · 교체 ${rec.filter(x => x === 'B').length}회<br>${msg}</div></div>`;
@@ -6858,7 +6936,37 @@
         var rogueState = (() => { try { return JSON.parse(localStorage.getItem('fm_rogue') || 'null'); } catch (e) { return null; } })();
         function saveRogue() { try { localStorage.setItem('fm_rogue', JSON.stringify(rogueState)); } catch (e) {} }
         function sandboxMode(m) { return m === 'saudi' || m === 'rogue' || m === 'onlineFriendly'; }
-        function pOut(p, mode) { if (!p) return true; if (mode === 'saudi') return false; if (mode === 'rogue') return !!(rogueState && rogueState.inj && rogueState.inj[p.id] > 0); return p.inj > 0; }
+        function leaguePlayerIdentity(p) { return String(p?.name || '').replace(/ \d+세$/, ''); }
+        function leagueBanRemaining(p) {
+            if (!p) return 0;
+            const name = leaguePlayerIdentity(p);
+            return players.filter(q => leaguePlayerIdentity(q) === name).reduce((n,q) => Math.max(n, Number(q.leagueBan) || 0), Number(p.leagueBan) || 0);
+        }
+        function settleLeagueSuspensions(st) {
+            if (!st || st.mode !== 'league' || st.leagueDisciplineProcessed) return;
+            const sentOff = new Set([...(st.homePlayers || []), ...(st.homeOut || [])].filter(p => p.isRedCarded).map(leaguePlayerIdentity));
+            players.forEach(p => { p.leagueBan = Math.max(0, (Number(p.leagueBan) || 0) - 1); });
+            players.forEach(p => { if (sentOff.has(leaguePlayerIdentity(p))) p.leagueBan = 1; });
+            st.leagueDisciplineProcessed = true;
+        }
+        function repairLeagueLineup(setup) {
+            if (!setup) return;
+            const layout = getLayout(setup.formation), used = new Set(), names = new Set();
+            const invalid = [];
+            layout.forEach((slot,i) => {
+                const p = players.find(p => p.id === setup.slots[i]);
+                if (p && !pOut(p,'league') && !used.has(p.id) && !names.has(leaguePlayerIdentity(p)) && (slot.pos === 'GK') === (p.position === 'GK')) {
+                    used.add(p.id); names.add(leaguePlayerIdentity(p));
+                } else { setup.slots[i] = ''; invalid.push(i); }
+            });
+            invalid.forEach(i => {
+                const slot = layout[i], det = slotDetail(slot);
+                const candidate = players.filter(p => !pOut(p,'league') && !used.has(p.id) && !names.has(leaguePlayerIdentity(p)) && (slot.pos === 'GK') === (p.position === 'GK'))
+                    .sort((a,b) => getCalculatedOvr(b) * aptitude(b,det) * condF(b) - getCalculatedOvr(a) * aptitude(a,det) * condF(a))[0];
+                if (candidate) { setup.slots[i] = candidate.id; used.add(candidate.id); names.add(leaguePlayerIdentity(candidate)); }
+            });
+        }
+        function pOut(p, mode) { if (!p) return true; if (mode === 'saudi') return false; if (mode === 'league' && leagueBanRemaining(p) > 0) return true; if (mode === 'rogue') return !!(rogueState && rogueState.inj && rogueState.inj[p.id] > 0); return p.inj > 0; }
         function pStam(p, mode) { if (mode === 'saudi') return 100; if (mode === 'rogue') { const v = rogueState && rogueState.stam ? rogueState.stam[p.id] : null; return Math.round(v == null ? 100 : v); } return Math.round(p.cond ?? 100); }
         function matchStartStam(p, mode) { return mode === 'saudi' ? 100 : mode === 'rogue' ? pStam(p, mode) : Math.round(60 + 0.4 * (p.cond ?? 100)); }
         const ROGUE_CARDS = {
@@ -7440,6 +7548,7 @@
             const R = getAwayRoster(mode, e);
             if (!pendingMatch || pendingMatch.mode !== mode || pendingMatch.e !== e) pendingMatch = { mode, e, setup: mode === 'saudi' ? null : { formation: currentFormation, slots: getLayout(currentFormation).map((_, i) => mine.find(p => p.slotIndex === i)?.id || ''), instr: { ...instr } } };
             const setup = pendingMatch.setup, formation = setup?.formation || currentFormation;
+            if (mode === 'league') repairLeagueLineup(setup);
             if (setup && mode === 'rogue' && !setup.rogueFilled) { setup.rogueFilled = true; rogueFillSlots(setup); }
             if (setup && setup.slots.some(id => !players.some(p => p.id === id && !pOut(p, mode)))) setup.slots = getLayout(formation).map((_, i) => { const id = setup.slots[i]; return players.some(p => p.id === id && !pOut(p, mode)) ? id : (mine.find(p => p.slotIndex === i && !pOut(p, mode))?.id || ''); });
             const layout = getLayout(formation), selected = setup ? setup.slots.map(id => players.find(p => p.id === id)).filter(Boolean) : mine;
@@ -7563,7 +7672,7 @@
             if (setup) {
                 const ids = setup.slots;
                 if (ids.length !== 11 || ids.some(id => !id) || new Set(ids).size !== 11) return alert('선발 11개 자리에 서로 다른 선수를 배치해줘.');
-                if (ids.some(id => !players.some(p => p.id === id && !pOut(p, m.mode)))) return alert('부상 선수는 선발로 출전할 수 없어.');
+                if (ids.some(id => !players.some(p => p.id === id && !pOut(p, m.mode)))) return alert('부상 또는 리그 출전정지 선수는 선발로 출전할 수 없어.');
                 const names = ids.map(id => players.find(p => p.id === id).name);
                 if (new Set(names).size !== 11) return alert('이름이 같은 선수는 한 경기에 함께 출전할 수 없어.');
             }
@@ -7651,6 +7760,15 @@
             if (userStarters.length < 11 || userStarters.some(p => p.slotIndex === -1)) { autoAssignStarters(sandboxMode(mode)); saveData(); userStarters = players.filter(p => p.isStarting); }
             if(userStarters.length < 11) { alert("선발 라인업을 구성할 수 없습니다. 선수가 부족합니다."); return; }
             if (!sandboxMode(mode)) { recoverCond(); if (!matchSetup) { const sw = replaceInjured(); if (sw.length) { saveData(); alert('부상 선수를 대신해 자동으로 교체했습니다.\n' + sw.join('\n')); } userStarters = players.filter(p => p.isStarting); } }
+            if (mode === 'league') {
+                if (!matchSetup) {
+                    matchSetup = { formation:currentFormation, slots:getLayout(currentFormation).map((_,i) => userStarters.find(p => p.slotIndex === i)?.id || ''), instr:{...instr} };
+                    repairLeagueLineup(matchSetup);
+                }
+                if (matchSetup.slots.length !== 11 || matchSetup.slots.some(id => !players.some(p => p.id === id && !pOut(p,'league')))) {
+                    alert('리그 출전정지·부상 선수를 제외한 선발 11명을 구성해 주세요.'); return;
+                }
+            }
             const matchFormation = matchSetup?.formation || currentFormation;
             if (matchSetup) userStarters = matchSetup.slots.map((id, slotIndex) => ({ ...players.find(p => p.id === id), slotIndex }));
             
@@ -8978,6 +9096,7 @@
             if (!l || l.status !== 'playoff' || !l.po || l.po.done || st.leagueSeason !== l.season) return '이미 처리된 경기';
             const win = !st.forfeit && (st.scoreHome > st.scoreAway || (st.scoreHome === st.scoreAway && st.penWinner === 'home')), opp = l.po.a === 'user' ? l.po.b : l.po.a;
             const uh = l.po.a === 'user', pens = st.pens ? ` (PK ${st.pens.h.filter(Boolean).length}:${st.pens.a.filter(Boolean).length})` : st.maxTime === 120 ? ' (연장)' : '';
+            settleLeagueSuspensions(st);
             l.po.done = true; l.po.winner = win ? 'user' : opp; l.po.score = uh ? `${st.scoreHome}:${st.scoreAway}${pens}` : `${st.scoreAway}:${st.scoreHome}${pens}`;
             let reward = st.forfeit ? 0 : LG[l.li].m, evo = 0, text = `🏟️ 승격 플레이오프 ${win ? '승리! ⬆️' : '패배…'} · 경기 보상 +${reward} T`;
             matchReport(st, LG[l.li].n);
@@ -9529,8 +9648,8 @@
                             let roundReward = careerState.round === 16 ? 300 : (careerState.round === 8 ? 500 : 1000);
                             awardTokens(roundReward,'competition_reward');
                             careerState.round = careerState.round / 2; careerState.leg = 1; careerState.aggUser = 0; careerState.aggEnemy = 0;
-                            let enemies = [...careerTeamsList].sort(() => Math.random() - 0.5);
-                            careerState.currentEnemy = { name: enemies[0], ovr: getCareerEnemyOvr(careerState.round, enemies[0]) };
+                            const enemy = selectUniqueCupOpponent(careerState, careerTeamsList.map(name => ({name})));
+                            careerState.currentEnemy = { name: enemy.name, ovr: getCareerEnemyOvr(careerState.round, enemy.name) };
                             rewardText = `합산 ${aggTxt} 승리! ${careerState.round}강 진출! (+${roundReward}T)`;
                         } else { rewardText = `합산 ${aggTxt} 패배... 탈락`; careerState.status = 'finished'; }
                     }
@@ -9628,7 +9747,7 @@
                 if (p && slot.pos !== 'GK') makeDraggable(node, container, (px, py) => { node.classList.add('dragging'); node.style.left = px + '%'; node.style.top = py + '%'; const n = nearestStarterSlot(idx, px, py, container), z = zoneAt(Math.min(85, py), px); showZones(true, n.near ? null : z && z.d); }, openIt, (px, py) => { showZones(false); const n = nearestStarterSlot(idx, px, py, container); if (n.near) { swapStarterByDrop(idx, px, py, container); renderPitch(); } else moveSlotToZone(idx, px, py); });
                 else if (p) makeDraggable(node, container, () => {}, openIt, (px, py) => swapStarterByDrop(idx, px, py, container)); else node.onclick = openIt;
                 
-                if (p) { const lvlTag = p.level > 0 ? `<div class="level-badge">+${p.level}</div>` : ''; const injuryTag = p.inj > 0 ? `<div class="inj-badge">🚑${p.inj}</div>` : ''; const energy = Math.max(0, Math.min(100, Math.round(p.cond ?? 100))); node.innerHTML = `${playerCardMarkup(p, {position:originalPlayerPosition(p), condition:p.cond, className:'orb-card-manager'})}${injuryTag}${lvlTag}<div class="player-name-tag"><span class="manager-slot-position" style="color:#c4b5fd;font-weight:900;margin-right:4px">${positionLabel(slotDetail(slot))}</span>${moodEmoji(p)} ${S.ace === p.id ? '⭐' : ''}${teamRoles.captain === p.id ? '<span style="color:#fbbf24">©</span> ' : ''}${p.evo ? '<span style="color:#fbbf24">★' + p.evo + '</span> ' : ''}${p.name}${positionPenaltyMarkup(p, slotDetail(slot))}</div><span class="manager-energy" title="체력 ${energy}%"><i style="width:${energy}%;background:${stamColor(energy)}"></i></span>`; } 
+                if (p) { const lvlTag = p.level > 0 ? `<div class="level-badge">+${p.level}</div>` : ''; const injuryTag = p.inj > 0 ? `<div class="inj-badge">🚑${p.inj}</div>` : (leagueBanRemaining(p) > 0 ? `<div class="inj-badge">리그 징계 ${leagueBanRemaining(p)}</div>` : ''); const energy = Math.max(0, Math.min(100, Math.round(p.cond ?? 100))); node.innerHTML = `${playerCardMarkup(p, {position:originalPlayerPosition(p), condition:p.cond, className:'orb-card-manager'})}${injuryTag}${lvlTag}<div class="player-name-tag"><span class="manager-slot-position" style="color:#c4b5fd;font-weight:900;margin-right:4px">${positionLabel(slotDetail(slot))}</span>${moodEmoji(p)} ${S.ace === p.id ? '⭐' : ''}${teamRoles.captain === p.id ? '<span style="color:#fbbf24">©</span> ' : ''}${p.evo ? '<span style="color:#fbbf24">★' + p.evo + '</span> ' : ''}${p.name}${positionPenaltyMarkup(p, slotDetail(slot))}</div><span class="manager-energy" title="체력 ${energy}%"><i style="width:${energy}%;background:${stamColor(energy)}"></i></span>`; } 
                 else { node.innerHTML = `<span class="text-gray-300">+</span>`; } 
                 container.appendChild(node); 
             }); 
@@ -9764,7 +9883,7 @@
             title.innerText = `${tierName} 뽑기 선수별 확률`;
             content.innerHTML = `<p class="text-sm text-gray-300 bg-gray-900 rounded-xl p-4">포지션 구분 없이 등급 안의 모든 선수를 한 풀에서 뽑아. OVR이 높을수록 확률이 크게 낮아져. 목록은 OVR 높은 순이야.</p>`;
             const odds = gachaOdds(tier);
-            content.innerHTML += `<section class="bg-gray-700 rounded-xl p-4"><div class="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-2 text-sm"><span class="text-gray-400 font-bold">선수</span><span class="text-gray-400 font-bold">포지션</span><span class="text-gray-400 font-bold text-right">OVR</span><span class="text-gray-400 font-bold text-right">확률</span>${odds.map(x => `<span class="text-white">${x.name}</span><span class="text-gray-300">${x.pos}</span><span class="text-gray-300 text-right">${x.ovr}</span><b class="text-emerald-300 text-right">${x.percent.toFixed(2)}%</b>`).join('')}</div></section>`;
+            content.innerHTML += `<section class="bg-gray-700 rounded-xl p-4"><div class="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 gap-y-2 text-sm"><span class="text-gray-400 font-bold">선수</span><span class="text-gray-400 font-bold">포지션</span><span class="text-gray-400 font-bold text-right">OVR</span><span class="text-gray-400 font-bold text-right">확률</span>${odds.map(x => `<span class="text-white">${x.name}</span><span class="text-gray-300">${FIXED_PLAYER_POSITIONS[x.name] || x.pos}</span><span class="text-gray-300 text-right">${x.ovr}</span><b class="text-emerald-300 text-right">${x.percent.toFixed(2)}%</b>`).join('')}</div></section>`;
             document.getElementById('tier-list-modal').classList.replace('hidden','flex');
         }
 
