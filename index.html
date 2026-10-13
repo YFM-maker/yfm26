@@ -2827,9 +2827,14 @@
             leagueState = { v: 2, season: (old?.season || 0) + 1, li, highestReachedLi: Math.max(highestReachedLi, li), ids, round: 0, myPlayed: 0, status: 'playing', schedule: leagueSchedule(ids), ps: {}, history, champion: null };
             if(!old)ach.stats.seasonStartTokens=tokens; else ach.stats.seasonStartTokens=tokens; saveAch();reconcileAchievements();skipByes();persistLeague();renderLeague();
         }
+        function restoreLeagueSeasonFitness() {
+            const now = Date.now();
+            players.forEach(p => { p.cond = 100; p.condAt = now; });
+        }
         function finishLeagueSeason() {
             const l = leagueState, L = LG[l.li], table = leagueTable(), champ = table[0].id, rank = table.findIndex(t => t.id === 'user') + 1;
             l.status = 'finished'; l.champion = champ; l.rank = rank;
+            restoreLeagueSeasonFitness();
             const gk = leagueTop('g', 1)[0], ak = leagueTop('a', 1)[0];
             l.awards = { g: gk || null, a: ak || null };
             [[gk, '득점왕', 'g'], [ak, '도움왕', 'a']].forEach(([r, t, k]) => { if (r) S.awards.push({ s: l.season, l: L.n, t, n: r.n, c: leagueName(r.c), v: r[k], mine: r.c === 'user' }); });
@@ -2846,6 +2851,7 @@
             text += l.nextLi > l.li ? ` · ⬆️ ${LG[l.nextLi].n} 승격!` : l.li === LG.length - 1 ? ` · ${rank}위로 시즌 종료` : ` · ${rank}위 · 잔류 ${l.po && (l.po.a === 'user' || l.po.b === 'user') ? '(승격 플레이오프 패배)' : '(1위 자동 승격 · 2·3위는 플레이오프 승자만 승격)'}`;
             if (gk) text += ` · 득점왕 ${gk.n}(${gk.g})`;
             l.titleReward = reward; l.evoReward = evo;
+            text += ' · 시즌 종료: 모든 선수 체력 100% 회복';
             localStorage.setItem('fm_stats', JSON.stringify(S));
             return { reward, evo, text };
         }
@@ -4279,6 +4285,13 @@
         }
         // 📢 업데이트 소식: 최신 패치가 맨 위. 새 업데이트는 이 배열 앞에 추가한다 (메인 메뉴 빈칸 카드)
         const GAME_UPDATES = [
+            { v: '1.27', date: '2026.10.13', title: '리그 시즌 종료 체력 회복', sec: [
+                ['시즌 종료 휴식 추가', [
+                    '리그 시즌이 끝나면 선발·벤치·미등록 선수를 포함한 보유 선수 전원의 체력이 100%로 회복됩니다.',
+                    '승격 플레이오프에 진출한 경우 플레이오프가 끝나 시즌이 최종 종료되는 시점에 적용됩니다. 우승·승격 여부와 관계없이 회복됩니다.',
+                    '시즌 종료 결과 화면에 체력 회복 안내가 표시됩니다. 부상 회복 규칙은 기존과 같습니다.'
+                ]]
+            ] },
             { v: '1.26', date: '2026.10.13', title: '종건급 선수 개성 & 골키퍼 능력 업데이트', sec: [
                 ['종건급 선수 특성·능력치 고정', [
                     '종건급 21명의 특성과 세부능력치를 선수별로 고정했습니다. 기존 보유 카드와 새 영입 카드에 모두 적용됩니다.',
@@ -6326,6 +6339,11 @@
                 else p.cond = Math.min(100, Math.round(p.cond + 45));
                 p.condAt = now;
             });
+            // 최종 경기의 피로 계산이 시즌 종료 회복을 덮어쓰지 않도록 마지막에 적용한다.
+            if (st.mode === 'league' && leagueState?.status === 'finished' && st.leagueSeason === leagueState.season) {
+                restoreLeagueSeasonFitness();
+                msgs.push('시즌 종료 휴식: 모든 선수 체력 100% 회복');
+            }
             const tired = players.filter(p => inMatch[p.id] && p.cond < 60 && !(p.inj > 0)).map(p => p.name);
             if (tired.length) msgs.push(`🔋 다음 경기 전 휴식 권장: ${tired.slice(0, 4).join(', ')}${tired.length > 4 ? ' 외 ' + (tired.length - 4) + '명' : ''}`);
             return msgs;
