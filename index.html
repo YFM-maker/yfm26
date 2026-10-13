@@ -9955,19 +9955,29 @@
             return `쿠폰 오류 [${code}]: ${message.slice(0,240)}`;
         }
         async function loadMissionCouponStatus(){if(!accountUser?.id||!window.yfmAccountReady){setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);return;}try{const {data,error}=await getOwnerRankClient().rpc('yfm_kickoff_coupon_status');if(error)throw error;if(data?.redeemed)setMissionCouponStatus('KICKOFF2026 쿠폰을 이미 사용했습니다.');else if(data?.expired)setMissionCouponStatus('쿠폰 사용 기간이 종료되었습니다.',true);}catch(e){console.warn('쿠폰 사용 기록을 불러오지 못했습니다.',e);setMissionCouponStatus(missionCouponErrorMessage(e),true)}}
+        let missionCouponBusy=false;
+        async function waitForCouponSave(owner,waitForWallet=true){
+            const deadline=Date.now()+15000;
+            while(accountSaving||(waitForWallet&&tokenWalletPending>0)){
+                if(accountUser?.id!==owner)throw new Error('계정이 변경되었습니다. 다시 로그인해 주세요.');
+                if(Date.now()>=deadline)throw {code:'SAVE_BUSY',message:'다른 저장·토큰 작업을 처리하고 있습니다. 잠시 후 쿠폰을 다시 사용해 주세요.'};
+                await new Promise(resolve=>setTimeout(resolve,100));
+            }
+            if(accountUser?.id!==owner)throw new Error('계정이 변경되었습니다. 다시 로그인해 주세요.');
+        }
         async function redeemMissionCoupon(event) {
-            event.preventDefault();
+            event.preventDefault();if(missionCouponBusy)return;
             const input=document.getElementById('mission-coupon-code'),button=document.getElementById('mission-coupon-submit'),code=String(input?.value||'').trim().toUpperCase();
             if(!code)return setMissionCouponStatus('쿠폰 코드를 입력해 주세요.',true);
             if(!accountUser?.id||!window.yfmAccountReady)return setMissionCouponStatus('로그인한 계정에서 쿠폰을 사용할 수 있습니다.',true);
-            button.disabled=true;button.classList.add('opacity-50');
+            missionCouponBusy=true;const owner=accountUser.id;button.disabled=true;button.classList.add('opacity-50');
             try {
+                // Flush before entering the wallet queue: queued wallet work intentionally blocks uploads.
+                saveData();await waitForCouponSave(owner);await uploadAccountSnapshot(true);
+                if(accountUser?.id!==owner)throw new Error('계정이 변경되었습니다. 다시 로그인해 주세요.');
+                if(accountDirty)throw {code:'SAVE_REQUIRED',message:'진행 상황을 서버에 저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'};
                 await queueWalletOperation(async()=>{
-                    const owner=accountUser.id;
-                    while(accountSaving)await new Promise(resolve=>setTimeout(resolve,100));
-                    if(accountUser?.id!==owner)throw new Error('계정이 변경되었습니다. 다시 로그인해 주세요.');
-                    saveData();await uploadAccountSnapshot(true);
-                    if(accountDirty)throw {code:'SAVE_REQUIRED',message:'진행 상황을 서버에 저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'};
+                    await waitForCouponSave(owner,false);
                     const {data,error}=await getOwnerRankClient().rpc('yfm_redeem_coupon',{p_code:code});
                     if(error)throw error;
                     if(!data?.ok)throw new Error(data?.reason||'coupon_failed');
@@ -9978,10 +9988,10 @@
                     localStorage.setItem('fm_evo_tokens',String(evoTokens));accountDirty=true;saveData();updateTokensUI();
                     const rewards=[];if(data.token_reward)rewards.push(`토큰 ${Number(data.token_reward).toLocaleString()}개`);if(data.player)rewards.push(`${data.player.name} 1장`);if(data.evo_reward)rewards.push(`진화 토큰 ${data.evo_reward}개`);
                     input.value='';setMissionCouponStatus(`쿠폰 적용 완료! ${josa(rewards.join(' · '), '를')} 받았습니다.`);
-                    await uploadAccountSnapshot(true);
                 });
+                if(accountUser?.id===owner)await uploadAccountSnapshot(true);
             }catch(error){console.warn('쿠폰 처리 실패:',error);setMissionCouponStatus(missionCouponErrorMessage(error),true);}
-            finally{if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50');}}
+            finally{missionCouponBusy=false;if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50');}}
         }
         function claimMission(id){ensureDaily();const m=DAILY_MISSIONS.find(x=>x.id===id);if(!m||!missionClaimable(m))return renderMissions();daily.claimed[id]=true;const rw={tokens:m.reward};grantRewards(rw);saveDaily();renderMissions();showRewardNotice(m.name,rw)}
         function claimAchievement(id){const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a||!achievementClaimable(a))return renderMissions();ach.claimed[id]=true;const rw={tokens:a.tokens,evo:a.evo};grantRewards(rw);saveAch();renderMissions();showRewardNotice(a.name,rw)}
