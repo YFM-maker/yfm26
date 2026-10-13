@@ -2766,11 +2766,12 @@
         function leagueTop(k, n = 10) { const o = k === 'g' ? 'a' : 'g'; return Object.values(leagueState?.ps || {}).filter(r => r[k] > 0).sort((a, b) => b[k] - a[k] || b[o] - a[o] || a.n.localeCompare(b.n, 'ko')).slice(0, n); }
         function startLeagueSeason() {
             if (leagueState && leagueState.status !== 'finished') return;
+            const highestReachedLi = saudiReachedLeague();
             const old = leagueState, li = old ? (old.nextLi ?? old.li) : 0, ids = ['user', ...LG[li].clubs.map(c => c.id)];
             for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
             const history = old ? [...(old.history || []), { season: old.season, l: LG[old.li].n, rank: old.rank, champion: leagueName(old.champion), reward: old.titleReward, evo: old.evoReward, up: old.nextLi > old.li }].slice(-30) : [];
             if (old) players.forEach(p => { if (!p.age || isGachaPlayer(p)) return; p.age++; if (p.age >= 33) { const d = 1 + Math.floor(Math.random() * 3); p.ovr = Math.max(40, p.ovr - d); if (p.attr) Object.keys(p.attr).forEach(k => p.attr[k] -= d); } });   // 나이: 유망주 성장 / 베테랑 하락
-            leagueState = { v: 2, season: (old?.season || 0) + 1, li, ids, round: 0, myPlayed: 0, status: 'playing', schedule: leagueSchedule(ids), ps: {}, history, champion: null };
+            leagueState = { v: 2, season: (old?.season || 0) + 1, li, highestReachedLi: Math.max(highestReachedLi, li), ids, round: 0, myPlayed: 0, status: 'playing', schedule: leagueSchedule(ids), ps: {}, history, champion: null };
             if(!old)ach.stats.seasonStartTokens=tokens; else ach.stats.seasonStartTokens=tokens; saveAch();reconcileAchievements();skipByes();persistLeague();renderLeague();
         }
         function finishLeagueSeason() {
@@ -4689,13 +4690,49 @@
             return `${s.round} 진출! +${award} 토큰`;
         }
 
+        // 해금은 최고 리그 도달 기록을 기준으로 유지한다.
+        const SAUDI_UNLOCK_LEAGUES = [0, 1, 3, 4, 6, 8, 10, 12, 13];
+        function saudiReachedLeague() {
+            const l = leagueState;
+            if (!l) return 0;
+            const valid = v => Number.isInteger(v) && v >= 0 && v < LG.length ? v : 0;
+            let highest = Math.max(valid(l.li), valid(l.highestReachedLi));
+            if (l.status === 'finished') highest = Math.max(highest, valid(l.nextLi));
+            for (const h of l.history || []) {
+                const i = LG.findIndex(x => x.n === h.l);
+                if (i >= 0) highest = Math.max(highest, Math.min(LG.length - 1, i + (h.up ? 1 : 0)));
+            }
+            return highest;
+        }
+        function saudiUnlockInfo(team) {
+            const index = saudiData.findIndex(x => x.id === team?.id);
+            const required = index >= 0 ? SAUDI_UNLOCK_LEAGUES[index] : LG.length;
+            return { unlocked: index >= 0 && saudiReachedLeague() >= required, league: LG[required]?.n || '상위 리그' };
+        }
+        function checkSaudiUnlock(team) {
+            const info = saudiUnlockInfo(team);
+            if (!info.unlocked) { alert(`${info.league}에 도달하여 해금할 수 있습니다.`); return false; }
+            return true;
+        }
         function initSaudiMode() {
             const list = document.getElementById('saudi-team-list'); list.innerHTML = '';
             saudiData.forEach(team => {
-                const el = document.createElement('div');
-                el.className = "min-w-0 bg-gray-800 rounded-2xl p-4 flex flex-col items-center justify-center border border-gray-600 hover:border-yellow-400 hover:-translate-y-1 transition cursor-pointer shadow-xl";
-                el.onclick = () => openPrematch('saudi', team);
-                el.innerHTML = `<img src="${team.logo}" class="w-20 h-20 object-contain mb-2 drop-shadow-lg" alt=""><h2 class="text-lg font-black text-white mb-1 text-center">${team.name}</h2><p class="text-gray-400 font-bold mb-2">OVR ${team.ovr}</p><div class="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm font-bold border border-yellow-500/50">승리 시 ${team.reward} T</div>`;
+                const info = saudiUnlockInfo(team), el = document.createElement('div');
+                el.className = 'min-w-0 bg-gray-800 rounded-2xl p-4 flex flex-col items-center justify-center border border-gray-600 transition shadow-xl';
+                el.style.position = 'relative';
+                const content = `<img src="${team.logo}" class="w-20 h-20 object-contain mb-2 drop-shadow-lg" alt=""><h2 class="text-lg font-black text-white mb-1 text-center">${team.name}</h2><p class="text-gray-400 font-bold mb-2">OVR ${team.ovr}</p><div class="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm font-bold border border-yellow-500/50">승리 시 ${team.reward} T</div>`;
+                if (info.unlocked) {
+                    el.classList.add('hover:border-yellow-400', 'hover:-translate-y-1', 'cursor-pointer');
+                    el.setAttribute('role', 'button'); el.tabIndex = 0;
+                    el.onclick = () => openPrematch('saudi', team);
+                    el.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); el.click(); } };
+                    el.setAttribute('aria-label', `${team.name} · 승리 시 ${team.reward} 토큰`);
+                    el.innerHTML = content;
+                } else {
+                    el.setAttribute('aria-disabled', 'true'); el.style.cursor = 'not-allowed';
+                    el.setAttribute('aria-label', `${team.name} · ${info.league}에 도달하여 해금`);
+                    el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;opacity:.3;filter:grayscale(1)">${content}</div><div style="position:absolute;inset:0;border-radius:16px;background:rgba(0,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;text-align:center;pointer-events:none"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 10h14v11H5ZM8 10V6a4 4 0 0 1 8 0v4"/></svg><b style="margin-top:10px;color:white;font-size:14px;line-height:1.6;text-shadow:0 2px 5px #000">${info.league}에 도달하여 해금</b></div>`;
+                }
                 list.appendChild(el);
             });
         }
@@ -7243,6 +7280,7 @@
             return '사우디 모드';
         }
         function openPrematch(mode, e) {
+            if (mode === 'saudi' && !checkSaudiUnlock(e)) return;
             fixInstr();
             let mine = players.filter(p => p.isStarting);
             if (mine.length < 11 || mine.some(p => p.slotIndex === -1)) { autoAssignStarters(sandboxMode(mode)); saveData(); mine = players.filter(p => p.isStarting); }
@@ -7456,6 +7494,7 @@
         }
         function formQ(st, home) { const F = st.formF; return F ? (home ? F.h.own * F.a.opp : F.a.own * F.h.opp) : 1; }
         function prepareMatch(mode, enemyData, matchSetup = null, onlineContext = null) {
+            if (mode === 'saudi' && !checkSaudiUnlock(enemyData)) return;
 
             let userStarters = players.filter(p => p.isStarting);
             if (userStarters.length < 11 || userStarters.some(p => p.slotIndex === -1)) { autoAssignStarters(sandboxMode(mode)); saveData(); userStarters = players.filter(p => p.isStarting); }
@@ -9301,7 +9340,7 @@
                 rewardText = rogueAfterMatch(st);
             } else if(st.mode === 'saudi') {
                 document.getElementById('match-end-title').innerText = "사우디 친선경기 종료";
-                if(userWon) { awardTokens(st.enemy.reward + gdBonus,'match_reward'); updateTokensUI(); saveData(); rewardText = `승리! +${st.enemy.reward} 토큰 + 득실차 보너스 +${gdBonus} 토큰 (총 +${st.enemy.reward + gdBonus})`; } 
+                if(userWon) { awardTokens(st.enemy.reward,'match_reward'); updateTokensUI(); saveData(); rewardText = `승리! +${st.enemy.reward} 토큰`; } 
                 else if(draw) { rewardText = "무승부! 보상 없음"; } else { rewardText = "패배! 보상 없음"; }
             } else if(st.mode === 'europa') {
                 matchReport(st, '유로파리그');
