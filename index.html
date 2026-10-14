@@ -3373,7 +3373,13 @@
         }
         async function boundedAuthFetch(input,init={}){
             const url=typeof input==='string'?input:input?.url||String(input);
-            if(!url.includes('/auth/v1/'))return fetch(input,init);
+            if(!url.includes('/auth/v1/')){
+                const response=await fetch(input,init);
+                if(response.status===401||response.status===403){
+                    try{const error=await response.clone().json();if(/SESSION_REQUIRED|SESSION_INVALID/.test(String(error.message||''))&&gameSessionOwner)blockGameSession();}catch(_){}
+                }
+                return response;
+            }
             const controller=new AbortController(),original=init.signal;
             const cancel=()=>controller.abort();if(original?.aborted)cancel();else original?.addEventListener('abort',cancel,{once:true});
             const timer=setTimeout(cancel,12000);
@@ -3723,6 +3729,8 @@
         function accountMessage(message) { document.getElementById('account-error').textContent = message; }
         let accountLoginStage='로그인 준비';
         function accountLoginFailure(error,message){
+            if(error?.code==='ACCOUNT_IN_USE'){accountMessage(error.message);return;}
+            if(accountLoginStage==='계정 동시 접속 확인'&&['PGRST202','42883'].includes(String(error?.code))){accountMessage('동시 접속 제한 SQL을 서버에 먼저 적용해 주세요.');return;}
             const raw=String(error?.code||''),text=String(error?.message||''),name=String(error?.name||'');
             const code=/^[A-Za-z0-9_]{1,48}$/.test(raw)?raw
                 : /timeout|timed out/i.test(text)||name==='AbortError'?'CLIENT_TIMEOUT'
@@ -4228,7 +4236,53 @@
                 sessionStorage.setItem('yfm_restored_account',owner);location.reload();
             }catch(error){console.warn('관리자 변경 사항 불러오기 실패:',error);}
         }
+        // Server-issued Auth session_id identifies one device login. No local flag
+        // is trusted for payout authorization; PostgreSQL checks every request.
+        var gameSessionOwner=null,gameSessionDeadline=0,gameSessionTimer=null,gameSessionBusy=false,gameSessionBlocked=false;
+        async function claimGameSession(user){
+            accountLoginStage='계정 동시 접속 확인';
+            const reply=await walletRpcWithRetry('yfm_session_claim',{}, {maxAttempts:1,timeoutMs:10000});
+            if(!reply.data?.ok){const wait=Math.max(1,Number(reply.data?.retry_after)||120);throw {code:'ACCOUNT_IN_USE',message:`다른 기기에서 이 계정을 이용 중입니다. 해당 기기에서 로그아웃하거나 게임을 닫고 최대 ${wait}초 후 다시 로그인해 주세요.`};}
+            gameSessionOwner=user.id;gameSessionDeadline=Date.now()+Number(reply.data.ttl_seconds||120)*1000;gameSessionBlocked=false;
+        }
+        function blockGameSession(message){
+            if(gameSessionBlocked)return;gameSessionBlocked=true;
+            if(typeof preservePendingSave==='function')preservePendingSave();
+            window.yfmAccountReady=false;clearInterval(gameSessionTimer);gameSessionTimer=null;
+            if(typeof currentMatchState!=='undefined'&&currentMatchState&&!currentMatchState.ended){currentMatchState.isPaused=true;currentMatchState.userPaused=true;currentMatchState.netHold=true;}
+            let box=document.getElementById('yfm-single-session-cover');
+            if(!box){box=document.createElement('div');box.id='yfm-single-session-cover';box.style.cssText='position:fixed;inset:0;z-index:200000;background:#10091aee;display:flex;align-items:center;justify-content:center;padding:20px;color:white';
+                const panel=document.createElement('div');panel.style.cssText='width:min(430px,100%);padding:24px;background:#21142e;border:1px solid #785192;border-radius:16px;text-align:center';
+                const text=document.createElement('p');text.id='yfm-single-session-message';panel.append(text);
+                const retry=document.createElement('button');retry.textContent='접속 다시 확인';retry.style.cssText='margin-top:18px;padding:12px 20px;background:#6d28a8;border-radius:9px';retry.onclick=async()=>{try{await claimGameSession(accountUser);location.reload();}catch(e){text.textContent=e.message||'잠시 후 다시 시도해 주세요.';}};
+                const out=document.createElement('button');out.textContent='이 기기에서 로그아웃';out.style.cssText='display:block;margin:12px auto;padding:8px';out.onclick=async()=>{await releaseGameSession();await getOwnerRankClient().auth.signOut({scope:'local'});location.reload();};
+                panel.append(retry,out);box.append(panel);document.body.append(box);
+            }
+            document.getElementById('yfm-single-session-message').textContent=message||'접속 확인이 만료되었습니다. 다른 기기에서 이 계정을 이용 중인지 확인해 주세요. 진행도는 기기에 보관됩니다.';
+        }
+        async function heartbeatGameSession(){
+            if(!gameSessionOwner||gameSessionBusy||gameSessionBlocked)return;
+            gameSessionBusy=true;
+            try{const reply=await walletRpcWithRetry('yfm_session_heartbeat',{}, {maxAttempts:1,timeoutMs:8000});
+                if(!reply.data?.ok){blockGameSession();return;}
+                gameSessionDeadline=Date.now()+Number(reply.data.ttl_seconds||120)*1000;
+            }catch(e){if(/SESSION_|ACCOUNT_SUSPENDED/.test(String(e.message||''))||Date.now()>=gameSessionDeadline)blockGameSession();}
+            finally{gameSessionBusy=false;}
+        }
+        function startGameSessionHeartbeat(){
+            clearInterval(gameSessionTimer);gameSessionTimer=setInterval(heartbeatGameSession,30000);
+        }
+        async function releaseGameSession(){
+            clearInterval(gameSessionTimer);gameSessionTimer=null;
+            if(gameSessionOwner){try{await walletRpcWithRetry('yfm_session_release',{}, {maxAttempts:1,timeoutMs:5000});}catch(e){console.warn('접속 종료 확인 실패:',e);}}
+            gameSessionOwner=null;gameSessionDeadline=0;
+        }
+        setInterval(()=>{if(gameSessionOwner&&!gameSessionBlocked&&Date.now()>=gameSessionDeadline)blockGameSession();},1000);
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden&&gameSessionOwner){if(Date.now()>=gameSessionDeadline)blockGameSession();else heartbeatGameSession();}});
+        window.addEventListener('online',heartbeatGameSession);
+
         async function enterGameAccount(user) {
+            await claimGameSession(user);
             accountLoginStage='게임 진입 준비';accountMessage('계정 이용 상태와 저장 기록을 확인하는 중...');
             let data,balance;
             if(startupBundleAvailable!==false){
@@ -4328,7 +4382,7 @@
             accountLoginStage=balance!==undefined?'서버 토큰 잔액 적용':'서버 토큰 잔액 조회 (yfm_wallet_get)';
             if(balance!==undefined)applyServerWallet(balance);else await loadServerWallet({maxAttempts:1,timeoutMs:10000,force:true});
             accountLoginStage='게임 화면 초기화';
-            window.yfmAccountReady=true;
+            window.yfmAccountReady=true;startGameSessionHeartbeat();
             setTimeout(()=>{if(accountUser?.id!==user.id||!window.yfmAccountReady)return;if(typeof window.yfmCheckAdmin==='function')window.yfmCheckAdmin();settleLeagueRewards();},2000);
             finishAccountResume();
             document.getElementById('account-gate').style.display='none';
@@ -4352,7 +4406,8 @@
             await uploadAccountSnapshot(true);
             if(accountDirty&&!confirm('서버에 저장하지 못한 기록이 있습니다. 기기에 보관한 뒤 로그아웃할까요?'))return;
             preservePendingSave();
-            await getOwnerRankClient().auth.signOut();
+            await releaseGameSession();
+            await getOwnerRankClient().auth.signOut({scope:'local'});
             sessionStorage.removeItem('yfm_restored_account');
             sessionStorage.removeItem('yfm_cloud_restore_receipt');
             accountUser=null;accountSyncBase=null;accountSaveConflict=null;document.getElementById('yfm-save-conflict')?.remove();clearTimeout(accountSaveTimer);accountPendingRemote=null;tokenWalletBalance=null;window.yfmAccountReady=false;
@@ -12404,7 +12459,7 @@ async function checkGameAccess(uid,required=false,prefetchedStatus=null){
   let cover=document.getElementById('yfm-suspended');
   if(!cover){cover=document.createElement('div');cover.id='yfm-suspended';cover.style.cssText='position:fixed;inset:0;z-index:2147483647;background:#130d20;display:flex;align-items:center;justify-content:center;color:white;padding:30px';document.body.append(cover);}
   cover.replaceChildren();const box=document.createElement('div'),title=document.createElement('h2'),reason=document.createElement('p'),out=document.createElement('button');
-  title.textContent='정지된 계정입니다';title.style.cssText='font-size:26px;font-weight:900;margin-bottom:16px';reason.textContent=data.reason||'관리자에 의해 이용이 제한되었습니다.';out.textContent='로그아웃';out.style.cssText='background:#6d28a8;padding:12px;border-radius:9px;margin-top:20px';out.onclick=async()=>{await getOwnerRankClient().auth.signOut();location.reload();};box.append(title,reason,out);cover.append(box);return false;
+  title.textContent='정지된 계정입니다';title.style.cssText='font-size:26px;font-weight:900;margin-bottom:16px';reason.textContent=data.reason||'관리자에 의해 이용이 제한되었습니다.';out.textContent='로그아웃';out.style.cssText='background:#6d28a8;padding:12px;border-radius:9px;margin-top:20px';out.onclick=async()=>{await getOwnerRankClient().auth.signOut({scope:'local'});location.reload();};box.append(title,reason,out);cover.append(box);return false;
  }catch(e){if(required)throw new Error('계정 이용 권한을 확인하지 못했습니다. 추가 SQL 적용과 연결을 확인해 주세요.');console.warn('계정 상태 확인 실패',e);return !gameBlocked;}finally{gameAccessBusy=false;}
 }
 function supportErrorMessage(e){
