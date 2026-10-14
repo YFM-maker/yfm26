@@ -4054,6 +4054,7 @@
             if(accountUser?.id!==owner)return false;
             rememberLeagueProgress(owner);
             snapshot=mergeAdvancedLeague(snapshot,readLeagueCheckpoint(owner));
+            accountSyncBase=snapshot;storeSaveRecord(owner,{...readSaveRecord(owner),base:snapshot,pending:null});
             rememberCloudRestore(owner,snapshot);
             window.__wiping=true;
             restoreAccountSnapshot(snapshot);
@@ -4066,7 +4067,9 @@
             const owner=accountUser?.id;
             if(!owner||!window.yfmAccountReady||window.__wiping||accountSaving||cloudProgressReading||document.hidden||cloudMatchInProgress())return;
             if(accountPendingRemote&&accountPendingRemote.owner!==owner)accountPendingRemote=null;
-            if(accountPendingRemote){restoreSyncedAccount(owner,accountPendingRemote.snapshot);return;}
+            if(accountSaveConflict)return;
+            if(accountSyncBase&&cloudSnapshotFingerprint(accountSnapshot())!==cloudSnapshotFingerprint(accountSyncBase))accountDirty=true;
+            if(accountPendingRemote){preservePendingSave();if(accountDirty)return;restoreSyncedAccount(owner,accountPendingRemote.snapshot);return;}
             if(accountDirty){await uploadAccountSnapshot(true);return;}
             cloudProgressReading=true;
             try{
@@ -4077,6 +4080,7 @@
                 const revision=Number.isSafeInteger(remote.sync_revision)?String(remote.sync_revision):null;
                 const knownVersion=revision!==null?revision===observedRevision:remote.at===localStorage.getItem('yfm_sync_at');
                 if(!knownVersion&&cloudSnapshotFingerprint(remote)!==cloudSnapshotFingerprint(accountSnapshot())){restoreSyncedAccount(owner,remote);return;}
+                accountSyncBase=remote;confirmDurableSave(owner,remote);
                 localStorage.setItem('yfm_sync_at',remote.at||'');localStorage.setItem('yfm_sync_revision',String(Number.isSafeInteger(remote.sync_revision)?remote.sync_revision:0));accountLastSnapshot=canonData(remote.data);
             }catch(e){console.warn('다른 기기 진행도 확인 실패:',e);}finally{cloudProgressReading=false;}
         }
@@ -4094,50 +4098,125 @@
             Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
             Object.entries(expandTournamentLogos(snapshot.data)).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && typeof v==='string') localStorage.setItem(k,v);});
         }
-        async function uploadAccountSnapshot(force=false,initialSave=false) {
-            if (!accountUser || accountSaving || window.__wiping || (!window.yfmAccountReady&&!initialSave)) return;
-            if (!force && (!accountDirty || Date.now()-accountLastWrite<55000)) return;
-            if(tokenWalletPending>0){accountDirty=true;return;}
-            if(accountPendingRemote&&accountPendingRemote.owner!==accountUser.id)accountPendingRemote=null;
-            if(accountPendingRemote){
-                if(cloudMatchInProgress())return;
-                restoreSyncedAccount(accountUser.id,accountPendingRemote.snapshot);return;
-            }
-            accountSaving=true;const saveOwner=accountUser.id;
-            try {
-                if(window.yfmAccountReady)await optimizeAccountLogo(saveOwner);if(accountUser?.id!==saveOwner)return;
-                if(tokenWalletPending>0){accountDirty=true;return;}
-                const walletRevisionAtStart=tokenWalletRevision,snapshot=accountSnapshot(), serialized=canonData(snapshot.data);
-                if (serialized===accountLastSnapshot) {accountDirty=false;return;}
-                let reply;
-                try{
-                    reply=await walletRpcWithRetry('yfm_save_progress_synced',{p_snapshot:snapshot,p_base_at:localStorage.getItem('yfm_sync_at')||null,p_base_revision:localStorage.getItem('yfm_sync_revision')||null},{maxAttempts:2});
-                }catch(e){
-                    if(['PGRST202','42883'].includes(String(e.code))&&!accountSyncSetupWarned){
-                        accountSyncSetupWarned=true;
-                        if(typeof managerToast==='function')managerToast('진행도 동기화 SQL을 먼저 적용해 주세요. 기기 저장은 유지됩니다.');
-                    }
-                    throw e;
-                }
-                if(!reply.data?.ok||!Number.isSafeInteger(Number(reply.data.balance))||Number(reply.data.balance)<0||typeof reply.data.at!=='string'||!reply.data.save_data?.data||!Number.isSafeInteger(reply.data.save_data.sync_revision)||reply.data.save_data.sync_revision<0)throw new Error('서버 저장 결과를 확인하지 못했습니다.');
-                const saved={save_data:reply.data.save_data},error=null;
-                if(error)throw error;if(accountUser?.id!==saveOwner)return;
-                // DB trigger returns the server-approved token value; overwrite any locally injected balance.
-                const serverTokens=Number(saved?.save_data?.data?.fm_tokens);
-                if(Number.isSafeInteger(serverTokens)&&serverTokens>=0&&walletRevisionAtStart===tokenWalletRevision){tokenWalletRevision++;tokenWalletBalance=serverTokens;if(serverTokens!==tokens){tokens=serverTokens;localStorage.setItem('fm_tokens',String(serverTokens));updateTokensUI();}}
-                const acceptedData=saved?.save_data?.data||snapshot.data;
-                accountLastSnapshot=canonData(acceptedData);accountLastWrite=Date.now();accountDirty=canonData(accountSnapshot().data)!==accountLastSnapshot;localStorage.setItem('yfm_sync_at', saved?.save_data?.at||snapshot.at);
-                localStorage.setItem('yfm_sync_revision',String(saved.save_data.sync_revision));
-                rememberLeagueProgress(saveOwner,saved.save_data);
-                const needsConflictRestore=reply.data.conflict&&cloudSnapshotFingerprint(saved.save_data)!==cloudSnapshotFingerprint(snapshot);
-                if(needsConflictRestore || compareLeagueSnapshots(saved.save_data,accountSnapshot())>0){
-                    accountPendingRemote={owner:saveOwner,snapshot:saved.save_data};
-                    if(!cloudMatchInProgress())restoreSyncedAccount(saveOwner,saved.save_data);
-                    else if(typeof managerToast==='function')managerToast('다른 기기의 최신 기록을 확인했습니다. 경기 종료 후 동기화합니다.');
-                }
-            } catch(error) {accountDirty=true; console.warn('클라우드 저장 실패:',error);if(String(error?.message||'').includes('ADMIN_SAVE_UPDATED'))await refreshAdminEditedSave();}
-            finally {accountSaving=false;}
+        // One acknowledged baseline and one unacknowledged snapshot per account.
+        let accountSyncBase=null,accountSaveTimer=null,accountSaveConflict=null,accountJournalWarned=false;
+        function saveRecordKey(owner){return 'yfm_durable_save_v1_'+owner;}
+        function readSaveRecord(owner){try{const r=JSON.parse(localStorage.getItem(saveRecordKey(owner))||'null');return r?.owner===owner?r:null;}catch(_){return null;}}
+        function saveStatus(text,failed=false){
+            let el=document.getElementById('yfm-durable-save-status');
+            if(!el){el=document.createElement('div');el.id='yfm-durable-save-status';el.style.cssText='position:fixed;bottom:8px;right:8px;z-index:100001;max-width:90vw;padding:7px 10px;border-radius:8px;background:#181126;color:white;font:12px sans-serif';document.body.append(el);}
+            el.textContent=text;el.style.color=failed?'#fca5a5':'#c4f9ce';
         }
+        function storeSaveRecord(owner,record){
+            try{localStorage.setItem(saveRecordKey(owner),JSON.stringify({owner,...record}));return true;}
+            catch(e){if(!accountJournalWarned){accountJournalWarned=true;saveStatus('기기 저장 공간이 부족합니다. 서버 저장 완료를 확인해 주세요.',true);}return false;}
+        }
+        function preservePendingSave(owner=accountUser?.id){
+            if(!owner||window.__wiping||localStorage.getItem(accountDeviceKey)!==owner)return null;
+            const snapshot=accountSnapshot(),record=readSaveRecord(owner);
+            const base=accountSyncBase||record?.base||null;
+            if(base&&cloudSnapshotFingerprint(snapshot)===cloudSnapshotFingerprint(base)&&!record?.pending)return null;
+            storeSaveRecord(owner,{base,pending:snapshot});return snapshot;
+        }
+        function confirmDurableSave(owner,snapshot){
+            accountSyncBase=JSON.parse(JSON.stringify(snapshot));
+            const current=accountSnapshot();
+            const dirty=cloudSnapshotFingerprint(current)!==cloudSnapshotFingerprint(snapshot);
+            storeSaveRecord(owner,{base:accountSyncBase,pending:dirty?current:null});
+            return dirty;
+        }
+        function planDurableSave(){
+            if(!accountUser?.id||!window.yfmAccountReady||window.__wiping)return;
+            preservePendingSave();clearTimeout(accountSaveTimer);
+            // Coalesce actions; the match renderer and Broadcast timing are unchanged.
+            accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.max(1500,15000-(Date.now()-accountLastWrite)));
+            saveStatus('기기에 보관됨 · 서버 저장 대기');
+        }
+        function mergeSaveChanges(local,remote,base){
+            if(!base?.data)return {snapshot:local,conflicts:['기준 저장 기록 없음']};
+            const same=(a,b)=>cloudSnapshotFingerprint({data:{value:a}})===cloudSnapshotFingerprint({data:{value:b}});
+            const result={...remote,data:{...remote.data}},conflicts=[];
+            for(const key of new Set([...Object.keys(base.data),...Object.keys(local.data),...Object.keys(remote.data)])){
+                if(key==='fm_tokens')continue;
+                const before=base.data[key],mine=local.data[key],theirs=remote.data[key];
+                if(same(mine,before)||same(mine,theirs))continue;
+                if(!same(theirs,before)){conflicts.push(key);continue;}
+                if(mine===undefined)delete result.data[key];else result.data[key]=mine;
+            }
+            return {snapshot:result,conflicts};
+        }
+        function showSaveConflict(owner,remote,conflicts){
+            if(accountUser?.id!==owner)return;
+            accountSaveConflict={owner,remote,conflicts};saveStatus('저장 충돌 · 기기 진행도는 보관 중입니다',true);
+            if(document.getElementById('yfm-save-conflict'))return;
+            const box=document.createElement('div');box.id='yfm-save-conflict';box.style.cssText='position:fixed;bottom:50px;right:10px;z-index:100002;width:min(400px,94vw);padding:16px;background:#21142e;border:2px solid #fd9f28;border-radius:12px;color:white;font:14px sans-serif';
+            const text=document.createElement('p');text.textContent='다른 기기에서도 같은 항목이 변경되어 자동으로 합칠 수 없습니다. 현재 진행도는 기기에 보관됩니다. 기록을 다운로드한 후 사용할 기록을 선택해 주세요.';box.append(text);
+            const button=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.style.cssText='display:block;width:100%;padding:9px;margin-top:8px;background:#65408a;border-radius:7px';b.onclick=fn;box.append(b);};
+            button('두 기록 다운로드',()=>{
+                const conflict=accountSaveConflict;if(!conflict||accountUser?.id!==owner)return;
+                const blob=new Blob([JSON.stringify({owner,local:accountSnapshot(),server:conflict.remote,base:accountSyncBase},null,2)],{type:'application/json'});
+                const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='YFM-save-recovery.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+            });
+            button('현재 기기 기록으로 저장',async()=>{
+                const conflict=accountSaveConflict;if(!conflict||accountUser?.id!==owner)return;
+                if(conflict.remote.data.fm_admin_revision!==accountSnapshot().data.fm_admin_revision){alert('관리자 변경 사항이 있습니다. 서버 기록을 불러와 주세요.');return;}
+                if(!confirm('다른 기기의 변경 사항 대신 현재 기기의 기록을 사용할까요? 먼저 두 기록을 다운로드하세요.'))return;
+                accountSyncBase=conflict.remote;accountSaveConflict=null;box.remove();accountDirty=true;preservePendingSave();await uploadAccountSnapshot(true);
+            });
+            button('서버 기록 불러오기',()=>{
+                const conflict=accountSaveConflict;if(!conflict||accountUser?.id!==owner)return;
+                if(!confirm('현재 기기 변경 사항 대신 서버 기록을 불러올까요? 먼저 두 기록을 다운로드하세요.'))return;
+                storeSaveRecord(owner,{base:conflict.remote,pending:null,recovery:accountSnapshot()});accountSyncBase=conflict.remote;accountSaveConflict=null;box.remove();restoreSyncedAccount(owner,conflict.remote);
+            });
+            document.body.append(box);
+        }
+        async function uploadAccountSnapshot(force=false,initialSave=false){
+            if(!accountUser||window.__wiping||(!window.yfmAccountReady&&!initialSave))return;
+            const owner=accountUser.id;
+            preservePendingSave(owner);
+            if(accountSaving||tokenWalletPending>0||accountSaveConflict)return;
+            if(!force&&(!accountDirty||Date.now()-accountLastWrite<55000))return;
+            accountSaving=true;
+            try{
+                if(window.yfmAccountReady)await optimizeAccountLogo(owner);
+                if(accountUser?.id!==owner||window.__wiping||tokenWalletPending>0)return;
+                let snapshot=accountSnapshot(),base=accountSyncBase||readSaveRecord(owner)?.base;
+                if(canonData(snapshot.data)===accountLastSnapshot){accountDirty=false;confirmDurableSave(owner,base||snapshot);return;}
+                // Capture local data BEFORE the request; a close/timeout cannot erase it.
+                preservePendingSave(owner);saveStatus('서버에 저장 중…');
+                const walletVersion=tokenWalletRevision;
+                for(let attempt=0;attempt<2;attempt++){
+                    const reply=await walletRpcWithRetry('yfm_save_progress_safe',{p_snapshot:snapshot,p_base_at:base?.at||null,p_base_revision:base?.sync_revision!=null?String(base.sync_revision):null},{maxAttempts:2});
+                    if(accountUser?.id!==owner||window.__wiping)return;
+                    const data=reply.data,accepted=data?.save_data;
+                    if(!accepted?.data||!Number.isSafeInteger(accepted.sync_revision)||!Number.isSafeInteger(Number(data.balance)))throw new Error('서버 저장 결과를 확인하지 못했습니다.');
+                    if(data.conflict&&!data.ok){
+                        const current=accountSnapshot(),merged=mergeSaveChanges(current,accepted,base);
+                        if(merged.conflicts.length||cloudMatchInProgress()||attempt===1){showSaveConflict(owner,accepted,merged.conflicts);return;}
+                        // Restore only a completed, non-overlapping rebase. The merged
+                        // unsent record survives the reload and is sent on next login.
+                        storeSaveRecord(owner,{base:accepted,pending:merged.snapshot});
+                        restoreAccountSnapshot(merged.snapshot);rememberCloudRestore(owner,merged.snapshot);
+                        localStorage.setItem(accountDeviceKey,owner);reloadForAccountRestore();return;
+                    }
+                    if(!data.ok)throw new Error('서버 저장에 실패했습니다.');
+                    const localNow=accountSnapshot();
+                    if(walletVersion===tokenWalletRevision)applyServerWallet(Number(data.balance));
+                    accountLastSnapshot=canonData(accepted.data);accountLastWrite=Date.now();
+                    localStorage.setItem('yfm_sync_at',accepted.at||'');localStorage.setItem('yfm_sync_revision',String(accepted.sync_revision));
+                    accountDirty=confirmDurableSave(owner,accepted);rememberLeagueProgress(owner,accepted);
+                    // Server normalization must never overwrite actions made while
+                    // this request was in flight. Keep them pending for the next save.
+                    if(cloudSnapshotFingerprint(accepted)!==cloudSnapshotFingerprint(snapshot)&&cloudSnapshotFingerprint(localNow)===cloudSnapshotFingerprint(snapshot)){
+                        storeSaveRecord(owner,{base:accepted,pending:null});restoreSyncedAccount(owner,accepted);return;
+                    }
+                    saveStatus(accountDirty?'새 변경 사항 저장 대기':'서버 저장 완료');
+                    if(accountDirty)planDurableSave();return;
+                }
+            }catch(e){accountDirty=true;preservePendingSave(owner);saveStatus('서버 저장 실패 · 기기 기록 보관 중',true);console.warn('클라우드 저장 실패:',e);}
+            finally{accountSaving=false;}
+        }
+
         async function refreshAdminEditedSave() {
             const owner=accountUser?.id;if(!owner)return;
             try {
@@ -4174,8 +4253,25 @@
             }
             accountLoginStage='게임 저장 기록 복원·기기 저장소 처리';
             const previousOwner=localStorage.getItem(accountDeviceKey);
+            let journal=readSaveRecord(user.id);
+            // First upgrade: preserve an existing unconfirmed device save BEFORE
+            // the older login code gets a chance to replace it with server data.
+            if(!journal&&previousOwner===user.id&&window.yfmHadLocalProgress&&data?.save_data&&
+               cloudSnapshotFingerprint(accountSnapshot())!==cloudSnapshotFingerprint(data.save_data)){
+                const lastRevision=localStorage.getItem('yfm_sync_revision');
+                const oldBase={app:'YFM',at:localStorage.getItem('yfm_sync_at')||null,data:null};
+                if(lastRevision!==null&&Number.isSafeInteger(Number(lastRevision)))oldBase.sync_revision=Number(lastRevision);
+                storeSaveRecord(user.id,{base:oldBase,pending:accountSnapshot()});journal=readSaveRecord(user.id);
+            }
+            const pending=journal?.pending;
+            accountSyncBase=journal?.base||data?.save_data||null;
+            if(pending&&!window.yfmResumingAccount){
+                restoreAccountSnapshot(pending);rememberCloudRestore(user.id,pending);
+                localStorage.setItem(accountDeviceKey,user.id);reloadForAccountRestore();return;
+            }
+
             const serverBeforeMerge=data?.save_data?canonData(data.save_data.data):'';
-            if(data?.save_data){
+            if(data?.save_data&&!pending){
                 localStorage.setItem('yfm_sync_revision',String(Number.isSafeInteger(data.save_data.sync_revision)?data.save_data.sync_revision:0));
                 if(previousOwner===user.id&&window.yfmHadLocalProgress){
                     rememberLeagueProgress(user.id,accountSnapshot());
@@ -4183,7 +4279,11 @@
                 }
                 data.save_data=mergeAdvancedLeague(data.save_data,readLeagueCheckpoint(user.id));
             }
-            if (data?.save_data) {
+            if(pending){
+                accountLastSnapshot=accountSyncBase?.data?canonData(accountSyncBase.data):'';
+                accountDirty=true;
+                setTimeout(()=>uploadAccountSnapshot(true),1500);
+            } else if (data?.save_data) {
                 const remote=canonData(compactTournamentLogos({...data.save_data.data})), remoteAt=data.save_data.at||'', syncAt=localStorage.getItem('yfm_sync_at')||'';
                 // 계정의 서버 기록을 우선한다. 다른 계정의 로컬 데이터는 업로드하지 않는다.
                 // 실제 서버 버전을 기준으로 복원한다. 같은 저장 시각의 초기 정리 작업은 업로드로 반영한다.
@@ -4217,12 +4317,13 @@
                     Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
                     localStorage.setItem(accountDeviceKey,user.id); reloadForAccountRestore(); return;
                 }
-                accountUser=user;accountDirty=true;
+                accountUser=user;accountDirty=true;localStorage.setItem(accountDeviceKey,user.id);
                 accountLoginStage='첫 클라우드 저장';
                 await uploadAccountSnapshot(true,true);
                 if (accountDirty) throw new Error('첫 클라우드 저장에 실패했어.');
             }
             localStorage.setItem(accountDeviceKey,user.id);
+            if(!pending&&data?.save_data){accountSyncBase=data.save_data;storeSaveRecord(user.id,{base:accountSyncBase,pending:null});}
             accountUser=user;
             accountLoginStage=balance!==undefined?'서버 토큰 잔액 적용':'서버 토큰 잔액 조회 (yfm_wallet_get)';
             if(balance!==undefined)applyServerWallet(balance);else await loadServerWallet({maxAttempts:1,timeoutMs:10000,force:true});
@@ -4243,16 +4344,18 @@
         setInterval(()=>{if(accountDirty)uploadAccountSnapshot(true);else pollCloudProgress();},30000);
         window.addEventListener('online',()=>pollCloudProgress());
         document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollCloudProgress();});
-        document.addEventListener('visibilitychange',()=>{if(document.hidden)uploadAccountSnapshot(true);});
-        window.addEventListener('pagehide',()=>{if(accountDirty)uploadAccountSnapshot(true);});
+        document.addEventListener('visibilitychange',()=>{if(document.hidden){preservePendingSave();uploadAccountSnapshot(true);}});
+        window.addEventListener('pagehide',()=>{preservePendingSave();if(accountDirty)uploadAccountSnapshot(true);});
         async function signOutGameAccount() {
             if(typeof window.yfmResetAdmin==='function')window.yfmResetAdmin();
             socialFriendId=null;supportPeers.clear();supportUnread.clear();socialUnread.clear();
             await uploadAccountSnapshot(true);
+            if(accountDirty&&!confirm('서버에 저장하지 못한 기록이 있습니다. 기기에 보관한 뒤 로그아웃할까요?'))return;
+            preservePendingSave();
             await getOwnerRankClient().auth.signOut();
             sessionStorage.removeItem('yfm_restored_account');
             sessionStorage.removeItem('yfm_cloud_restore_receipt');
-            accountUser=null;accountPendingRemote=null;tokenWalletBalance=null;window.yfmAccountReady=false;
+            accountUser=null;accountSyncBase=null;accountSaveConflict=null;document.getElementById('yfm-save-conflict')?.remove();clearTimeout(accountSaveTimer);accountPendingRemote=null;tokenWalletBalance=null;window.yfmAccountReady=false;
             ownerRankRegistered=false;ownerRankLastSent='';
             socialFriendId=null;socialFriends=[];
             document.getElementById('social-search-result').replaceChildren();
@@ -4304,6 +4407,7 @@
             updateTokensUI(); 
             queueOwnerRankSync();
             accountDirty = true;
+            planDurableSave();
             if(accountUser?.id&&window.yfmAccountReady)rememberLeagueProgress(accountUser.id);
             if(accountUser?.id && tokenWalletBalance!==null && Number(tokens)!==tokenWalletBalance && !tokenWalletRefreshQueued){tokenWalletRefreshQueued=true;queueWalletOperation(async()=>{try{await loadServerWallet();}finally{tokenWalletRefreshQueued=false;}});}
             updateTeamNameUI();
