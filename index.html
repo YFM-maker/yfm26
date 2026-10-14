@@ -12277,6 +12277,13 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
 })();
 
 </script>
+
+<style>
+#yfm-admin-section-cards .yfm-admin-roster-card{min-width:0;padding:10px;background:#100c1b;border:1px solid #44305c;border-radius:10px}
+#yfm-admin-section-cards .player-card{width:130px;height:176px;flex:none}
+#yfm-admin-section-cards .player-card.halloween-card{width:130px;height:130px}
+#yfm-admin-section-cards select{max-width:100%}
+</style>
 <div id="yfm-admin-modal" style="display:none;position:fixed;inset:0;z-index:145;background:rgba(3,2,10,.94);padding:14px;overflow:auto">
  <div style="max-width:1250px;margin:auto;color:#f5f3ff">
   <header style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px"><h2 style="font-size:25px;font-weight:900">🛠 개발자 관리</h2><button id="yfm-admin-close" class="px-4 py-2 rounded-xl bg-gray-700 font-bold">닫기</button></header>
@@ -12295,6 +12302,106 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
 (()=>{
  const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const A={allowed:false,owner:null,users:[],target:null,detail:null,offset:0,total:0,busy:false,selected:null,listBusy:false,detailBusy:false,queuedTarget:null,readVersion:0,capabilityAt:0,detailBasic:true,fullRead:null};
+ let adminRosterPage=0,adminCardGiving=false;
+ function adminCardOvr(p,save=A.detail?.save){
+  let result=Number(p.ovr)||0;
+  for(let i=0;i<(Number(p.level)||0);i++)result+=Number(enhanceRates[i]?.bonus)||0;
+  result+=Number(EVO_BONUS[Number(p.evo)||0])||0;
+  const manager=save?.data?.fm_manager;
+  if(manager==='kim'&&['DF','MF'].includes(p.position))result++;
+  if(manager==='lee'&&p.position==='FW')result+=2;
+  return result;
+ }
+ function adminCardCatalog(){
+  const out=[],seen=new Set();
+  for(const tier of [1,2,3])for(const pos of ['GK','DF','MF','FW'])for(const name of tierData[tier]?.[pos]||[]){
+   const key='normal:'+name;if(seen.has(key))continue;seen.add(key);
+   out.push({key,label:`일반 · ${name} · ${fixedPlayerPosition({name})||pos}`,name,position:pos,ovr:fixedOvr(name)??(tier===1?60:tier===2?70:80)});
+  }
+  for(const p of HALLOWEEN_PLAYERS)out.push({key:'halloween:'+p.name,label:`할로윈 · ${p.name} · ST`,name:p.name,position:'FW',pos2:'ST',ovr:70,eventSeason:HALLOWEEN_SEASON});
+  return out.sort((a,b)=>a.label.localeCompare(b.label,'ko'));
+ }
+ function buildAdminGiftCard(template,level,evo){
+  if(!template||!Number.isInteger(level)||level<0||level>10||!Number.isInteger(evo)||evo<0||evo>EVO_MAX)throw new Error('선수와 강화·진화 단계를 확인해 주세요.');
+  const p={id:'p_admin_'+walletRequestId(),name:template.name,ovr:template.ovr,position:template.position,isStarting:false,level,evo,cond:100,inj:0,slotIndex:-1};
+  if(template.eventSeason){p.eventSeason=template.eventSeason;p.pos2='ST';}
+  ensure(p);if(template.eventSeason)p.pos2='ST';return p;
+ }
+ function readPendingCardGift(){try{const p=JSON.parse(localStorage.getItem('yfm_admin_card_gift_'+accountUser?.id)||'null');return p?.owner===accountUser?.id?p:null;}catch(_){return null;}}
+ function cardGiftMarkup(){return `<details id="yfm-admin-section-cards" class="mt-4 p-3 rounded-xl border border-purple-700"><summary class="font-bold cursor-pointer">스쿼드 카드 조회 · 카드 지급</summary><div class="mt-3"><div class="flex flex-wrap gap-2"><input id="yfm-admin-roster-search" placeholder="보유 선수 이름 검색" class="flex-1 min-w-0 bg-gray-900 border border-gray-600 rounded p-2"><button id="yfm-admin-roster-refresh" class="px-3 py-2 rounded bg-purple-700">최신 스쿼드 조회</button></div><p id="yfm-admin-roster-count" class="text-xs my-3 text-purple-200"></p><div id="yfm-admin-roster-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px"></div><div class="flex justify-between mt-3"><button id="yfm-admin-roster-prev" class="px-3 py-2 rounded bg-gray-700">이전</button><button id="yfm-admin-roster-next" class="px-3 py-2 rounded bg-gray-700">다음</button></div></div><div class="mt-5 p-3 rounded-xl bg-purple-950"><h4 class="font-bold mb-2">복구용 카드 지급</h4><input id="yfm-admin-card-search" placeholder="지급할 선수 이름 검색" class="w-full p-2 bg-gray-900 border border-gray-600 rounded"><select id="yfm-admin-card-player" aria-label="지급할 선수" class="w-full mt-2 p-2 bg-gray-900 border border-gray-600 rounded"></select><div class="flex flex-wrap gap-3 mt-3"><label>강화 <select id="yfm-admin-card-level" class="p-2 bg-gray-900 rounded">${Array.from({length:11},(_,i)=>`<option value="${i}">${i}강</option>`).join('')}</select></label><label>진화 <select id="yfm-admin-card-evo" class="p-2 bg-gray-900 rounded">${Array.from({length:EVO_MAX+1},(_,i)=>`<option value="${i}">${i}단계</option>`).join('')}</select></label></div><p id="yfm-admin-card-preview" class="text-sm text-purple-200 mt-3"></p><p id="yfm-admin-card-pending-note" class="text-sm text-orange-300 mt-2"></p><button id="yfm-admin-card-give" data-admin-write class="w-full mt-3 px-4 py-3 rounded bg-emerald-700 font-bold">선택한 카드 1장 지급</button><p class="text-xs mt-2 text-gray-400">위 변경 사유를 입력하세요. 새 카드는 선발을 바꾸지 않고 보유 선수에 추가됩니다.</p></div></details>`;}
+ function renderAdminRoster(){
+  const container=$('yfm-admin-roster-cards');if(!container)return;
+  let list=[];try{list=JSON.parse(A.detail?.save?.data?.fm_players||'[]');}catch(_){}
+  if(!Array.isArray(list)){container.textContent='선수 저장 데이터를 확인할 수 없습니다.';return;}
+  const query=($('yfm-admin-roster-search')?.value||'').trim().toLowerCase(),all=list,filtered=list.filter(p=>String(p.name||'').toLowerCase().includes(query));
+  adminRosterPage=Math.max(0,Math.min(adminRosterPage,Math.max(0,Math.ceil(filtered.length/24)-1)));
+  let bench=[];try{bench=JSON.parse(A.detail?.save?.data?.fm_bench||'[]');}catch(_){}
+  $('yfm-admin-roster-count').textContent=`보유 ${all.length}장 · 선발 ${all.filter(p=>p.isStarting).length}명 · 검색 ${filtered.length}장 · ${adminRosterPage+1}페이지`;
+  container.innerHTML=filtered.slice(adminRosterPage*24,adminRosterPage*24+24).map(p=>`<article class="yfm-admin-roster-card"><div style="height:190px;display:flex;align-items:center;justify-content:center">${playerCardMarkup(p,{ovr:adminCardOvr(p),tier:getPlayerTier(p)})}</div><b class="block mt-2 text-sm">${esc(p.name)}</b><div class="text-xs text-purple-200">${esc(isHalloweenPlayer(p)?'할로윈':p.tf?'이적 선수':'일반')} · ${esc(isHalloweenPlayer(p)?'ST':originalPlayerPosition({...p}))}<br>${Number(p.level)||0}강 · 진화 ${Number(p.evo)||0}단계 · OVR ${adminCardOvr(p)}<br>${p.isStarting?'선발':Array.isArray(bench)&&bench.includes(p.id)?'벤치':'보유'} · 체력 ${Number(p.cond??100)}%</div></article>`).join('')||'<p class="text-sm text-gray-400">해당 카드가 없습니다.</p>';
+  $('yfm-admin-roster-prev').disabled=adminRosterPage===0;$('yfm-admin-roster-next').disabled=(adminRosterPage+1)*24>=filtered.length;
+ }
+ function renderAdminGiftOptions(){
+  const select=$('yfm-admin-card-player');if(!select)return;
+  const before=select.value,query=$('yfm-admin-card-search').value.trim().toLowerCase();
+  select.innerHTML=adminCardCatalog().filter(p=>p.label.toLowerCase().includes(query)).map(p=>`<option value="${esc(p.key)}">${esc(p.label)} · 기본 OVR ${p.ovr}</option>`).join('');
+  if([...select.options].some(x=>x.value===before))select.value=before;
+  previewAdminGift();
+ }
+ function previewAdminGift(){
+  const template=adminCardCatalog().find(p=>p.key===$('yfm-admin-card-player')?.value);
+  $('yfm-admin-card-preview').textContent=template?`${template.label} · ${$('yfm-admin-card-level').value}강 · 진화 ${$('yfm-admin-card-evo').value}단계 · 지급 OVR ${adminCardOvr({...template,level:Number($('yfm-admin-card-level').value),evo:Number($('yfm-admin-card-evo').value)})}`:'검색에 해당하는 선수가 없습니다.';
+  const pending=readPendingCardGift();
+  $('yfm-admin-card-pending-note').textContent=pending?`결과 미확인 지급 · ${pending.targetName||pending.target}: ${pending.player.name} ${pending.player.level}강 / 진화 ${pending.player.evo}단계. 버튼을 누르면 이 지급 결과를 다시 확인합니다.`:'';
+  $('yfm-admin-card-give').textContent=pending?'이전 카드 지급 결과 확인':'선택한 카드 1장 지급';
+ }
+ function wireAdminCards(){
+  $('yfm-admin-section-cards').addEventListener('toggle',()=>{const section=$('yfm-admin-section-cards');if(section.open&&!section.dataset.cardsLoaded){section.dataset.cardsLoaded='1';adminRosterPage=0;renderAdminRoster();renderAdminGiftOptions();}});
+  $('yfm-admin-roster-search').oninput=()=>{adminRosterPage=0;renderAdminRoster();};
+  $('yfm-admin-roster-prev').onclick=()=>{adminRosterPage--;renderAdminRoster();};$('yfm-admin-roster-next').onclick=()=>{adminRosterPage++;renderAdminRoster();};
+  $('yfm-admin-card-search').oninput=renderAdminGiftOptions;
+  for(const id of ['yfm-admin-card-player','yfm-admin-card-level','yfm-admin-card-evo'])$(id).onchange=previewAdminGift;
+  $('yfm-admin-card-give').onclick=grantAdminCard;
+  $('yfm-admin-roster-refresh').onclick=async()=>{const target=A.target,owner=accountUser?.id,version=A.readVersion;try{if(A.busy||adminCardGiving)return;const d=await rpc('detail',{user_id:target});if(target!==A.target||owner!==accountUser?.id||version!==A.readVersion)return;A.detail=d;renderAdminRoster();status('최신 스쿼드를 조회했습니다.');}catch(e){fail(e);}};
+ }
+ async function grantAdminCard(){
+  if(adminCardGiving||A.busy)return;adminCardGiving=true;
+  const owner=accountUser?.id,target=A.target,version=A.readVersion,button=$('yfm-admin-card-give');if(button)button.disabled=true;
+  try{
+   if(!A.allowed||A.owner!==owner)throw new Error('관리자 권한을 다시 확인해 주세요.');
+   let operation=readPendingCardGift();
+   if(operation&&operation.target!==target)throw new Error(`이전 지급 결과가 확인되지 않았습니다. 대상 ${operation.targetName||operation.target} 유저를 선택하여 결과 확인을 먼저 해 주세요.`);
+   if(!operation){
+    const template=adminCardCatalog().find(p=>p.key===$('yfm-admin-card-player')?.value),level=Number($('yfm-admin-card-level')?.value),evo=Number($('yfm-admin-card-evo')?.value),why=reason();
+    const player=buildAdminGiftCard(template,level,evo);
+    if(!confirm(`${A.selected?.username||target}에게 ${template.label} ${level}강 / 진화 ${evo}단계 카드 1장을 지급할까요?`))return;
+    const latest=await rpc('detail',{user_id:target});
+    if(owner!==accountUser?.id||target!==A.target||version!==A.readVersion)throw new Error('선택한 유저가 변경되었습니다. 다시 시도해 주세요.');
+    const save=JSON.parse(JSON.stringify(latest.save||null));
+    if(save?.app!=='YFM'||!save.data)throw new Error('유저 저장 데이터가 없습니다. 게임을 한 번 저장한 뒤 지급해 주세요.');
+    const roster=JSON.parse(save.data.fm_players||'null');if(!Array.isArray(roster))throw new Error('선수 저장 데이터를 확인할 수 없습니다.');
+    if(roster.some(p=>p.id===player.id))throw new Error('카드 번호가 중복되었습니다. 다시 시도해 주세요.');
+    roster.push(player);save.data.fm_players=JSON.stringify(roster);
+    operation={owner,target,targetName:A.selected?.username||target,player,payload:{user_id:target,save,expected_at:latest.save.at||null,reason:`[카드 지급 · ${template.label} · ${level}강 · 진화 ${evo}단계] ${why}`}};
+    // Persist the exact payload before sending. Unknown outcomes must retry the
+    // same audited request, not generate another player/card ID.
+    localStorage.setItem('yfm_admin_card_gift_'+owner,JSON.stringify(operation));A.detail=latest;A.detailBasic=false;
+   }
+   const result=await mutate('save',operation.payload);
+   if(!result)return;
+   const acceptedRoster=JSON.parse(result.save?.data?.fm_players||'null');
+   if(!Array.isArray(acceptedRoster)||acceptedRoster.filter(p=>p.id===operation.player.id).length!==1)throw new Error('카드 지급 결과를 확인하지 못했습니다. 이전 지급 결과 확인으로 다시 확인해 주세요.');
+   localStorage.removeItem('yfm_admin_card_gift_'+owner);
+   if(owner!==accountUser?.id||target!==A.target)return;
+   if(target===owner){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}
+   A.detail={...A.detail,save:result.save};renderAdminRoster();previewAdminGift();
+   const area=$('yfm-admin-save-json');if(area?.dataset.formatted&&area.value===area.dataset.savedText){area.value=JSON.stringify(result.save,null,2);area.dataset.savedText=area.value;area.dataset.expectedAt=result.save.at||'';}
+   status(`${operation.player.name} ${operation.player.level}강 · 진화 ${operation.player.evo}단계 카드 1장 지급 완료. 유저는 최신 서버 기록을 불러오면 반영됩니다.`);
+  }catch(e){
+   if(String(e.message||'').includes('SAVE_CONFLICT'))localStorage.removeItem('yfm_admin_card_gift_'+owner);
+   fail(e);if($('yfm-admin-card-preview'))previewAdminGift();
+  }finally{adminCardGiving=false;if(button&&button.isConnected)button.disabled=false;}
+ }
+
  const format=v=>Number(v||0).toLocaleString(),time=v=>v?new Date(v).toLocaleString('ko-KR'):'없음';
  function status(message,error=false){$('yfm-admin-status').textContent=message;$('yfm-admin-status').style.color=error?'#fca5a5':'#c4b5fd';}
  function fail(error){status(error?.code==='PGRST202'?'개발자 기능 SQL을 먼저 적용해 주세요.':`${error?.message||error} ${error?.code?'['+error.code+']':''}`,true);}
@@ -12351,7 +12458,7 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div class="my-3 p-3 rounded-xl bg-gray-900"><b>${esc(u.club_name||'새 구단')}</b><br>목록에서 조회한 토큰 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b><br><small>진화토큰·뽑기권 보유량과 정지 상태는 상세 조회 후 표시됩니다.</small></div>
 <div class="p-3 mb-4 rounded-xl bg-purple-950 border border-purple-700"><label class="block text-sm mb-2">변경 사유 (모든 변경에 필수)</label><input id="yfm-admin-reason" maxlength="500" class="w-full rounded-lg p-2 bg-gray-900 border border-gray-600" placeholder="보상 지급 / 비정상 획득 회수 / 기록 정정"><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-amount" type="number" min="1" max="1000000000" step="1" placeholder="토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">지급</button><button id="yfm-admin-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">회수·차감</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-evo-amount" type="number" min="1" max="1000000000" step="1" placeholder="진화토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-evo-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">진화토큰 지급</button><button id="yfm-admin-evo-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">진화토큰 압수</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-ticket-amount" type="number" min="1" max="1000000000" step="1" placeholder="이벤트 뽑기권 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-ticket-gift" data-admin-write class="px-3 py-2 rounded-lg bg-orange-700 font-bold">🎟 뽑기권 지급</button><button id="yfm-admin-ticket-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">뽑기권 압수</button></div></div>
  <button id="yfm-admin-load-inventory" class="w-full px-3 py-2 mb-3 rounded-lg bg-purple-700 font-bold">진화토큰·뽑기권 보유량 조회</button>
- ${[['suspension','계정 정지 관리'],['matches','오프라인·온라인 전적 조회 및 점수 정정'],['save','전체 게임 저장 데이터 조회·수정'],['transactions','토큰 거래 내역'],['audit','관리자 변경 기록·수정 전 데이터'],['legacy','이전 버전 온라인 기록']].map(([key,title])=>`<details data-admin-lazy="${key}" class="mt-3 p-3 rounded-xl border border-purple-800"><summary class="font-bold cursor-pointer">${title}</summary><p class="text-sm text-gray-400 mt-2">서버에서 상세 정보를 불러옵니다…</p></details>`).join('')}`;
+ ${[['cards','스쿼드 카드 조회 · 카드 지급'],['suspension','계정 정지 관리'],['matches','오프라인·온라인 전적 조회 및 점수 정정'],['save','전체 게임 저장 데이터 조회·수정'],['transactions','토큰 거래 내역'],['audit','관리자 변경 기록·수정 전 데이터'],['legacy','이전 버전 온라인 기록']].map(([key,title])=>`<details data-admin-lazy="${key}" class="mt-3 p-3 rounded-xl border border-purple-800"><summary class="font-bold cursor-pointer">${title}</summary><p class="text-sm text-gray-400 mt-2">서버에서 상세 정보를 불러옵니다…</p></details>`).join('')}`;
   $('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);
   $('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);
   $('yfm-admin-ticket-gift').onclick=()=>adjustEventTickets(1);$('yfm-admin-ticket-remove').onclick=()=>adjustEventTickets(-1);
@@ -12364,6 +12471,7 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   $('yfm-admin-detail').innerHTML=`<h3 style="font-size:22px;font-weight:900">${esc(u.username||A.target)} · ${esc(u.owner_name||'구단주')}</h3><p style="font-size:12px;color:#bfaed5;word-break:break-all">${esc(A.target)}</p><div style="margin:12px 0;padding:14px;border:2px solid #9d60d5;border-radius:12px;background:#2a1438"><h4 style="font-weight:900;font-size:18px;margin-bottom:8px">계정 정지 관리</h4><p>현재 상태: <b>${d.suspension?.suspended?'정지':'정상'}</b>${d.suspension?.suspended?` · ${esc(d.suspension.reason)}`:''}</p><p style="font-size:12px;color:#dfc7ef;margin:8px 0">아래 변경 사유를 입력한 뒤 정지하거나 해제하세요.</p>${!d.suspension?'<p style="color:#fca5a5;font-size:12px;margin:8px 0">추가 정지·문의 SQL이 적용되지 않았습니다. 서버 SQL을 먼저 적용해 주세요.</p>':''}<button id="yfm-admin-suspend" data-admin-write ${A.target===accountUser.id||!d.suspension?'disabled':''} style="padding:10px 18px;border-radius:8px;background:${d.suspension?.suspended?'#167652':'#a32d43'};font-weight:900;opacity:${A.target===accountUser.id||!d.suspension?'.5':'1'}">${A.target===accountUser.id?'관리자 계정은 정지 불가':d.suspension?.suspended?'정지 해제':'이 계정 정지'}</button></div><div class="my-3 p-3 rounded-xl bg-gray-900">서버 잔액 <b class="text-yellow-300 text-xl">${format(d.tokens)} T</b> · 🧬 진화토큰 <b class="text-purple-300">${format(d.save?.data?.fm_evo_tokens)}개</b> · 🎟 이벤트 뽑기권 <b>${format(d.save?.data?.fm_halloween_tickets)}장</b> · 보유 선수 ${format(roster.length)}명<br><small>가입 ${esc(time(u.created_at))} · 마지막 로그인 ${esc(time(u.last_sign_in_at))}</small></div>
   <div class="p-3 mb-4 rounded-xl bg-purple-950 border border-purple-700"><label class="block text-sm mb-2">변경 사유 (모든 변경에 필수)</label><input id="yfm-admin-reason" maxlength="500" class="w-full rounded-lg p-2 bg-gray-900 border border-gray-600" placeholder="보상 지급 / 비정상 획득 회수 / 기록 정정"><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-amount" type="number" min="1" max="1000000000" step="1" placeholder="토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">지급</button><button id="yfm-admin-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">회수·차감</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-evo-amount" type="number" min="1" max="1000000000" step="1" placeholder="진화토큰 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-evo-gift" data-admin-write class="px-3 py-2 rounded-lg bg-emerald-700 font-bold">진화토큰 지급</button><button id="yfm-admin-evo-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">진화토큰 압수</button></div><div class="flex flex-wrap gap-2 mt-3"><input id="yfm-admin-ticket-amount" type="number" min="1" max="1000000000" step="1" placeholder="이벤트 뽑기권 수량" class="min-w-0 flex-1 rounded-lg p-2 bg-gray-900 border border-gray-600"><button id="yfm-admin-ticket-gift" data-admin-write class="px-3 py-2 rounded-lg bg-orange-700 font-bold">🎟 뽑기권 지급</button><button id="yfm-admin-ticket-remove" data-admin-write class="px-3 py-2 rounded-lg bg-red-800 font-bold">뽑기권 압수</button></div></div>
 
+  ${cardGiftMarkup()}
   <h4 class="font-black mb-2">오프라인 전적</h4><div style="overflow:auto"><table class="w-full text-sm"><thead><tr><th>모드</th><th>경기</th><th>승 / 무 / 패</th><th>득점 / 실점</th></tr></thead><tbody>${offline||'<tr><td colspan="4">기록 없음</td></tr>'}</tbody></table></div>
   <h4 class="font-black mt-5 mb-2">온라인 친선전</h4><p class="text-sm mb-3">${format(summary.games)}경기 · ${format(summary.wins)}승 ${format(summary.draws)}무 ${format(summary.losses)}패 · 최근 100경기</p><div>${online.map((r,i)=>`<div data-match="${i}" class="my-2 p-2 rounded-lg bg-gray-900"><div class="text-xs text-purple-200">${esc(time(r.ended_at))} · ${r.kind==='friend'?'친구 친선':'코드 친선'} · ${esc(r.method)}</div><div class="flex flex-wrap items-center gap-2 mt-2"><label class="text-xs">방장 <input class="admin-host w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.host_goals)||0}"></label><span>:</span><label class="text-xs">참가자 <input class="admin-guest w-14 bg-gray-800 rounded p-1" type="number" min="0" max="99" value="${Number(r.guest_goals)||0}"></label><button data-admin-write class="admin-score px-2 py-1 rounded bg-purple-700 text-sm">점수 정정</button></div></div>`).join('')||'<p class="text-sm text-gray-400">기록 없음</p>'}</div>
   <details id="yfm-admin-section-save" class="mt-4"><summary class="font-bold cursor-pointer">전체 게임 저장 데이터 조회·수정</summary><p class="text-xs text-gray-400 my-2">선수·리그·오프라인 기록을 수정할 수 있습니다. 토큰은 위 지급·회수로 변경하세요. 다른 저장이 반영되면 다시 조회해야 합니다.</p><textarea id="yfm-admin-save-json" spellcheck="false" style="width:100%;height:300px;background:#0b0711;padding:10px;border:1px solid #584073;border-radius:8px;font:12px monospace"></textarea><button id="yfm-admin-save" data-admin-write class="mt-2 px-4 py-2 rounded-lg bg-red-800 font-bold">게임 데이터 수정 적용</button></details>
@@ -12371,7 +12479,8 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   <details id="yfm-admin-section-audit" class="mt-4"><summary class="font-bold cursor-pointer">관리자 변경 기록·수정 전 데이터 (최근 50건)</summary><div>${(d.audit||[]).map(x=>`<button data-audit="${esc(x.request_id)}" class="block w-full text-left p-2 my-1 rounded bg-gray-900 text-xs">${esc(time(x.created_at))} · ${esc(x.action)} · ${esc(x.reason)} ${x.delta!==null?`(${Number(x.delta)>0?'+':''}${format(x.delta)} T)`:''}</button>`).join('')||'기록 없음'}</div><textarea id="yfm-admin-audit-json" readonly style="width:100%;height:220px;background:#0b0711;padding:8px;font:11px monospace;margin-top:8px"></textarea></details>
   <details id="yfm-admin-section-legacy" class="mt-4"><summary class="font-bold cursor-pointer">이전 버전 온라인 기록</summary><pre style="white-space:pre-wrap;word-break:break-all;font-size:11px">${esc(JSON.stringify(d.legacy_online_results||[],null,2))}</pre></details>`;
   $('yfm-admin-suspend').onclick=async()=>{try{const target=A.target,suspended=!A.detail.suspension?.suspended,why=reason();if(!confirm(suspended?'이 계정의 모든 게임 서비스를 정지할까요?':'계정 정지를 해제할까요?'))return;await mutate('suspension',{user_id:target,suspended,reason:why});await selectUser(target);status(suspended?'계정 정지 완료':'정지 해제 완료');}catch(e){fail(e);}};
-  const saveArea=$('yfm-admin-save-json');saveArea.closest('details').addEventListener('toggle',()=>{if(saveArea.closest('details').open&&!saveArea.dataset.formatted){saveArea.value=JSON.stringify(d.save,null,2);saveArea.dataset.formatted='1';}});$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;$('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);$('yfm-admin-ticket-gift').onclick=()=>adjustEventTickets(1);$('yfm-admin-ticket-remove').onclick=()=>adjustEventTickets(-1);
+  const saveArea=$('yfm-admin-save-json');saveArea.closest('details').addEventListener('toggle',()=>{if(saveArea.closest('details').open&&!saveArea.dataset.formatted){saveArea.value=JSON.stringify(d.save,null,2);saveArea.dataset.savedText=saveArea.value;saveArea.dataset.expectedAt=d.save?.at||'';saveArea.dataset.formatted='1';}});$('yfm-admin-gift').onclick=()=>adjustTokens(1);$('yfm-admin-remove').onclick=()=>adjustTokens(-1);$('yfm-admin-save').onclick=editSave;$('yfm-admin-evo-gift').onclick=()=>adjustEvoTokens(1);$('yfm-admin-evo-remove').onclick=()=>adjustEvoTokens(-1);$('yfm-admin-ticket-gift').onclick=()=>adjustEventTickets(1);$('yfm-admin-ticket-remove').onclick=()=>adjustEventTickets(-1);
+  wireAdminCards();
   $('yfm-admin-detail').querySelectorAll('[data-match]').forEach(el=>el.querySelector('.admin-score').onclick=()=>editScore(Number(el.dataset.match),el));
   $('yfm-admin-detail').querySelectorAll('[data-audit]').forEach(el=>el.onclick=async()=>{try{const data=await rpc('audit',{user_id:A.target,request_id:el.dataset.audit});$('yfm-admin-audit-json').value=JSON.stringify(data,null,2);}catch(e){fail(e);}});
  }
@@ -12434,7 +12543,7 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
    status(`이벤트 뽑기권 ${sign>0?'지급':'압수'} 완료 · 잔액 ${format(after)}장. 유저 화면은 다음 저장·재접속 때 반영됩니다.`);
   }catch(e){fail(e);}
  }
- async function editSave(){try{const target=A.target,save=JSON.parse($('yfm-admin-save-json').value),why=reason();if(!confirm('선택한 유저의 게임 저장 데이터를 수정할까요? 변경 전 데이터는 관리자 기록에 보관됩니다.'))return;const result=await mutate('save',{user_id:target,save,expected_at:A.detail.save?.at||null,reason:why});if(!result)return;if(target===accountUser.id){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}await selectUser(target);status('저장 데이터 수정 완료. 유저는 다음 저장·재접속 때 변경 사항을 다시 불러옵니다.');}catch(e){fail(e);}}
+ async function editSave(){try{const target=A.target,save=JSON.parse($('yfm-admin-save-json').value),why=reason();if(!confirm('선택한 유저의 게임 저장 데이터를 수정할까요? 변경 전 데이터는 관리자 기록에 보관됩니다.'))return;const result=await mutate('save',{user_id:target,save,expected_at:($('yfm-admin-save-json').dataset.expectedAt??A.detail.save?.at)||null,reason:why});if(!result)return;if(target===accountUser.id){window.__wiping=true;restoreAccountSnapshot(result.save);localStorage.setItem('yfm_sync_at',result.save.at);location.reload();return;}await selectUser(target);status('저장 데이터 수정 완료. 유저는 다음 저장·재접속 때 변경 사항을 다시 불러옵니다.');}catch(e){fail(e);}}
  async function editScore(i,el){try{const r=A.detail.online_results[i],h=Number(el.querySelector('.admin-host').value),g=Number(el.querySelector('.admin-guest').value);if(!Number.isInteger(h)||!Number.isInteger(g)||h<0||g<0||h>99||g>99)throw new Error('스코어는 0~99로 입력해 주세요.');const target=A.target,result=await mutate('online_score',{user_id:target,room_id:r.room_id,host_goals:h,guest_goals:g,reason:reason()});if(result){await selectUser(target);status('온라인 전적을 정정했습니다.');}}catch(e){fail(e);}}
  $('yfm-admin-close').onclick=()=>{$('yfm-admin-modal').style.display='none';};$('yfm-admin-reload').onclick=()=>{if(A.listBusy)return;A.offset=0;loadUsers().catch(fail);};$('yfm-admin-search').onkeydown=e=>{if(e.key==='Enter'){$('yfm-admin-reload').click();}};$('yfm-admin-prev').onclick=()=>{if(A.listBusy)return;A.offset=Math.max(0,A.offset-50);loadUsers().catch(fail);};$('yfm-admin-next').onclick=()=>{if(A.listBusy)return;A.offset+=50;loadUsers().catch(fail);};
  if(window.yfmAccountReady)window.yfmCheckAdmin();
