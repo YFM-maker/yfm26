@@ -1077,9 +1077,12 @@
                 <nav class="fm-nav">
                     <button class="fm-nav-item active" onclick="switchScreen('screen-lobby')"><span class="fm-ico">🏠</span><span>홈</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-mode-select')"><span class="fm-ico">⚽</span><span>경기 · 대회</span></button>
-                    <button class="fm-nav-item" onclick="openGroupedMenu('club')" data-menu-group="club"><span class="fm-ico">📋</span><span>구단 관리</span></button>
+                    <button class="fm-nav-item" onclick="switchScreen('screen-manager')"><span class="fm-ico">📋</span><span>팀관리</span></button>
+                    <button class="fm-nav-item" onclick="openHub()"><span class="fm-ico">👥</span><span>팀허브</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-recruit')"><span class="fm-ico">🔍</span><span>선수 영입</span></button>
-                    <button id="fm-nav-awaken" class="fm-nav-item" onclick="openGroupedMenu('growth')" data-menu-group="growth"><span class="fm-ico">⬆️</span><span>선수 육성</span><span id="fm-awk-badge" class="fm-badge" style="display:none" aria-label="합성 가능한 학생 수"></span></button>
+                    <button class="fm-nav-item" onclick="switchScreen('screen-enhance')"><span class="fm-ico">⬆️</span><span>강화</span></button>
+                    <button class="fm-nav-item" onclick="switchScreen('screen-fusion')"><span class="fm-ico">🧬</span><span>진화</span></button>
+                    <button id="fm-nav-awaken" class="fm-nav-item" onclick="switchScreen('screen-awaken')"><span class="fm-ico">🔄</span><span>선수 합성</span><span id="fm-awk-badge" class="fm-badge" style="display:none" aria-label="합성 가능한 학생 수"></span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-stats')"><span class="fm-ico">📊</span><span>기록실</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-owner-rank')"><span class="fm-ico">🏆</span><span>구단주 TOP 50</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-social')"><span class="fm-ico">👥</span><span>소셜</span><span id="fm-social-badge" class="fm-badge" style="display:none" aria-label="새 소셜 알림"></span></button>
@@ -12774,7 +12777,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.yf
  const side=document.getElementById('fm-global-side');if(!side)return;
  const nav=side.querySelector('.fm-nav'),mobile=matchMedia('(max-width:760px), (max-width:1000px) and (max-height:500px)');
  const primary=['screen-lobby','screen-mode-select','screen-manager','screen-recruit'];
- nav.querySelectorAll('.fm-nav-item').forEach(b=>{if(b.dataset.menuGroup==='club'||primary.some(id=>(b.getAttribute('onclick')||'').includes("'"+id+"'")))b.classList.add('mobile-primary');});
+ nav.querySelectorAll('.fm-nav-item').forEach(b=>{if(primary.some(id=>(b.getAttribute('onclick')||'').includes("'"+id+"'")))b.classList.add('mobile-primary');});
  const more=document.createElement('button');more.id='yfm-mobile-more';more.className='fm-nav-item';more.type='button';more.innerHTML='<span class="fm-ico">☰</span><span>더보기</span>';more.setAttribute('aria-expanded','false');more.setAttribute('aria-label','전체 메뉴 열기');nav.append(more);
  const close=()=>{side.classList.remove('mobile-nav-expanded');more.setAttribute('aria-expanded','false');more.querySelector('span:last-child').textContent='더보기';};
  more.onclick=()=>{const expanded=side.classList.toggle('mobile-nav-expanded');more.setAttribute('aria-expanded',String(expanded));more.querySelector('span:last-child').textContent=expanded?'닫기':'더보기';};
@@ -13978,30 +13981,7 @@ new MutationObserver(records=>{for(const r of records){if(r.type==='characterDat
 </script>
 
 
-<style>
-#grouped-menu-dialog{border:1px solid #6d4a9b;border-radius:20px;background:#171326;color:#fff;padding:24px;width:min(420px,calc(100vw - 32px));box-shadow:0 24px 80px #0009}
-#grouped-menu-dialog::backdrop{background:#000a}
-#grouped-menu-dialog h2{font-size:23px;font-weight:900;margin:0}
-#grouped-menu-dialog .grouped-menu-options{display:grid;gap:12px;margin-top:22px}
-#grouped-menu-dialog .grouped-menu-option{padding:18px;text-align:left;border:1px solid #56406f;border-radius:12px;background:#29203e;font-size:17px;font-weight:700;cursor:pointer}
-#grouped-menu-dialog .grouped-menu-option:hover{background:#42305f;border-color:#b78aef}
-</style>
-<dialog id="grouped-menu-dialog" aria-labelledby="grouped-menu-title">
-<div style="display:flex;align-items:center;justify-content:space-between;gap:16px"><h2 id="grouped-menu-title"></h2><button type="button" onclick="document.getElementById('grouped-menu-dialog').close()" aria-label="닫기" style="padding:6px 12px;font-size:24px">×</button></div>
-<div class="grouped-menu-options"></div>
-</dialog>
-<script>
-function openGroupedMenu(group){
- const dialog=document.getElementById('grouped-menu-dialog');
- const club=group==='club';
- document.getElementById('grouped-menu-title').textContent=club?'구단 관리':'선수 육성';
- const options=club?[['팀관리','screen-manager'],['팀허브','hub']]:[['강화','screen-enhance'],['진화','screen-fusion'],['선수 합성','screen-awaken']];
- const container=dialog.querySelector('.grouped-menu-options');container.replaceChildren();
- options.forEach(([label,target])=>{const button=document.createElement('button');button.type='button';button.className='grouped-menu-option';button.textContent=label;button.onclick=()=>{dialog.close();if(target==='hub')openHub();else switchScreen(target);};container.appendChild(button);});
- dialog.showModal();
-}
-document.getElementById('grouped-menu-dialog').addEventListener('click',function(event){if(event.target===this){const r=this.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)this.close();}});
-</script>
+
 
 
 <style id="yfm-refined-theme">
