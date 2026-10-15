@@ -14231,6 +14231,113 @@ function renderEnergyPlayerInfo(name,attributes,grade){
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshMissionReceipts();});
 setTimeout(()=>refreshMissionReceipts(true),2500);
 </script>
+<style id="touch-device-refinement">/* Touch layouts: retain gameplay, card aspect ratios and the desktop layout. */
+:root{--device-vh:100dvh;--device-nav-space:0px}
+@supports not(height:100dvh){:root{--device-vh:100vh}}
+@media(pointer:coarse){
+ button,input,select,textarea,a{touch-action:manipulation}
+ input,select,textarea{font-size:16px!important}
+ .custom-scrollbar{scrollbar-width:thin;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+ button:disabled{touch-action:none}
+ #fm-global-side .fm-nav-item{min-height:44px}
+ #yfm-durable-save-status{pointer-events:none;max-width:min(86vw,340px)!important;font-size:10px!important;padding:5px 8px!important}
+}
+@media(min-width:761px) and (max-width:1366px) and (pointer:coarse){
+ .fm-grid{grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;padding:14px 14px 80px}
+ .fm-card-b{padding:14px}.fm-top{gap:10px;padding:12px 14px!important}
+ .fm-club-name{font-size:22px}.fm-top-right{gap:6px;min-width:0}.fm-tip{max-width:260px}.fm-tip-text{font-size:11px}
+ #screen-enhance>header{flex-wrap:wrap;gap:10px;padding:12px!important}
+ #screen-enhance>header h1{position:static!important;transform:none!important;font-size:23px}
+ #screen-enhance>div.flex.flex-1{padding:12px;gap:12px;min-height:0}
+ #screen-enhance>div.flex.flex-1>div{min-width:0}
+ #enhance-panel>div:first-child>div{gap:12px}#enhance-panel .orb-card-md{width:clamp(90px,10vw,135px)}
+ #enhance-panel h2{font-size:25px}#enhance-panel>div{margin-bottom:15px}
+ #enhance-panel .bg-gray-900{padding:16px}#btn-do-enhance{font-size:19px;padding:14px 30px;min-height:48px}
+ #screen-enhance>div.flex.flex-1>div:last-child{padding:16px;overflow-y:auto;justify-content:flex-start}
+ #screen-manager>div:first-child{min-width:0}#bench-strip,#reserve-list{min-width:0}
+ #screen-recruit>main{align-content:flex-start;overflow-y:auto}
+ #screen-stats{overflow:auto}#stats-tabs{gap:6px}#stats-tabs button{font-size:14px;padding:12px 6px}
+ #mission-modal>div:first-child{max-height:calc(var(--device-vh) - 32px)!important}
+}
+@media(min-width:761px) and (max-width:1100px) and (orientation:portrait){
+ .fm-span-8,.fm-span-4,.fm-span-6{grid-column:span 12}
+ #screen-manager{flex-direction:column!important;overflow-y:auto}
+ #screen-manager>#pitch-container{order:-1;flex:none;height:clamp(520px,66dvh,700px);min-height:520px;width:100%}
+ #screen-manager>div:first-child{width:100%!important;flex:none;height:auto;overflow:visible;display:block;padding:16px}
+ #screen-enhance{overflow:auto}#screen-enhance>div.flex.flex-1{flex:none;overflow:visible;flex-direction:column}
+ #screen-enhance>div.flex.flex-1>div:first-child{width:100%;flex:none}
+ #enhance-player-list{max-height:260px;min-height:100px}
+ #screen-enhance>div.flex.flex-1>div:last-child{flex:none;overflow:visible;min-height:420px}
+ #enhance-panel .orb-card-md{width:130px}
+}
+@media(max-width:760px),(max-width:1000px) and (max-height:500px){
+ :root{--device-nav-space:calc(var(--mobile-nav-height) + env(safe-area-inset-bottom,0px))}
+ body.has-global-nav .screen.active:not(#screen-lobby):not(#screen-match){height:calc(var(--device-vh) - var(--device-nav-space))!important;max-height:calc(var(--device-vh) - var(--device-nav-space));min-height:0}
+ #screen-lobby .fm-shell{bottom:var(--device-nav-space)!important;height:calc(var(--device-vh) - var(--device-nav-space))}
+ #fm-global-side{padding-left:env(safe-area-inset-left,0px)!important;padding-right:env(safe-area-inset-right,0px)!important}
+ #fm-global-side.mobile-nav-expanded{max-height:calc(var(--device-vh) - 12px)!important}
+ #fm-global-side.mobile-nav-expanded .fm-nav{max-height:calc(var(--device-vh) - 140px)}
+ .fm-top{align-items:flex-start;flex-wrap:wrap}.fm-club{min-width:0;flex:1}.fm-club-name{font-size:20px}
+ .fm-top-right{min-width:0;max-width:100%;flex-wrap:wrap;gap:6px}.fm-tip{max-width:100%;order:3;flex-basis:100%}
+ .fm-grid{padding:12px 10px 24px;gap:12px}.fm-span-8,.fm-span-4,.fm-span-6{grid-column:span 12}
+ .fm-card-h{padding:11px 12px}.fm-card-b{padding:12px}.fm-next-team b{font-size:14px}.fm-next{gap:6px}
+ .fm-stat{gap:6px}.fm-stat>div{padding:10px 6px}.fm-btn{min-height:42px;font-size:12px}
+ #screen-manager>#pitch-container{height:clamp(480px,76dvh,610px);min-height:480px}
+ #screen-manager>div:first-child{display:block!important;padding:12px!important}
+ #screen-manager #formation-panel button{min-height:42px;padding:8px 4px;font-size:12px}
+ #screen-enhance>div.flex.flex-1>div:last-child{min-width:0;align-items:stretch}
+ #enhance-panel>div:first-child>div{gap:10px}.orb-card-md{max-width:100%}
+ #enhance-panel .orb-card-md,#fusion-center .orb-card-md{width:clamp(90px,27vw,125px)}
+ #enhance-panel h2{font-size:25px}#enhance-panel .bg-gray-900{padding:14px}
+ #enhance-panel .bg-gray-900>div{gap:10px;flex-wrap:wrap}#enhance-panel .text-4xl{font-size:23px}
+ #btn-do-enhance{width:100%;font-size:19px;padding:14px 18px;min-height:48px}
+ #fusion-center>div.flex{gap:12px;justify-content:center}#fusion-center button{max-width:100%;padding:13px 24px;white-space:normal;font-size:17px}
+ #screen-recruit>main{padding-bottom:24px}#screen-recruit>main>div{min-width:0}
+ #screen-social,#screen-owner-rank{overflow-x:hidden}#social-chat-form{gap:6px;flex-wrap:wrap}#social-chat-form input{min-width:0;flex:1 1 150px}
+ :is(#player-modal,#swap-modal,#tier-list-modal,#mission-modal,#star-modal){max-height:var(--device-vh);padding-top:max(10px,env(safe-area-inset-top,0px))!important;padding-bottom:max(10px,env(safe-area-inset-bottom,0px))!important}
+ :is(#player-modal,#swap-modal,#tier-list-modal,#mission-modal)>div:first-child{max-height:calc(var(--device-vh) - 32px)!important;min-height:0}
+ #mission-list{min-height:0;overflow-y:auto;overscroll-behavior:contain}#mission-list>div{gap:8px;padding:10px}#mission-list button{min-height:42px;flex-shrink:0}
+ #mission-list form>div{flex-wrap:wrap}#mission-coupon-code{min-width:140px}#mission-coupon-submit{min-height:44px}
+ #yfm-durable-save-status{bottom:calc(var(--device-nav-space) + 6px)!important;right:6px!important}
+ #grouped-menu-dialog{max-height:calc(var(--device-vh) - 24px);width:min(420px,calc(100vw - 24px));overscroll-behavior:contain}
+ body.device-keyboard-open{--device-nav-space:0px}body.device-keyboard-open #fm-global-side{display:none!important}
+ body.device-keyboard-open #social-chat-messages{height:clamp(100px,24dvh,220px)!important}
+}
+@media(max-width:760px) and (orientation:landscape){
+ #screen-recruit>main{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #screen-manager>#pitch-container{height:480px;min-height:480px}
+}
+/* Keep cinematic results and confirmation controls inside short touch viewports. */
+@media(pointer:coarse) and (max-height:650px){
+ #gacha-overlay.energy-active #gacha-result-card{display:grid;grid-template-columns:minmax(100px,160px) minmax(140px,260px);align-items:center;justify-content:center;column-gap:20px;row-gap:12px;max-height:calc(var(--device-vh) - 20px);width:auto;max-width:94vw;padding:12px!important;overflow-y:auto}
+ #gacha-overlay.energy-active #gacha-result-card.hidden{display:none!important}
+ #gacha-result-card #gacha-result-circle{grid-row:1/3;width:clamp(100px,26vh,150px)!important;grid-column:1}
+ #gacha-overlay.energy-active #gacha-result-name{grid-column:2;min-width:0;width:100%;margin:0;padding:10px}
+ #gacha-overlay.energy-active #gacha-result-card>button{grid-column:2;min-width:0;width:100%;margin:0;padding:10px}
+ #energy-caption{bottom:7px;font-size:9px}.energy-card-back{width:clamp(105px,30vh,160px);margin-bottom:0}
+ .energy-player-name{font-size:19px}.energy-player-stats{font-size:10px}.energy-player-grade{margin-top:5px}
+ .overload-card{width:clamp(96px,27vh,145px)}.overload-heading{top:8px}.overload-heading strong{font-size:14px}
+ .overload-level{top:14%;font-size:24px}.overload-readout{top:70%;font-size:18px}
+ #enhance-effect-overlay.overload-active #enhance-result-desc{font-size:10px}
+ .asc-heading{top:8px}.asc-heading strong{font-size:16px}.asc-card-wrap{top:40%;width:clamp(95px,27vh,145px)}
+ .asc-copy{top:65%}.asc-phase{font-size:15px}.asc-subtitle{font-size:9px}.asc-changes{line-height:1.35}.asc-controls{bottom:8px}
+}
+@media(prefers-reduced-motion:reduce){html:focus-within{scroll-behavior:auto}}
+</style>
+<script>(()=>{
+ const root=document.documentElement,viewport=window.visualViewport;
+ let scheduled=false;
+ function update(){scheduled=false;const h=viewport?.height||innerHeight;
+  root.style.setProperty('--device-vh',Math.round(h)+'px');
+  const input=document.activeElement;
+  const editing=input?.matches?.('textarea,input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"])');
+  document.body.classList.toggle('device-keyboard-open',!!editing&&innerHeight-h>120);
+ }
+ const schedule=()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(update);};
+ viewport?.addEventListener('resize',schedule,{passive:true});window.addEventListener('resize',schedule,{passive:true});
+ document.addEventListener('focusin',schedule);document.addEventListener('focusout',schedule);window.addEventListener('pageshow',schedule);update();
+})();
+</script>
 </body>
 </html>
 
