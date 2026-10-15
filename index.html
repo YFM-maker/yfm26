@@ -3522,7 +3522,8 @@
         let socialNotificationCheckedAt=0,socialNotificationCheckedOwner=null;
         async function updateSocialNotifications(force=false){
             if(!accountUser || !window.yfmAccountReady || document.hidden || socialNotificationBusy)return;
-            if(!force&&socialNotificationCheckedOwner===accountUser.id&&Date.now()-socialNotificationCheckedAt<19000)return;
+            if(!force&&socialNotificationCheckedOwner===accountUser.id&&Date.now()-socialNotificationCheckedAt<59000)return;
+            if(!force&&!serverBackgroundReady('social-notifications',59000))return;
             socialNotificationBusy=true;
             try {
                 const me=accountUser.id;
@@ -3702,7 +3703,7 @@
         }
         // 대화·문의·알림은 아래의 5초 소셜 갱신으로 함께 처리합니다.
         setInterval(()=>{if(document.querySelector('.screen.active')?.id==='screen-social' && !document.hidden)refreshSocial();},60000);
-        setInterval(updateSocialNotifications,20000);
+        setInterval(()=>updateSocialNotifications(),60000);
         document.addEventListener('visibilitychange',()=>{if(!document.hidden && document.querySelector('.screen.active')?.id==='screen-social'){refreshSocial();loadSocialMessages();}});
         document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateSocialNotifications();});
 
@@ -3878,6 +3879,19 @@
             if(code==='CLIENT_TIMEOUT'||/Failed to fetch|NetworkError|Load failed|timeout/i.test(message))return '서버 응답을 확인하지 못했습니다. 연결 후 같은 작업을 다시 시도해 주세요. 같은 결제 번호를 유지합니다.';
             return `${action} 오류 [${code}]: ${message.slice(0,240)}`;
         }
+        var serverLoadState={until:0,failures:0},backgroundReadTimes=Object.create(null),nextCloudPollAt=0;
+        function serverBackgroundReady(key,gap){
+            if(document.hidden||Date.now()<serverLoadState.until)return false;
+            const now=Date.now();if(now-(backgroundReadTimes[key]||0)<gap)return false;
+            backgroundReadTimes[key]=now;return true;
+        }
+        function noteServerOverload(error){
+            const code=String(error?.code||''),message=String(error?.message||error||'');
+            if(code==='CLIENT_TIMEOUT'||['PGRST000','PGRST001','PGRST002','53300','53400','57014','55P03','40P01','40001'].includes(code)||Number(error?.status)>=500||/Failed to fetch|NetworkError|Load failed|timeout/i.test(message)){
+                serverLoadState.failures=Math.min(4,serverLoadState.failures+1);
+                serverLoadState.until=Math.max(serverLoadState.until,Date.now()+Math.min(90000,8000*2**serverLoadState.failures)+Math.random()*3000);
+            }
+        }
         async function walletRpcWithRetry(name,args,options={}){
             const client=getOwnerRankClient();let lastError,refreshed=false;
             for(let attempt=0;attempt<(options.maxAttempts||3);attempt++){
@@ -3888,7 +3902,7 @@
                     if(result.error)throw result.error;
                     return result;
                 }catch(error){
-                    lastError=error;
+                    lastError=error;noteServerOverload(error);
                     const code=String(error?.code||''),message=String(error?.message||error||'');
                     if(!refreshed&&(code==='PGRST301'||code==='PGRST303'||error?.status===401||/JWT.*expired/i.test(message))){
                         refreshed=true;const refreshedSession=await client.auth.refreshSession();
@@ -3898,7 +3912,7 @@
                     }
                     const retry=code==='CLIENT_TIMEOUT'||['40001','40P01','55P03','PGRST000','PGRST001','PGRST002'].includes(code)||Number(error?.status)>=500||/Failed to fetch|NetworkError|Load failed|timeout/i.test(message);
                     if(!retry||attempt===(options.maxAttempts||3)-1)throw error;
-                    await new Promise(resolve=>setTimeout(resolve,(1000*(attempt+1)+Math.random()*500)));
+                    await new Promise(resolve=>setTimeout(resolve,(Math.min(12000,1500*2**attempt)+Math.random()*1500)));
                 }finally{if(timer)clearTimeout(timer);}
             }
             throw lastError;
@@ -4075,7 +4089,7 @@
             sessionStorage.setItem('yfm_restored_account',owner);
             accountPendingRemote=null;reloadForAccountRestore();return true;
         }
-        async function pollCloudProgress() {
+        async function pollCloudProgress(force=false) {
             const owner=accountUser?.id;
             if(!owner||!window.yfmAccountReady||window.__wiping||accountSaving||cloudProgressReading||document.hidden||cloudMatchInProgress())return;
             if(accountPendingRemote&&accountPendingRemote.owner!==owner)accountPendingRemote=null;
@@ -4083,7 +4097,8 @@
             if(accountSyncBase&&cloudSnapshotFingerprint(accountSnapshot())!==cloudSnapshotFingerprint(accountSyncBase))accountDirty=true;
             if(accountPendingRemote){preservePendingSave();if(accountDirty)return;restoreSyncedAccount(owner,accountPendingRemote.snapshot);return;}
             if(accountDirty){await uploadAccountSnapshot(true);return;}
-            cloudProgressReading=true;
+            if(!force&&(Date.now()<nextCloudPollAt||Date.now()<serverLoadState.until))return;
+            nextCloudPollAt=Date.now()+60000+Math.random()*5000;cloudProgressReading=true;
             try{
                 const result=await boundedProgressRead(owner);if(result.error)throw result.error;
                 if(accountUser?.id!==owner||accountSaving||cloudMatchInProgress()||accountDirty)return;
@@ -4094,7 +4109,7 @@
                 if(!knownVersion&&cloudSnapshotFingerprint(remote)!==cloudSnapshotFingerprint(accountSnapshot())){restoreSyncedAccount(owner,remote);return;}
                 accountSyncBase=remote;confirmDurableSave(owner,remote);
                 localStorage.setItem('yfm_sync_at',remote.at||'');localStorage.setItem('yfm_sync_revision',String(Number.isSafeInteger(remote.sync_revision)?remote.sync_revision:0));accountLastSnapshot=canonData(remote.data);
-            }catch(e){console.warn('다른 기기 진행도 확인 실패:',e);}finally{cloudProgressReading=false;}
+            }catch(e){noteServerOverload(e);console.warn('다른 기기 진행도 확인 실패:',e);}finally{cloudProgressReading=false;}
         }
         function accountSnapshot() {
             const data = {};
@@ -4213,6 +4228,10 @@
             if(!accountUser||window.__wiping||(!window.yfmAccountReady&&!initialSave))return;
             const owner=accountUser.id;
             preservePendingSave(owner);
+            if(!initialSave&&Date.now()<serverLoadState.until){
+                saveStatus('서버 응답 지연 · 기기 보관 · 잠시 후 재시도',true);
+                clearTimeout(accountSaveTimer);accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.max(1500,serverLoadState.until-Date.now()+Math.random()*2000));return;
+            }
             if(accountSaving||tokenWalletPending>0||accountSaveConflict)return;
             if(!force&&(!accountDirty||Date.now()-accountLastWrite<55000))return;
             accountSaving=true;
@@ -4238,7 +4257,7 @@
                         restoreAccountSnapshot(merged.snapshot);rememberCloudRestore(owner,merged.snapshot);
                         localStorage.setItem(accountDeviceKey,owner);reloadForAccountRestore();return;
                     }
-                    if(!data.ok)throw new Error('서버 저장에 실패했습니다.');accountSaveFailures=0;
+                    if(!data.ok)throw new Error('서버 저장에 실패했습니다.');accountSaveFailures=0;serverLoadState.failures=0;
                     const localNow=accountSnapshot();
                     if(walletVersion===tokenWalletRevision)applyServerWallet(Number(data.balance));
                     accountLastSnapshot=canonData(accepted.data);accountLastWrite=Date.now();
@@ -4434,8 +4453,8 @@
             maybeStartTutorial();
         }
         setInterval(()=>{if(accountDirty)uploadAccountSnapshot(true);else pollCloudProgress();},15000);
-        window.addEventListener('online',()=>{pollCloudProgress();refreshMissionReceipts(true);});
-        document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollCloudProgress();});
+        window.addEventListener('online',()=>{pollCloudProgress(true);refreshMissionReceipts(true);});
+        document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollCloudProgress(true);});
         document.addEventListener('visibilitychange',()=>{if(document.hidden){preservePendingSave();uploadAccountSnapshot(true);}});
         window.addEventListener('pagehide',()=>{preservePendingSave();if(accountDirty)uploadAccountSnapshot(true);});
         async function signOutGameAccount() {
@@ -12702,7 +12721,8 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
 <script>
 let gameAccessBusy=false,gameBlocked=false,gameAccessCheckedAt=0,gameAccessCheckedOwner=null;
 async function checkGameAccess(uid,required=false,prefetchedStatus=null){
- if(!required&&(gameAccessBusy||(gameAccessCheckedOwner===uid&&Date.now()-gameAccessCheckedAt<28000)))return !gameBlocked;
+ if(!required&&(gameAccessBusy||(gameAccessCheckedOwner===uid&&Date.now()-gameAccessCheckedAt<58000)))return !gameBlocked;
+ if(!required&&!prefetchedStatus&&!serverBackgroundReady('account-access',58000))return !gameBlocked;
  gameAccessBusy=true;
  try{
   let data=prefetchedStatus;
@@ -12729,6 +12749,7 @@ async function supportRpc(action,payload={}){const {data,error}=await walletRpcW
 let supportRefreshBusy=false,supportCheckedAt=0,supportCheckedOwner=null;
 function showSupportError(e){const box=document.getElementById('social-support-inbox');box.replaceChildren();const p=document.createElement('p');p.style.cssText='padding:12px;border:1px solid #a34d66;border-radius:9px;color:#fca5a5;font-size:13px';p.textContent=supportErrorMessage(e);box.append(p);}
 async function refreshAdminSupport(force=false){
+ if(!force&&!serverBackgroundReady('support-inbox',15000))return;
  const uid=accountUser?.id;if(!uid||supportRefreshBusy)return;
  if(!force&&supportCheckedOwner===uid&&Date.now()-supportCheckedAt<19000)return;
  supportRefreshBusy=true;try{
@@ -12742,7 +12763,7 @@ async function refreshAdminSupport(force=false){
  }catch(e){showSupportError(e);throw e;}finally{supportRefreshBusy=false;}
 }
 async function openAdminSupport(){try{await refreshAdminSupport(true);const id=window.yfmAdminId;if(!id)throw new Error('관리자 정보를 확인하지 못했습니다. SQL 적용 후 다시 로그인해 주세요.');if(id===accountUser?.id){document.getElementById('social-support-inbox').scrollIntoView?.({block:'nearest',behavior:'smooth'});return;}supportPeers.add(id);await openSocialChat(id,'관리자');}catch(e){socialStatus(e.message||'관리자 문의를 열지 못했습니다.',true);}}
-setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden)checkGameAccess(accountUser.id);},30000);
+setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden)checkGameAccess(accountUser.id);},60000);
 setInterval(()=>{if(window.yfmAccountReady&&accountUser&&!document.hidden&&document.querySelector('.screen.active')?.id==='screen-social'){refreshAdminSupport().then(updateSocialNotifications).catch(()=>{});loadSocialMessages();}},5000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.yfmAccountReady&&accountUser)checkGameAccess(accountUser.id);});
 </script>
