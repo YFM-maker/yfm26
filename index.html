@@ -1091,7 +1091,6 @@
                     <button class="fm-nav-item" onclick="switchScreen('screen-recruit')"><span class="fm-ico">🔍</span><span>선수 영입</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-enhance')"><span class="fm-ico">⬆️</span><span>강화</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-fusion')"><span class="fm-ico">🧬</span><span>진화</span></button>
-                    <button id="fm-nav-awaken" class="fm-nav-item" onclick="switchScreen('screen-awaken')"><span class="fm-ico">✨</span><span>선수 합성</span><span id="fm-awk-badge" class="fm-badge" style="display:none" aria-label="합성 가능한 학생 수"></span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-stats')"><span class="fm-ico">📊</span><span>기록실</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-owner-rank')"><span class="fm-ico">🏆</span><span>구단주 TOP 50</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-social')"><span class="fm-ico">👥</span><span>소셜</span><span id="fm-social-badge" class="fm-badge" style="display:none" aria-label="새 소셜 알림"></span></button>
@@ -1126,7 +1125,7 @@
     <div id="screen-owner-rank" class="screen bg-gradient-dark flex-col" style="overflow:auto;padding:20px">
         <div style="width:min(100%,760px);margin:0 auto;color:white">
             <h1 style="font-size:clamp(22px,4vw,32px);font-weight:900;margin:0 0 6px">구단주 TOP 50</h1>
-            <p style="font-size:13px;color:#cbd5e1;margin:0 0 16px">선발 11명 평균 OVR 순위 · 매일 한국 시간 자정 갱신 · 접속 시 자동 참여 · 동점이면 먼저 참여한 구단 우선</p>
+            <p style="font-size:13px;color:#cbd5e1;margin:0 0 16px">선발 11명 평균 OVR 순위 · 매 정시 갱신 (1시간마다) · 접속 시 자동 참여 · 동점이면 먼저 참여한 구단 우선</p>
             <div style="background:#19152c;border:1px solid #64518b;border-radius:14px;padding:15px;margin-bottom:16px">
                 <div id="owner-rank-mine" style="font-weight:800;margin-bottom:9px">내 팀 정보를 불러오는 중...</div>
                 <button type="button" onclick="loadOwnerRank()" style="background:#334155;border-radius:9px;padding:9px 14px;font-weight:800;color:#fff;margin-left:7px">순위 새로고침</button>
@@ -1136,7 +1135,7 @@
             <div id="owner-rank-detail" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:120;align-items:center;justify-content:center;padding:16px;background:#000b">
                 <div style="background:#1c1630;border:1px solid #7863a8;border-radius:16px;padding:20px;width:min(100%,480px);max-height:85vh;overflow:auto">
                     <div style="display:flex;gap:12px;align-items:start"><h2 id="owner-rank-detail-title" style="flex:1;font-size:18px;font-weight:900"></h2><button type="button" onclick="document.getElementById('owner-rank-detail').style.display='none'" aria-label="닫기" style="font-size:25px">×</button></div>
-                    <p style="font-size:12px;color:#cbd5e1;margin:8px 0">공개된 선발 11명 · 매일 자정 갱신</p><div id="owner-rank-detail-list"></div>
+                    <p style="font-size:12px;color:#cbd5e1;margin:8px 0">공개된 선발 11명 · 매 정시 갱신</p><div id="owner-rank-detail-list"></div>
                 </div>
             </div>
             <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">현재 순위는 플레이어가 등록한 기록이며 경기 기록을 서버에서 검증하지 않아.</p>
@@ -1574,20 +1573,6 @@
             <div class="w-80 bg-gray-800/80 rounded-2xl border border-gray-700 p-3 flex flex-col min-h-0"><h2 class="font-black text-gray-300 mb-1">② 진화 토큰</h2><div id="fusion-mats" class="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1 pr-1"></div></div>
         </div>
         <div id="fusion-overlay" onclick="skipCurrentEffect(event)" class="fixed inset-0 bg-black/90 z-50 hidden flex-col items-center justify-center"></div>
-    </div>
-
-    <!-- ✨ 선수 합성 (각성) -->
-    <div id="screen-awaken" class="screen bg-gradient-dark flex-col">
-        <header class="flex justify-between items-center px-6 py-4 bg-gray-900/80 border-b border-gray-700 shrink-0">
-            <button onclick="switchScreen('screen-lobby')" class="text-xl font-bold hover:text-blue-400">&lt; 로비로 돌아가기</button>
-            <h1 class="text-2xl font-black text-amber-300">✨ 선수 합성</h1>
-            <div class="flex items-center gap-2 bg-gray-800 px-5 py-2 rounded-full border border-yellow-500"><span class="text-yellow-400 font-black">T</span><span class="font-bold" id="token-display-awaken"></span></div>
-        </header>
-        <div class="awk-wrap">
-            <section class="awk-col"><div class="awk-col-h"><b>① 합성할 학생</b><span id="awk-ready-count"></span><button id="awk-filter" onclick="awkToggleReady()">합성 가능만</button></div><div id="awk-list" class="awk-scroll"></div></section>
-            <section class="awk-col awk-mid"><div class="awk-col-h"><b>② 각성 경로</b><span>★1·★3 특성 · ★5 전용 능력</span></div><div id="awk-center" class="awk-scroll"></div></section>
-            <section class="awk-col"><div class="awk-col-h"><b>③ 보유 카드</b><span>본체 · 재료</span></div><div id="awk-cards" class="awk-scroll"></div></section>
-        </div>
     </div>
 
     <!-- 첫 팀 종건급 선택 -->
@@ -3369,7 +3354,6 @@
             if (currentManager === 'kim' && (p.position === 'DF' || p.position === 'MF')) t += 1;
             if (currentManager === 'lee' && p.position === 'FW') t += 2;
             t += EVO_BONUS[p.evo || 0];
-            t += Math.max(0, Math.min(5, Number(p.awk) || 0));   // ✨ 각성: 별 하나당 OVR +1 (최대 +5) — 특성은 ★1·★3·★5에서 해금
             return t; 
         }
         function getTeamOvr() {
@@ -3382,7 +3366,7 @@
         const OWNER_RANK_URL = 'https://wgnnwherrljscxcclkdr.supabase.co';
         const OWNER_RANK_PUBLISHABLE_KEY = 'sb_publishable_yBpUGiF77N7k-ArjiW__uw_KPvL4yp2';
         var ownerRankClient = null, ownerRankRegistered = false, ownerRankChecking = null, ownerRankSyncTimer = null, ownerRankLastSent = '';   // var: 첫 실행(저장 없음) 때 saveData가 이보다 먼저 불려도 오류가 나지 않게
-        let ownerRankDay = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+        let ownerRankDay = Math.floor(Date.now() / 3600000);
         function ownerRankStatus(message, failed = false) {
             const el = document.getElementById('owner-rank-status');
             if (el) { el.textContent = message; el.style.color = failed ? '#fca5a5' : '#c4b5fd'; }
@@ -3398,18 +3382,18 @@
             }
             const controller=new AbortController(),original=init.signal;
             const cancel=()=>controller.abort();if(original?.aborted)cancel();else original?.addEventListener('abort',cancel,{once:true});
-            const timer=setTimeout(cancel,20000);   // 느린 모바일 회선에서도 로그인 요청이 끝날 시간을 준다
+            const timer=setTimeout(cancel,12000);
             try{return await fetch(input,{...init,signal:controller.signal});}
             finally{clearTimeout(timer);original?.removeEventListener('abort',cancel);}
         }
         async function boundedProgressRead(owner){
-            const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);   // 저장 기록(로고·선수 데이터)이 크면 10초로는 모자랐음
+            const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
             try{
                 const result=await getOwnerRankClient().from('game_progress').select('save_data').eq('user_id',owner).abortSignal(controller.signal).maybeSingle();
                 if(result.error)throw result.error;return result;
             }finally{clearTimeout(timer);}
         }
-        function startupTimeout(promise,ms=20000){
+        function startupTimeout(promise,ms=12000){
             let timer;return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject({code:'CLIENT_TIMEOUT',message:'로그인 확인 시간이 초과됐습니다.'}),ms);})]).finally(()=>clearTimeout(timer));
         }
         let startupBundleAvailable=null,accountGateBusy=false;
@@ -3471,11 +3455,11 @@
                 if(error) throw error;
                 if(!data?.length){ownerRankRegistered=false;return;}
                 ownerRankLastSent=signature;
-                if(document.querySelector('.screen.active')?.id==='screen-owner-rank') ownerRankStatus('현재 베스트 11을 저장했어. 공개 순위에는 다음 자정에 반영돼.');
+                if(document.querySelector('.screen.active')?.id==='screen-owner-rank') ownerRankStatus('현재 베스트 11을 저장했어. 공개 순위에는 다음 정시에 반영돼.');
             } catch(e){console.warn('구단주 순위 저장 실패:',e);}
         }
         setInterval(()=>{
-            const day=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+            const day=Math.floor(Date.now()/3600000);
             if(day!==ownerRankDay){ownerRankDay=day;if(document.querySelector('.screen.active')?.id==='screen-owner-rank') loadOwnerRank();}
             queueOwnerRankSync();
         },60000);
@@ -3506,7 +3490,7 @@
                     const score=document.createElement('b');score.style.cssText='white-space:nowrap';score.textContent=`OVR ${row.published_ovr}`;
                     item.append(rank,names,score);item.addEventListener('click',()=>showOwnerRankLineup(row));list.append(item);
                 });
-                ownerRankStatus(ownerRankRegistered?'접속 시 자동 참여합니다. 이후 OVR과 베스트 11은 매일 한국 시간 자정에 갱신됩니다.':'로그인 후 선발 11명을 구성하면 자동으로 참여합니다.');
+                ownerRankStatus(ownerRankRegistered?'접속 시 자동 참여합니다. 이후 OVR과 베스트 11은 매 정시 갱신됩니다.':'로그인 후 선발 11명을 구성하면 자동으로 참여합니다.');
             } catch(e){if(list)list.textContent='순위를 불러오지 못했어.';ownerRankStatus(e.message||'연결 오류',true);}
         }
         function showOwnerRankLineup(row) {
@@ -3808,7 +3792,7 @@
             const ownerName = document.getElementById('account-owner-name').value.trim();
             if (accountMode === 'signup' && (ownerName.length < 2 || ownerName.length > 16)) return accountMessage('구단주명은 2~16자로 입력해줘.');
             if (!/^[A-Za-z0-9!@#^*]{3,10}$/.test(id) || !/^[A-Za-z0-9!@#^*]{7,15}$/.test(password)) return accountMessage('아이디·비밀번호의 길이와 허용 문자를 확인해줘.');
-            const button=document.getElementById('account-submit');if(button.disabled||accountGateBusy){accountMessage('자동 로그인을 확인하는 중이야. 잠시만 기다려줘…');return;}button.disabled=true;
+            const button=document.getElementById('account-submit');if(button.disabled||accountGateBusy)return;button.disabled=true;
             accountLoginStage='Supabase 라이브러리 로딩';accountMessage('계정 확인 중...');
             try {
                 if (!(await waitSupabase())) throw {code:'LIBRARY_TIMEOUT',message:'supabase script timeout'};
@@ -3831,7 +3815,7 @@
                 accountLoginStage=accountMode==='signup'?'회원가입 인증 요청':'아이디·비밀번호 인증 요청';
                 const result = accountMode === 'signup'
                     ? await client.auth.signUp({email,password,options:{data:{username:id,owner_name:ownerName}}})
-                    : await retryNet(async () => { const r = await client.auth.signInWithPassword({email,password}); if (r.error && !/invalid/i.test(r.error.message || '') && (r.error.status === 0 || r.error.status >= 500 || /fetch|network|abort/i.test(r.error.message || ''))) throw r.error; return r; },2);
+                    : await retryNet(async () => { const r = await client.auth.signInWithPassword({email,password}); if (r.error && !/invalid/i.test(r.error.message || '') && (r.error.status === 0 || r.error.status >= 500 || /fetch|network/i.test(r.error.message || ''))) throw r.error; return r; },1);
                 if (result.error) throw result.error;
                 accountLoginStage='인증 세션 응답 확인';
                 if (!result.data.session) throw new Error('Supabase Auth의 이메일 확인을 꺼야 아이디 가입 후 바로 로그인할 수 있어.');
@@ -3854,7 +3838,7 @@
                 finishAccountResume();
                 accountLoginFailure(error,accountMode === 'signup' ? '가입에 실패했어. 이미 쓰는 아이디이거나 설정을 확인해야 해.'
                     : /invalid/i.test(msg) ? '아이디 또는 비밀번호가 맞지 않아.'
-                    : (error?.code === 'CLIENT_TIMEOUT' || /time ?out|timed out|fetch|network|Failed|abort|Load failed/i.test(msg)) ? '서버 응답이 늦어. 인터넷 연결을 확인하고 잠시 후 다시 시도해줘.' : '로그인에 실패했어. 잠시 후 다시 시도해줘.');
+                    : /timeout|fetch|network|Failed/i.test(msg) ? '서버 연결이 불안정해. 잠시 후 다시 시도해줘.' : '로그인에 실패했어. 잠시 후 다시 시도해줘.');
             } finally { button.disabled = false; }
         }
         let tokenWalletBalance=null, tokenWalletRevision=0, tokenWalletQueue=Promise.resolve(), tokenWalletRefreshQueued=false, tokenWalletPending=0;
@@ -4081,7 +4065,7 @@
             accountSyncBase=snapshot;storeSaveRecord(owner,{...readSaveRecord(owner),base:snapshot,pending:null});
             rememberCloudRestore(owner,snapshot);
             window.__wiping=true;
-            restoreAccountSnapshot(snapshot,owner);
+            restoreAccountSnapshot(snapshot);
             localStorage.setItem('yfm_sync_at',snapshot.at||'');
             localStorage.setItem('yfm_sync_revision',String(Number.isSafeInteger(snapshot.sync_revision)?snapshot.sync_revision:0));
             sessionStorage.setItem('yfm_restored_account',owner);
@@ -4117,37 +4101,10 @@
             if(accountUser?.id&&Number.isSafeInteger(tokenWalletBalance)&&tokenWalletBalance>=0)data.fm_tokens=String(tokenWalletBalance);
             return {app:'YFM',v:22,at:new Date().toISOString(),data:compactTournamentLogos(data)};
         }
-        // 서버 기록으로 복원한 뒤 새로고침되기 전까지, 이 화면에 남아 있던 옛 메모리 값이 fm_ 저장소를 다시 덮어쓰지 못하게 잠근다.
-        // (새로고침하는 순간 visibilitychange → dailyTick → 업적 정리가 옛 기록실·업적 데이터를 저장해, 복원한 기록이 초기화되던 문제)
-        (function(){
-            const P=Storage.prototype,set=P.setItem,del=P.removeItem;
-            const locked=(store,key)=>window.__restoreLock===true&&store===window.localStorage&&String(key).startsWith('fm_');
-            P.setItem=function(key,value){if(locked(this,key))return;return set.call(this,key,value);};
-            P.removeItem=function(key){if(locked(this,key))return;return del.call(this,key);};
-        })();
-        // 기록실 기록(fm_stats)은 경기 수·골처럼 늘어나기만 하는 값이다. 같은 계정의 이 기기에 더 많이 쌓인 기록이 있으면
-        // 서버 쪽의 비어 있거나 덜 쌓인 기록으로 덮어쓰지 않고 항목별로 더 많이 쌓인 쪽을 남긴다 (예전 버그로 서버 기록이 비워진 경우 복구).
-        function mergeRecordStats(localRaw,incomingRaw){
-            let L,I;try{L=JSON.parse(localRaw||'null');}catch(_){L=null;}try{I=JSON.parse(incomingRaw||'null');}catch(_){I=null;}
-            if(!L||typeof L!=='object'||Array.isArray(L))return incomingRaw;
-            if(!I||typeof I!=='object'||Array.isArray(I))return localRaw;
-            const out={...I},games=r=>r&&typeof r==='object'?(Number(r.app)||0)+(Number(r.sub)||0):0,cnt=v=>typeof achievementCount==='function'?achievementCount(v):(Number(v)||0);
-            ['saudi','career','league','europa','worldcup'].forEach(k=>{if(L[k]&&typeof L[k]==='object'&&(Number(L[k].p)||0)>(Number(I[k]?.p)||0))out[k]=L[k];});
-            if(L.pl&&typeof L.pl==='object'){out.pl={...(I.pl&&typeof I.pl==='object'?I.pl:{})};Object.entries(L.pl).forEach(([id,r])=>{if(games(r)>games(out.pl[id]))out.pl[id]=r;});}
-            ['titles','europaTitles','worldCupTitles','rogueClears'].forEach(k=>{if((Number(L[k])||0)>(Number(I[k])||0))out[k]=L[k];});
-            if(L.leagueTitles&&typeof L.leagueTitles==='object'){out.leagueTitles={...(I.leagueTitles||{})};Object.entries(L.leagueTitles).forEach(([n,v])=>{if(cnt(v)>cnt(out.leagueTitles[n]))out.leagueTitles[n]=v;});}
-            ['awards','cupAwards'].forEach(k=>{if(Array.isArray(L[k])&&L[k].length>(Array.isArray(I[k])?I[k].length:0))out[k]=L[k];});
-            if(L.story&&typeof L.story==='object'){out.story={...(I.story||{})};Object.entries(L.story).forEach(([b,r])=>{const o=out.story[b];if(r&&(!o||(r.tl||[]).length>(o.tl||[]).length))out.story[b]=r;});if(!out.storyV&&L.storyV)out.storyV=L.storyV;}
-            return JSON.stringify(out);
-        }
-        function restoreAccountSnapshot(snapshot,owner) {
+        function restoreAccountSnapshot(snapshot) {
             if (snapshot?.app!=='YFM' || !snapshot.data || !Array.isArray(JSON.parse(snapshot.data.fm_players||'null'))) throw new Error('서버 저장 데이터가 올바르지 않아.');
-            window.__restoreLock=false;
-            const keepStats=owner&&localStorage.getItem(accountDeviceKey)===owner?localStorage.getItem('fm_stats'):null;   // 같은 계정의 기기 기록만 합친다
             Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
             Object.entries(expandTournamentLogos(snapshot.data)).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && typeof v==='string') localStorage.setItem(k,v);});
-            if(keepStats){try{const merged=mergeRecordStats(keepStats,localStorage.getItem('fm_stats'));if(merged)localStorage.setItem('fm_stats',merged);}catch(e){console.warn('기록실 기록 합치기 실패:',e);}}
-            window.__restoreLock=true;window.__wiping=true;   // 복원 뒤에는 항상 새로고침한다
         }
         // One acknowledged baseline and one unacknowledged snapshot per account.
         let accountSyncBase=null,accountSaveTimer=null,accountSaveConflict=null,accountJournalWarned=false;
@@ -4284,7 +4241,7 @@
         var gameSessionOwner=null,gameSessionDeadline=0,gameSessionTimer=null,gameSessionBusy=false,gameSessionBlocked=false;
         async function claimGameSession(user){
             accountLoginStage='계정 동시 접속 확인';
-            const reply=await walletRpcWithRetry('yfm_session_claim',{}, {maxAttempts:2,timeoutMs:12000});
+            const reply=await walletRpcWithRetry('yfm_session_claim',{}, {maxAttempts:1,timeoutMs:10000});
             if(!reply.data?.ok){const wait=Math.max(1,Number(reply.data?.retry_after)||120);throw {code:'ACCOUNT_IN_USE',message:`다른 기기에서 이 계정을 이용 중입니다. 해당 기기에서 로그아웃하거나 게임을 닫고 최대 ${wait}초 후 다시 로그인해 주세요.`};}
             gameSessionOwner=user.id;gameSessionDeadline=Date.now()+Number(reply.data.ttl_seconds||120)*1000;gameSessionBlocked=false;
         }
@@ -4327,11 +4284,11 @@
         async function enterGameAccount(user) {
             await claimGameSession(user);
             accountLoginStage='게임 진입 준비';accountMessage('계정 이용 상태와 저장 기록을 확인하는 중...');
-            let data,balance,bundleFallback=false;
+            let data,balance;
             if(startupBundleAvailable!==false){
                 try{
                     accountLoginStage='계정 상태·저장 기록 통합 조회 (yfm_startup_bundle)';
-                    const reply=await walletRpcWithRetry('yfm_startup_bundle',{}, {maxAttempts:1,timeoutMs:18000});
+                    const reply=await walletRpcWithRetry('yfm_startup_bundle',{}, {maxAttempts:1,timeoutMs:10000});
                     if(!reply.data?.status)throw new Error('로그인 서버 응답이 올바르지 않습니다.');
                     startupBundleAvailable=true;
                     accountLoginStage='계정 이용 가능 여부 확인';
@@ -4339,21 +4296,14 @@
                     accountLoginStage='통합 응답 토큰 잔액 검증';
                     if(!Number.isSafeInteger(Number(reply.data.balance))||Number(reply.data.balance)<0)throw new Error('토큰 잔액을 확인하지 못했습니다.');
                     data={save_data:reply.data.save_data};balance=Number(reply.data.balance);
-                }catch(e){
-                    if(['PGRST202','42883'].includes(String(e.code)))startupBundleAvailable=false;
-                    // 한 번에 받는 묶음 응답이 느리면(시간 초과·네트워크) 상태 확인과 저장 기록을 나눠서 다시 받는다
-                    else if(e?.code==='CLIENT_TIMEOUT'||/Failed to fetch|NetworkError|Load failed|abort|timeout/i.test(String(e?.message||e))){bundleFallback=true;accountMessage('서버 응답이 느려 나눠서 불러오는 중...');}
-                    else throw e;
-                }
+                }catch(e){if(['PGRST202','42883'].includes(String(e.code)))startupBundleAvailable=false;else throw e;}
             }
-            if(startupBundleAvailable===false||bundleFallback){
+            if(startupBundleAvailable===false){
                 accountLoginStage='계정 이용 상태 조회';
                 if(!(await checkGameAccess(user.id,true)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
                 accountMessage('저장 기록을 불러오는 중...');
                 accountLoginStage='게임 저장 기록 조회 (game_progress)';
                 data=(await boundedProgressRead(user.id)).data;
-                // 나눠 받은 경로에서 저장 기록이 비어 오면 '새 계정'으로 단정하지 않는다. 처음 시작한 데이터로 서버 기록을 덮어쓰지 않도록 다시 로그인하게 한다.
-                if(bundleFallback&&!data?.save_data)throw {code:'CLIENT_TIMEOUT',message:'저장 기록을 확인하지 못했습니다.'};
             }
             accountLoginStage='게임 저장 기록 복원·기기 저장소 처리';
             const previousOwner=localStorage.getItem(accountDeviceKey);
@@ -4370,7 +4320,7 @@
             const pending=journal?.pending;
             accountSyncBase=journal?.base||data?.save_data||null;
             if(pending&&!window.yfmResumingAccount){
-                restoreAccountSnapshot(pending,user.id);rememberCloudRestore(user.id,pending);
+                restoreAccountSnapshot(pending);rememberCloudRestore(user.id,pending);
                 localStorage.setItem(accountDeviceKey,user.id);reloadForAccountRestore();return;
             }
 
@@ -4397,7 +4347,7 @@
                 const needRestore = !sameOwnerLocal || leagueNeedsRestore || (localDiff && (!Number.isFinite(Date.parse(syncAt)) || Date.parse(remoteAt) > Date.parse(syncAt)));
                 if (shouldRestoreCloudAtLogin(user.id,data.save_data,needRestore)) {
                     rememberCloudRestore(user.id,data.save_data);
-                    restoreAccountSnapshot(data.save_data,user.id);
+                    restoreAccountSnapshot(data.save_data);
                     if (remoteAt) localStorage.setItem('yfm_sync_at', remoteAt);
                     sessionStorage.setItem('yfm_restored_account',user.id);
                     localStorage.setItem(accountDeviceKey,user.id);
@@ -4430,7 +4380,7 @@
             if(!pending&&data?.save_data){accountSyncBase=data.save_data;storeSaveRecord(user.id,{base:accountSyncBase,pending:null});}
             accountUser=user;
             accountLoginStage=balance!==undefined?'서버 토큰 잔액 적용':'서버 토큰 잔액 조회 (yfm_wallet_get)';
-            if(balance!==undefined)applyServerWallet(balance);else await loadServerWallet({maxAttempts:2,timeoutMs:15000,force:true});
+            if(balance!==undefined)applyServerWallet(balance);else await loadServerWallet({maxAttempts:1,timeoutMs:10000,force:true});
             accountLoginStage='게임 화면 초기화';
             window.yfmAccountReady=true;startGameSessionHeartbeat();
             setTimeout(()=>{if(accountUser?.id!==user.id||!window.yfmAccountReady)return;if(typeof window.yfmCheckAdmin==='function')window.yfmCheckAdmin();settleLeagueRewards();},2000);
@@ -4654,48 +4604,6 @@
         }
         // 📢 업데이트 소식: 최신 패치가 맨 위. 새 업데이트는 이 배열 앞에 추가한다 (메인 메뉴 빈칸 카드)
         const GAME_UPDATES = [
-            { v: '1.32', date: '2026.10.14', title: '각성 & 학생 기록 업데이트', sec: [
-                ['🗂️ 기록 초기화 문제 수정', [
-                    '다른 기기나 새 브라우저에서 로그인해 서버 저장 기록을 불러올 때 기록실 기록(경기·골·도움·평점·개인상·우승)과 업적이 처음 상태로 돌아가던 문제를 고쳤습니다. 저장 기록을 불러오고 새로고침되는 순간, 이전 화면에 남아 있던 빈 기록이 다시 저장된 것이 원인이었습니다.',
-                    '같은 계정으로 쓰던 기기에 기록이 더 많이 남아 있으면, 서버 쪽 기록이 비어 있어도 항목별로 더 많이 쌓인 기록을 남깁니다. 그 기기로 접속하면 남아 있던 기록이 다시 서버에 저장됩니다.',
-                    '학생 기록에 업데이트 이전의 경기 기록, 리그 득점왕·도움왕, 대회 개인상과 우승이 반영됩니다. 이미 뛰던 학생에게 ‘데뷔’나 ‘첫 MOM’이 다시 붙지 않습니다.',
-                    '선수 합성 때 재료 카드의 경기 기록이 본체 카드로 합쳐져, 기록실 ‘내 팀’에서 기록이 사라지지 않습니다.',
-                    '로그인 응답이 느려 저장 기록을 나눠서 불러오다가 기록을 확인하지 못하면, 새 계정으로 처리하지 않고 다시 시도하도록 안내합니다.'
-                ]],
-                ['✨ 각성 시스템', [
-                    '같은 학생의 중복 카드를 합쳐 ★1~★5까지 각성할 수 있습니다. 학생마다 정해진 각성 경로(특성 해금 순서)를 미리 볼 수 있습니다.',
-                    '메뉴에 ‘✨ 선수 합성’이 새로 생겼습니다. 합성할 수 있는 학생 목록, 각성 경로, 본체·재료 카드를 한 화면에서 확인하고 바로 합성합니다. 합성할 수 있는 학생이 있으면 메뉴에 숫자 배지가 뜨고, 선수 정보 창의 ‘선수 합성에서 보기’를 누르면 그 학생 화면으로 바로 이동합니다.',
-                    '별 하나마다 OVR +1(최대 +5)이고, ★1·★3에서 특성, ★5에서 전용 능력이 열립니다. ★2·★4는 OVR만 오릅니다.',
-                    '카드 등급이 높을수록 특성 수치가 크고 좋은 특성이 열립니다. ‘감아차기 스페셜리스트’·‘세트피스 마스터’·‘막판 해결사’는 노말급 이상에서만 나옵니다.',
-                    '★5 전용 능력은 천민급 ‘잡초 근성’, 노말급 ‘골 냄새’·‘마에스트로’·‘통곡의 벽’·‘거미손’, 종건급 ‘황금 발’·‘레전드 오라’·‘수비 사령관’·‘수호신’입니다. 종건급 전용 능력 일부는 팀 전체에 영향을 줍니다.',
-                    '특성은 박스 밖 슈팅·75분 이후·지고 있을 때처럼 정해진 상황에서만 발동해 OVR 인플레이션 없이 개성을 살립니다.',
-                    '🌀 감아차기 스페셜리스트·황금 발의 박스 밖 슈팅과 직접 프리킥(세트피스 마스터 포함)은 바깥으로 휘었다가 골문 쪽으로 감겨 들어가고, 빛나는 궤적이 경기 화면에 남습니다.',
-                    '필요한 카드는 단계별 1·1·2·2·3장(총 9장)이며, 선발이 아닌 카드 중 강화·진화가 낮은 카드부터 재료로 사용합니다. 본체 카드는 직접 바꿀 수 있고, 각성한 카드에는 별(★)이 표시됩니다.'
-                ]],
-                ['📖 학생별 성장 서사 & 전용 기록', [
-                    '학생마다 통산 경기·골·도움·MOM·해트트릭·클린시트·평균 평점·우승 기록이 쌓입니다. 판매하거나 각성 재료로 쓴 카드의 기록도 합산됩니다.',
-                    '데뷔, 첫 골, 첫 MOM, 통산 기록 달성, 극장골, 각성, 우승·승격, 득점왕 같은 순간이 성장 타임라인에 남고, 기록을 바탕으로 학생별 성장 이야기가 자동으로 써집니다.',
-                    '기록에 따라 ‘100골의 사나이’, ‘통곡의 벽’, ‘극장골 전문’ 같은 칭호가 붙습니다. 기록실 › 학생 탭에서 학생 명예의 전당을 볼 수 있습니다.'
-                ]],
-                ['🎤 인터뷰 질문 다양화', [
-                    'MOM 인터뷰에 기자 질문이 생겼습니다. 해트트릭·극장골·첫 골·통산 기록·무실점·교체 투입·역전승·각성·주장·연승·여론 압박 등 상황에 맞는 질문이 나오고, 선수 성격에 따라 답이 달라집니다.',
-                    '감독 기자회견 질문이 크게 늘었습니다. 연승·부진·순위 경쟁·무실점·막판 실점·교체 적중·점유율·결정력·카드·부상·주장·여론·팬·상대 감독 발언 등 그날 경기와 팀 상황에 맞는 질문이 섞여 나옵니다. 경기 전 기자회견도 마찬가지입니다.'
-                ]],
-                ['🗣️ 사람과 대화하듯: 감독·선수·팬', [
-                    '선수 면담이 한 번 묻고 끝나지 않습니다. 선수가 성격대로 말을 이어 가고(출전 고민·폼·부상·팀 분위기·친구·라이벌·학교생활), 감독이 답을 골라 2~3번 더 대화합니다.',
-                    '팀 허브에 ‘💬 단톡방’이 생겼습니다. 경기가 끝나면 학생 선수들이 카톡처럼 수다를 떱니다. 득점자 자랑, 친구의 놀림, 자책하는 동료 다독이기, 벤치 선수의 아쉬움, 다음 상대 이야기가 나오고, 감독도 경기마다 한 번 메시지를 남길 수 있습니다.',
-                    '공식 계정으로 답글을 달면 원글 작성자와 다른 팬들이 다시 반응합니다. 선수 SNS에서는 선수끼리 @멘션으로 주고받고, 도움을 준 선수와 득점한 선수가 서로 고마움을 전합니다.'
-                ]],
-                ['💬 진짜 사람 같은 팬 댓글', [
-                    '팬 커뮤니티·소셜 피드 댓글이 서로 대화합니다. 질문에 답하고, 의견에 반박·재반박하고, 틀린 득점 시간을 정정하고, 작성자가 답글을 다는 등 실제 커뮤니티처럼 이어집니다.',
-                    '댓글은 득점자·득점 시간·평점·점유율·슈팅·xG·순위·연승·연패·VAR 판정 같은 실제 경기 기록을 근거로 합니다. 기존의 재밌는 드립 댓글은 그대로 남아 있습니다.'
-                ]],
-                ['🛠️ 개선 및 수정', [
-                    '서버 응답이 느리거나 모바일 회선이 불안정할 때 로그인 도중 시간 초과로 실패하던 문제를 수정했습니다. 응답이 늦으면 나눠서 다시 불러오고, 오류 원인에 맞는 안내가 표시됩니다.',
-                    '경기 중 교체로 들어온 선수가 나간 선수의 각성 단계를 물려받지 않도록 했습니다.',
-                    '선수 SNS 게시물에 서로 다른 동료가 똑같은 댓글을 달던 문제를 고쳤습니다.'
-                ]]
-            ] },
             { v: '1.31', date: '2026.10.13', title: '로그인 저장 기록 복원 반복 수정', sec: [
                 ['저장 기록 불러오기 반복 수정', [
                     '로그인 중 같은 서버 저장 기록을 반복해서 복원하고 새로고침하던 문제를 수정했습니다.',
@@ -5603,7 +5511,7 @@
             if (o.sideF && o.sideF !== 1) { np.sideF = o.sideF; np.ovr = Math.round(np.ovr * o.sideF * 10) / 10; Object.keys(np.attr).forEach(k => np.attr[k] = Math.round(np.attr[k] * o.sideF)); }
             np.rlBase = null; applyPI(np); o.exitTime = st.time; st.homePlayers[i] = np; st.homeOut.push(o); if (st.tacSessionAvailable) st.tacSessionAvailable.add(o.id); if (!returning) st.playerStats[n.id] = { goals: 0 };
             (st.subMap ||= {})[o.id] = np.id;   // 코너킥 수비 잔류 등 개인 역할을 교체 선수가 이어받음
-            np.isCaptain = false; if (o.isCaptain) passArmband(st, o); np.awk = Math.max(0, Math.min(5, Number(n.awk) || 0)); np.awkT = typeof awkTraitsFor === 'function' ? awkTraitsFor(n) : null; np.awkCurl = !!(np.awkT && np.awkT.some(t => t.curl)); if (typeof awkTeamRecalc === 'function') awkTeamRecalc(st);
+            np.isCaptain = false; if (o.isCaptain) passArmband(st, o);
             np.mF = st.pressure != null && typeof matchMentalF === 'function' ? matchMentalF(st, n) : 1;
             if (correctionSub) st.tacSessionEntered.delete(outId); else st.subsLeft--;
             if (st.tacSessionEntered) st.tacSessionEntered.add(np.id);
@@ -5973,7 +5881,7 @@
         function effAttrs(p) { ensure(p); const d = getCalculatedOvr(p) - p.ovr, o = {}; ATTRS.forEach(k => o[k] = p.attr[k] + d); return o; }
         function actF(p) { const st = currentMatchState; return st && st.samun && p.isHome && st.time >= st.samun ? 1.08 : 1; }   // 서포터즈 응원: 활동량 +8%
         function talkF(p) { const st = currentMatchState; return st && p.isHome && st.talkF && st.htDone ? st.talkF : 1; }                // 하프타임 팀 토크
-        function A(p, k) { return (p.attr ? p.attr[k] : p.ovr) * (p.mF && k !== 'pac' ? p.mF : 1) * (p.awkT ? awkF(p, k) : 1) * (p.isHome && currentMatchState && currentMatchState.awkTeam ? (currentMatchState.awkTeam[k] || currentMatchState.awkTeam.all || 1) : 1) * (p.ivB || 1) * (p.htF && currentMatchState && currentMatchState.htDone ? p.htF : 1) * stamF(p) * (p.ace && currentMatchState && currentMatchState.time >= 75 ? 1.04 : 1) * talkF(p) * psychFactor(p,k) * (p.mkF || 1) * (p.pf || 1) * (p.tF || 1) * (p.mkA && (k === 'sho' || k === 'pas' || k === 'dri') ? p.mkA : 1); }
+        function A(p, k) { return (p.attr ? p.attr[k] : p.ovr) * (p.mF && k !== 'pac' ? p.mF : 1) * (p.ivB || 1) * (p.htF && currentMatchState && currentMatchState.htDone ? p.htF : 1) * stamF(p) * (p.ace && currentMatchState && currentMatchState.time >= 75 ? 1.04 : 1) * talkF(p) * psychFactor(p,k) * (p.mkF || 1) * (p.pf || 1) * (p.tF || 1) * (p.mkA && (k === 'sho' || k === 'pas' || k === 'dri') ? p.mkA : 1); }
         function mor(p) { return p.morale === undefined ? 70 : p.morale; }
         function moraleF(p) { return 0.97 + mor(p) / 100 * 0.06; }
         function moodEmoji(p) { const m = mor(p); return m >= 85 ? '😊' : m >= 70 ? '🙂' : m >= 50 ? '😐' : m >= 30 ? '😕' : '😡'; }
@@ -6558,7 +6466,7 @@
             if (reserve) {
                 const i = squad.indexOf(chosen), stamina = matchStartStam(reserve, st.mode);
                 const np = { ...chosen, id: reserve.id, name: reserve.name, role: 'GK', det: 'GK', ovr: Math.round(getCalculatedOvr(reserve) * moraleF(reserve)), displayOvr: getCalculatedOvr(reserve), attr: matchAttrs(reserve, 'GK'), rl: roleFor(effAttrs(reserve), 'GK'), baseX: keeper.baseX, baseY: keeper.baseY, x: keeper.baseX, y: keeper.baseY, targetX: keeper.baseX, targetY: keeper.baseY, enter: st.time, subIn: true, isRedCarded: false, cards: 0, stam: stamina, stam0: stamina, tiredWarned: false, vx: 0, vy: 0 };
-                chosen.exitTime = st.time; st.homeOut.push(chosen); squad[i] = np; st.playerStats[np.id] = { goals: 0 }; st.subsLeft--; (st.subMap ||= {})[chosen.id] = np.id; np.isCaptain = false; np.awk = Math.max(0, Math.min(5, Number(reserve.awk) || 0)); np.awkT = typeof awkTraitsFor === 'function' ? awkTraitsFor(reserve) : null; np.awkCurl = false; if (home && chosen.isCaptain) passArmband(st, chosen);
+                chosen.exitTime = st.time; st.homeOut.push(chosen); squad[i] = np; st.playerStats[np.id] = { goals: 0 }; st.subsLeft--; (st.subMap ||= {})[chosen.id] = np.id; np.isCaptain = false; if (home && chosen.isCaptain) passArmband(st, chosen);
                 if (st.ball.ownerId === chosen.id) st.ball.ownerId = null;
                 if (st.ball.fl?.to === chosen.id) st.ball.fl.to = np.id;
                 matchElements[chosen.id]?.remove(); delete matchElements[chosen.id]; makeDot(np);
@@ -6608,7 +6516,7 @@
             all.forEach(p => {
                 if (st.mode === 'saudi') { p.stam = 100; return; }
                 if (p.stam === undefined) p.stam = 100;
-                const base = (p.role === 'GK' ? 0.008 : 0.23 + (100 - rawA(p, 'sta')) / 100 * 0.32) * (p.trait === 'engine' ? 0.8 : p.trait === 'ironman' ? 0.92 : 1) * (p.awkSta || 1) * (p.piFat || 1) / actF(p) / actF(p);
+                const base = (p.role === 'GK' ? 0.008 : 0.23 + (100 - rawA(p, 'sta')) / 100 * 0.32) * (p.trait === 'engine' ? 0.8 : p.trait === 'ironman' ? 0.92 : 1) * (p.piFat || 1) / actF(p) / actF(p);
                 const run = Math.min(1.3, 0.85 + Math.hypot(p.vx || 0, p.vy || 0) / 1.6);   // 많이 뛰어도 소모 증가폭은 완만하게
                 const passionFatigue=p.isHome&&p.psychEffects?.some(e=>e.until>st.time)?1+Math.max(0,psychValue(p,'motivation',st)-p.psych.motivation)*.003:1;
                 p.stam = Math.max(0, p.stam - base * run * (p.isHome ? (st.M.fat || 1) : st.online ? awayStyleMod(st,'fat') : 1) * passionFatigue * wxFat(st) * MIN_PER_TICK);
@@ -6770,7 +6678,7 @@
             const shotStat = q => { if (tk.isHome) { st.stats.homeShots++; st.stats.homeXG += q; } else { st.stats.awayShots++; st.stats.awayXG += q; } };
             if (sp.kind === 'corner') { deliverCorner(st, tk, all, sp); return; }
             if (sp.kind === 'pen') {
-                const q = Math.min(0.93, 0.76 * Math.exp((A(tk, 'sho') - gkv) / 60) * (tk.trait === 'finisher' ? 1.04 : 1) * (tr(tk, 'pk') ? 1.1 : 1) * (tr(gk, 'penSaver') ? 0.82 : 1) * (typeof awkPkF === 'function' ? awkPkF(tk, gk) : 1)) * damp; shotStat(q);
+                const q = Math.min(0.93, 0.76 * Math.exp((A(tk, 'sho') - gkv) / 60) * (tk.trait === 'finisher' ? 1.04 : 1) * (tr(tk, 'pk') ? 1.1 : 1) * (tr(gk, 'penSaver') ? 0.82 : 1)) * damp; shotStat(q);
                 comm(st, `🎯 ${tk.name}, 페널티킥을 찹니다...`);
                 if (Math.random() < q) { st.playerStats[tk.id].goals++; launchShot(st, tk, 'goal', gk, null, 'pk'); }
                 else { addErr(st, tk, 0.6, 'PK 실축'); const r = Math.random(); launchShot(st, tk, r < 0.7 ? 'save' : r < 0.8 ? 'post' : 'wide', gk); if (st.ball.fl) st.ball.fl.txt = '🎯 페널티킥 실축! ' + st.ball.fl.txt; }
@@ -6779,7 +6687,7 @@
             if (sp.kind === 'fk') {
                 const d = Math.hypot(((tk.isHome ? 97 : 3) - sp.x) * MX, (50 - sp.y) * MY), dy = Math.abs(sp.y - 50) * MY;
                 if (d < 32 && dy < 16 && Math.random() < (tr(tk, 'fk') ? (d < 25 ? 0.95 : 0.7) : (d < 25 ? 0.75 : 0.4))) { // 직접 프리킥
-                    const q = Math.min(0.36, 0.075 * Math.exp((A(tk, 'sho') - gkv) / 30) * (tk.trait === 'bold' || tk.trait === 'finisher' ? 1.25 : 1) * (tr(tk, 'fk') ? 1.6 : 1) * (d < 20 ? 1.3 : 1) * (typeof awkFkF === 'function' ? awkFkF(tk) : 1)) * damp; shotStat(q);
+                    const q = Math.min(0.36, 0.075 * Math.exp((A(tk, 'sho') - gkv) / 30) * (tk.trait === 'bold' || tk.trait === 'finisher' ? 1.25 : 1) * (tr(tk, 'fk') ? 1.6 : 1) * (d < 20 ? 1.3 : 1)) * damp; shotStat(q);
                     if (Math.random() < q) { st.playerStats[tk.id].goals++; launchShot(st, tk, 'goal', gk, null, 'fk'); }
                     else { const r = Math.random(); launchShot(st, tk, r < 0.35 ? 'block' : r < 0.7 ? 'save' : r < 0.78 ? 'post' : 'wide', gk); if (st.ball.fl) st.ball.fl.txt = `🎯 ${tk.name}의 직접 프리킥! ` + (r < 0.35 ? '수비벽에 막힙니다' : st.ball.fl.txt.replace(`${tk.name}의 슈팅`, '슈팅')); }
                     return;
@@ -7048,7 +6956,6 @@
             const f = st.ball.fl; f.t++;
             const k = Math.min(1, f.t / f.n), e = f.kind === 'pass' ? 1 - Math.pow(1 - k, 1.5) : k;
             st.ball.x = f.sx + (f.ex - f.sx) * e; st.ball.y = f.sy + (f.ey - f.sy) * e;
-            if (f.curve) { const L = Math.hypot(f.ex - f.sx, f.ey - f.sy) || 1, off = Math.sin(Math.PI * e) * f.curve; st.ball.x += -(f.ey - f.sy) / L * off; st.ball.y += (f.ex - f.sx) / L * off; if (typeof curlTrail === 'function') curlTrail(st, f); }   // 🌀 감아차기: 바깥으로 휘었다가 감겨 들어간다
             all.forEach(p => stepPlayer(p, p.id === f.to && f.kind === 'pass' ? 1.2 : 1));
             if (f.dive) { const g = all.find(p => p.id === f.dive.id); if (g) { const w = 0.35 + 0.55 * Math.min(1, f.t / Math.max(1, f.n - 0.5)); g.x += (f.dive.x - g.x) * w; g.y += (f.dive.y - g.y) * w; g.targetX = g.x; g.targetY = g.y; } }   // 키퍼 다이빙
             if (f.blocker) { const d = all.find(p => p.id === f.blocker); if (d) { d.x += (f.ex - d.x) * 0.6; d.y += (f.ey - d.y) * 0.6; } }
@@ -7393,7 +7300,7 @@
         }
         function pOut(p, mode) { if (!p) return true; if (mode === 'saudi') return false; if (mode === 'league' && leagueBanRemaining(p) > 0) return true; if (mode === 'rogue') return !!(rogueState && rogueState.inj && rogueState.inj[p.id] > 0); return p.inj > 0; }
         function pStam(p, mode) { if (mode === 'saudi') return 100; if (mode === 'rogue') { const v = rogueState && rogueState.stam ? rogueState.stam[p.id] : null; return Math.round(v == null ? 100 : v); } return Math.round(p.cond ?? 100); }
-        function matchStartStam(p, mode) { return mode === 'saudi' ? 100 : mode === 'rogue' ? pStam(p, mode) : Math.min(100, Math.round(60 + 0.4 * (p.cond ?? 100))); }
+        function matchStartStam(p, mode) { return mode === 'saudi' ? 100 : mode === 'rogue' ? pStam(p, mode) : Math.round(60 + 0.4 * (p.cond ?? 100)); }
         const ROGUE_CARDS = {
             c_fin: { n: '⚽ 결정력 훈련', d: '내 슈팅 품질 +4%', r: 1, max: 3 },
             c_def: { n: '🧱 수비 조직 훈련', d: '상대 슈팅 품질 -4%', r: 1, max: 3 },
@@ -8203,7 +8110,7 @@
                 let p = userStarters.find(x => x.slotIndex === idx);
                 if(p) {
                     let mappedX = (100 - slot.x) * 0.45 + 5; 
-                    homePlayers.push({ id: p.id, name: p.name, ovr: Math.round(getCalculatedOvr(p) * aptitude(p, slotDetail(slot)) * moraleF(p)), attr: matchAttrs(p, slotDetail(slot)), trait: ensure(p).trait, det: slotDetail(slot), rl: roleFor(effAttrs(p), slotDetail(slot)), role: slot.pos, baseX: mappedX, baseY: slot.y, x: mappedX, y: slot.y, targetX: mappedX, targetY: slot.y, isHome: true, phase: Math.random()*100, isRedCarded: false, isCaptain: teamRoles.captain === p.id, cards: 0, awk: Math.max(0, Math.min(5, Number(p.awk) || 0)) });
+                    homePlayers.push({ id: p.id, name: p.name, ovr: Math.round(getCalculatedOvr(p) * aptitude(p, slotDetail(slot)) * moraleF(p)), attr: matchAttrs(p, slotDetail(slot)), trait: ensure(p).trait, det: slotDetail(slot), rl: roleFor(effAttrs(p), slotDetail(slot)), role: slot.pos, baseX: mappedX, baseY: slot.y, x: mappedX, y: slot.y, targetX: mappedX, targetY: slot.y, isHome: true, phase: Math.random()*100, isRedCarded: false, isCaptain: teamRoles.captain === p.id, cards: 0 });
                 }
             });
 
@@ -8446,7 +8353,6 @@
                     if (laneFree && minEnmD > 3) pShot *= owner.trait === 'bold' ? 0.25 : 0.12;
                     else if (d > 22) pShot *= owner.trait === 'bold' ? 0.55 : 0.4;
                     if (d > 26) pShot *= 0.5;                                              // 26m 이상은 정말 각이 날 때만
-                    if (owner.awkCurl) pShot = Math.min(0.9, pShot * 1.7);                 // 🌀 감아차기 스페셜리스트는 중거리를 더 자주 노린다
                 }
                 if (Math.random() < pShot) {
                     const qq = Math.min(0.9, q * SHOT_K * clutchF(st, owner) * (owner.isHome ? st.M.own * awayStyleMod(st, 'opp') * aiV(st, 'block') : st.M.opp * awayStyleMod(st, 'own') * (st.online ? 1 : (AWAY_OWN[st.awayStyle] || 1)) * aiV(st, 'own')) * matchupF(st, owner.isHome) * formQ(st, owner.isHome)) * (st.damp && st.fav === (owner.isHome ? 'home' : 'away') ? st.damp : 1) * wxShot(st, d);
@@ -9969,7 +9875,7 @@
             const L = fanReactions(st), H = st.scoreHome, A = st.scoreAway, mood = H > A || st.penWinner === 'home' ? 'win' : H < A || st.penWinner === 'away' ? 'lose' : 'draw';
             const cmt = t => { const tg = galTag(t); return [galComment(tg, mood), pick(GAL_CMT.any), galComment(tg, mood), Math.random() < 0.5 ? pick(GAL_CMT[mood]) : null].filter((v, j, a) => v && a.indexOf(v) === j); };
             const gal = (list, nick) => list.map((c, i) => { const rec = c.like, cmts = Math.max(1, Math.round(rec / 9 + Math.random() * 12)), views = Math.round(rec * (6 + Math.random() * 10));
-                return `<details class="gal-row ${i === 0 ? 'best' : ''}"><summary><span class="gal-tag">${galTag(c.t)}</span><span class="gal-title">${leagueEsc(c.t)} <b class="gal-cn">[${cmts}]</b>${rec >= 300 ? ' <i class="gal-hot">개념</i>' : ''}</span><span class="gal-meta"><span>${leagueEsc(c.n)}</span><span>조회 ${views.toLocaleString()}</span><span>추천 <b>${rec}</b></span></span></summary><div class="gal-cmts">${(typeof galConvoHtml === 'function' ? galConvoHtml(st, c, nick ? [pick(['ㅇㅈ', 'ㄹㅇ', '222', '공감']), pick(['다음엔 우리가 이긴다', '오늘은 인정', '할 말 없음…', '분위기 최악이다', '그래도 응원한다'])] : cmt(c.t), !!nick, mood) : (nick ? [pick(['ㅇㅈ', 'ㄹㅇ', '222', '공감']), pick(['다음엔 우리가 이긴다', '오늘은 인정', '할 말 없음…', '분위기 최악이다', '그래도 응원한다'])] : cmt(c.t)).map(x => `<div><span>${leagueEsc(nick ? pick(OPP_FANS) : GAL_NICK())}</span>${leagueEsc(x)}</div>`).join(''))}</div></details>`; }).join('');
+                return `<details class="gal-row ${i === 0 ? 'best' : ''}"><summary><span class="gal-tag">${galTag(c.t)}</span><span class="gal-title">${leagueEsc(c.t)} <b class="gal-cn">[${cmts}]</b>${rec >= 300 ? ' <i class="gal-hot">개념</i>' : ''}</span><span class="gal-meta"><span>${leagueEsc(c.n)}</span><span>조회 ${views.toLocaleString()}</span><span>추천 <b>${rec}</b></span></span></summary><div class="gal-cmts">${(nick ? [pick(['ㅇㅈ', 'ㄹㅇ', '222', '공감']), pick(['다음엔 우리가 이긴다', '오늘은 인정', '할 말 없음…', '분위기 최악이다', '그래도 응원한다'])] : cmt(c.t)).map(x => `<div><span>${leagueEsc(nick ? pick(OPP_FANS) : GAL_NICK())}</span>${leagueEsc(x)}</div>`).join('')}</div></details>`; }).join('');
             const opp = oppFanPosts(st), intl = intlPosts(st), errPane = renderRefErrPane(st);
             const intlHtml = intl.map((c, i) => { const S2 = INTL_SITES[c.s]; return `<details class="intl-row ${i === 0 ? 'best' : ''}"><summary><span class="intl-flag">${S2[0]}</span><span class="intl-body"><span class="intl-ko">${leagueEsc(c.k)}</span><span class="intl-o">${leagueEsc(c.o)}</span></span><span class="intl-meta"><span>${S2[1]}</span><span>▲ ${c.up.toLocaleString()}</span></span></summary>${c.re ? `<div class="intl-re">${c.re.map(r => { const [o, k] = r.split(' → '); return `<div><i>${leagueEsc(o)}</i><span>${leagueEsc(k || '')}</span></div>`; }).join('')}</div>` : ''}</details>`; }).join('');
             const tab = (k, n, on) => `<button class="gal-tab ${on ? 'on' : ''}" data-k="${k}" onclick="galTab(this)">${n}</button>`;
@@ -11069,7 +10975,7 @@
         function exRenderInterviews(st) {
             const box = document.getElementById('ex-interviews'); if (!box || !st) return;
             if (!st.exIv) st.exIv = exMakeInterviews(st);
-            box.innerHTML = `<div class="font-black mb-2">🎙️ 믹스트존 선수 인터뷰</div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">${st.exIv.map((v, i) => `<div class="rounded-xl bg-gray-800/80 border border-gray-700 p-3"><div class="text-xs text-gray-400 mb-1">${exEsc(v.name)} · ${exEsc(v.per)} ${v.tag ? `· <b class="text-amber-300">${exEsc(v.tag)}</b>` : ''}</div>${v.q ? `<div class="text-xs text-sky-300 mb-1">🎤 ${exEsc(v.q)}</div>` : ''}<div class="text-sm">"${exEsc(v.quote)}"</div>
+            box.innerHTML = `<div class="font-black mb-2">🎙️ 믹스트존 선수 인터뷰</div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">${st.exIv.map((v, i) => `<div class="rounded-xl bg-gray-800/80 border border-gray-700 p-3"><div class="text-xs text-gray-400 mb-1">${exEsc(v.name)} · ${exEsc(v.per)} ${v.tag ? `· <b class="text-amber-300">${exEsc(v.tag)}</b>` : ''}</div><div class="text-sm">"${exEsc(v.quote)}"</div>
                 ${v.opts ? (v.done ? `<div class="text-xs mt-2 text-emerald-300">감독 반응: ${exEsc(v.done)}</div>` : `<div class="flex flex-wrap gap-1 mt-2">${v.opts.map((o, k) => `<button onclick="exIvAnswer(${i},${k})" class="mt-btn text-xs" title="${exEsc(o.why || '')}">${exEsc(o.t)}</button>`).join('')}</div>`) : ''}</div>`).join('')}</div>`;
         }
         function exMakeInterviews(st) {
@@ -11094,7 +11000,7 @@
                 };
                 return exPick(mood === 'draw' ? (D[k] || D.pro) : (L[k] || L.pro)[mood]);
             };
-            if (best) { let mi = null; try { mi = typeof momInterview === 'function' ? momInterview(st, best) : null; } catch (x) { console.error(x); } const q = mi ? mi.a : line(best, win ? 'good' : lose ? 'bad' : 'draw'), k = personaOf(best).k; out.push({ id: best.id, name: best.name, per: personaOf(best).n, tag: `${mi ? 'MOM · ' : ''}평점 ${R[best.id]}`, q: mi ? mi.q : null, quote: q, eff: k === 'loyal' ? { fan: 2 } : k === 'amb' ? { media: 1 } : k === 'hot' && lose ? { media: -1 } : { fan: 1 } }); }
+            if (best) { const q = line(best, win ? 'good' : lose ? 'bad' : 'draw'), k = personaOf(best).k; out.push({ id: best.id, name: best.name, per: personaOf(best).n, tag: `평점 ${R[best.id]}`, quote: q, eff: k === 'loyal' ? { fan: 2 } : k === 'amb' ? { media: 1 } : k === 'hot' && lose ? { media: -1 } : { fan: 1 } }); }
             // 출전하지 못한 야심가/다혈질 선수의 불만 — 감독이 반응해야 함
             const benched = players.filter(p => !st.homePlayers.some(h => String(h.id) === String(p.id)) && !(st.homeOut || []).some(h => String(h.id) === String(p.id)) && ['amb', 'hot'].includes(personaOf(p).k) && getCalculatedOvr(p) >= (getTeamOvr() || 60) - 3 && !p.inj);
             const b = benched.sort((a, c) => getCalculatedOvr(c) - getCalculatedOvr(a))[0];
@@ -11179,7 +11085,7 @@
         socialCard = function (x) {
             const html = _exSocialCard(x), E = EX(), key = exPostKey(x), liked = !!E.likes[key], rep = E.replied[key];
             const neg = NEG_RE.test(x.text || ''), canReply = ['fan', 'opp', 'player', 'journalist', 'pundit', 'meme', 'foreign'].includes(x.type);
-            const bar = `<div class="flex items-center gap-2 mt-2 text-xs" data-k="${key}"><button onclick="exLike('${key}','${x.type}','${exEsc(x.name).replace(/'/g, '')}')" class="px-2 py-1 rounded-lg ${liked ? 'bg-rose-600/40 text-rose-200' : 'bg-gray-700 hover:bg-gray-600'}">${liked ? '❤️ 좋아요함' : '🤍 좋아요'}</button>${canReply ? (rep ? `<span class="text-gray-400">💬 공식 답글: ${exEsc(rep)}</span>` : `<button onclick="exReplyMenu('${key}')" class="px-2 py-1 rounded-lg bg-gray-700 hover:bg-gray-600">💬 공식 계정으로 답글</button>`) : ''}${neg ? '<span class="text-rose-300">· 부정적 반응</span>' : ''}</div><div id="ex-rep-${key}">${rep && typeof exRepThreadHtml === 'function' ? exRepThreadHtml(key) : ''}</div>`;
+            const bar = `<div class="flex items-center gap-2 mt-2 text-xs" data-k="${key}"><button onclick="exLike('${key}','${x.type}','${exEsc(x.name).replace(/'/g, '')}')" class="px-2 py-1 rounded-lg ${liked ? 'bg-rose-600/40 text-rose-200' : 'bg-gray-700 hover:bg-gray-600'}">${liked ? '❤️ 좋아요함' : '🤍 좋아요'}</button>${canReply ? (rep ? `<span class="text-gray-400">💬 공식 답글: ${exEsc(rep)}</span>` : `<button onclick="exReplyMenu('${key}')" class="px-2 py-1 rounded-lg bg-gray-700 hover:bg-gray-600">💬 공식 계정으로 답글</button>`) : ''}${neg ? '<span class="text-rose-300">· 부정적 반응</span>' : ''}</div><div id="ex-rep-${key}"></div>`;
             exSocialIndex[key] = x;
             return html.replace(/<\/article>\s*$/, bar + '</article>');
         };
@@ -11771,8 +11677,8 @@
     function hubRender() {
         const el = document.getElementById('ex-hub'); if (!el) return; const E = hubE();
         const unread = E.mail.filter(m => !m.done).length;
-        const tabs = [['rel', '🕸️ 관계도'], ['room', '🚪 라커룸'], ['chat', `💬 단톡방${EX().gcNew ? ' 🔴' : ''}`], ['cap', '©️ 주장'], ['mood', '😊 선수 상태'], ['fans', `💌 팬 소통${unread ? ` (${unread})` : ''}`], ['act', '🎉 팀 활동'], ['log', '📜 기록']];
-        const body = hubTab === 'rel' ? hubRelView() : hubTab === 'room' ? hubRoomView() : hubTab === 'chat' ? (EX().gcNew = 0, typeof hubChatView === 'function' ? hubChatView() : '') : hubTab === 'cap' ? hubCapView() : hubTab === 'mood' ? hubMoodView() : hubTab === 'fans' ? hubFansView() : hubTab === 'act' ? hubActView() : hubLogView();
+        const tabs = [['rel', '🕸️ 관계도'], ['room', '🚪 라커룸'], ['cap', '©️ 주장'], ['mood', '😊 선수 상태'], ['fans', `💌 팬 소통${unread ? ` (${unread})` : ''}`], ['act', '🎉 팀 활동'], ['log', '📜 기록']];
+        const body = hubTab === 'rel' ? hubRelView() : hubTab === 'room' ? hubRoomView() : hubTab === 'cap' ? hubCapView() : hubTab === 'mood' ? hubMoodView() : hubTab === 'fans' ? hubFansView() : hubTab === 'act' ? hubActView() : hubLogView();
         el.innerHTML = `<div class="mx-auto w-full max-w-6xl rounded-2xl border border-violet-500/40 bg-gray-950 p-3 sm:p-5 shadow-2xl">
             <div class="flex items-center justify-between gap-2 mb-3"><div><div class="text-xs font-black tracking-widest text-violet-300">TEAM HUB</div><div class="text-2xl font-black">🧩 팀 허브 <span class="text-base text-gray-400">${exEsc(teamName || '')}</span></div></div><button onclick="closeHub()" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 font-black">✕ 닫기</button></div>
             <div class="mb-3">${exMeters(true)}</div>
@@ -12652,7 +12558,7 @@ async function checkGameAccess(uid,required=false,prefetchedStatus=null){
  gameAccessBusy=true;
  try{
   let data=prefetchedStatus;
-  if(!data){const reply=await walletRpcWithRetry('yfm_account_status',undefined,{maxAttempts:required?2:1,timeoutMs:required?15000:10000});if(reply.error)throw reply.error;data=reply.data;}
+  if(!data){const reply=await walletRpcWithRetry('yfm_account_status',undefined,{maxAttempts:1,timeoutMs:10000});if(reply.error)throw reply.error;data=reply.data;}
   if(!required&&accountUser?.id!==uid)return false;
   gameAccessCheckedOwner=uid;gameAccessCheckedAt=Date.now();window.yfmAdminId=data.admin_id;
   if(!data.suspended)return true;
@@ -12708,1165 +12614,6 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&window.yf
 })();
 </script>
 
-<style id="yfm-students-style">
-.card-awk{position:absolute;right:6%;top:4%;z-index:5;font-size:clamp(9px,7cqw,13px);font-weight:900;color:#fde68a;text-shadow:0 0 6px #f59e0b,0 1px 2px #000;letter-spacing:-.04em;pointer-events:none}
-.stu-box{background:#111827;border:1px solid #374151;border-radius:14px;padding:12px;margin-top:10px}
-.stu-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:900;margin-bottom:8px}
-.stu-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.stu-tile{background:#1f2937;border-radius:10px;padding:7px 4px;text-align:center}.stu-tile b{display:block;font-size:18px;color:#fff}.stu-tile small{font-size:11px;color:#9ca3af}
-.stu-hon{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.stu-hon span{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;background:#312e81;color:#e0e7ff;border:1px solid #6366f1}
-.stu-bio{font-size:13px;line-height:1.65;color:#d1d5db;margin-top:8px;word-break:keep-all}
-.stu-tl{margin-top:8px;display:flex;flex-direction:column;gap:4px}.stu-tl div{font-size:12px;color:#cbd5e1;display:flex;gap:6px}.stu-tl small{color:#6b7280;white-space:nowrap}
-.awk-stars{font-size:20px;letter-spacing:2px;color:#4b5563}.awk-stars b{color:#fbbf24;text-shadow:0 0 8px #f59e0b}
-.awk-steps{display:flex;flex-direction:column;gap:3px;margin:8px 0;font-size:12px}.awk-steps div{color:#6b7280}.awk-steps div.on{color:#fde68a}.awk-steps div.next{color:#fff;font-weight:800}
-.awk-btn{width:100%;padding:10px;border-radius:11px;font-weight:900;background:linear-gradient(90deg,#b45309,#f59e0b);color:#fff}.awk-btn[disabled]{background:#374151;color:#9ca3af}
-.awk-path{display:flex;flex-direction:column;gap:5px;margin:9px 0}
-.awk-node{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:11px;background:#1f2937;border:1px solid #374151;opacity:.55}
-.awk-node.trait{background:#1e1b4b;border-color:#4338ca}.awk-node.ex{background:linear-gradient(90deg,#3b0764,#1e1b4b);border-color:#a855f7}
-.awk-node.on{opacity:1}.awk-node.on .awk-lv{background:#f59e0b;color:#111}.awk-node.next{opacity:1;box-shadow:0 0 0 2px #fbbf24 inset}
-.awk-lv{flex:none;width:34px;text-align:center;font-size:12px;font-weight:900;border-radius:8px;padding:3px 0;background:#374151;color:#e5e7eb}
-.awk-body{flex:1;min-width:0;font-size:13px;line-height:1.35}.awk-body b{color:#fff}.awk-body small{display:block;font-size:11px;color:#c7d2fe;margin-top:1px;word-break:keep-all}
-.awk-tag{font-size:10px;font-weight:900;color:#fde68a;border:1px solid #f59e0b;border-radius:999px;padding:0 6px;margin-left:3px}.awk-st{flex:none;font-size:13px}
-#fm-nav-awaken>span:nth-child(2){white-space:nowrap}#fm-nav-awaken .fm-badge{flex:none}
-#screen-awaken{color:#fff;flex-direction:column}
-#screen-awaken>header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 22px;background:rgba(17,24,39,.8);border-bottom:1px solid #374151;flex:none}
-#screen-awaken>header>button{font-size:18px;font-weight:800}#screen-awaken>header h1{font-size:22px;font-weight:900;color:#fcd34d}
-#screen-awaken>header>div{display:flex;align-items:center;gap:6px;background:#1f2937;padding:7px 16px;border-radius:999px;border:1px solid #eab308;font-weight:800}
-.awk-wrap{flex:1;min-height:0;display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr) minmax(240px,320px);gap:14px;padding:14px}
-.awk-col{background:rgba(31,41,55,.82);border:1px solid #374151;border-radius:16px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.awk-col-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px 13px;border-bottom:1px solid #374151;font-size:12px;color:#9ca3af}.awk-col-h b{color:#fff;font-size:14px;margin-right:auto}
-.awk-col-h button{padding:4px 10px;border-radius:999px;background:#374151;color:#fde68a;font-weight:800;font-size:11px}
-.awk-scroll{flex:1;min-height:0;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px}
-.awk-row{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;background:#111827;border:1px solid #1f2937;text-align:left;width:100%}
-.awk-row:hover{border-color:#6b7280}.awk-row.sel{border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24 inset}.awk-row.ready{background:linear-gradient(90deg,#3f2d0b,#111827)}
-.awk-row .nm{flex:1;min-width:0;display:flex;flex-direction:column}.awk-row .nm b{font-size:14px}.awk-row .nm small{font-size:11px;color:#9ca3af}
-.awk-row .sr{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.awk-row .sr i{font-style:normal;font-size:10px;font-weight:900;color:#111;background:#fbbf24;border-radius:999px;padding:1px 7px}.awk-row .sr i.max{background:#a855f7;color:#fff}.awk-row .sr small{font-size:11px;color:#9ca3af}
-.awk-dot{width:9px;height:9px;border-radius:50%;flex:none}.awk-dot.t1{background:#9ca3af}.awk-dot.t2{background:#3b82f6}.awk-dot.t3{background:#eab308}
-.awk-stars.sm{font-size:12px;letter-spacing:1px}
-.awk-hero{display:grid;grid-template-columns:minmax(84px,128px) minmax(0,1fr);gap:14px;align-items:center}.awk-card{width:100%;min-width:0}.awk-card .player-card{width:100%}
-.awk-info{min-width:0;flex:1}.awk-name{font-size:22px;font-weight:900}.awk-sub{font-size:12px;color:#9ca3af}.awk-sub b{color:#fff}.awk-sub .up{color:#86efac}
-.awk-next{margin-top:8px;padding:9px 11px;border-radius:12px;background:#1e1b4b;border:1px solid #6366f1;display:flex;flex-direction:column;gap:2px}.awk-next small{font-size:10px;color:#a5b4fc;font-weight:900}.awk-next b{font-size:14px}.awk-next span{font-size:12px;color:#c7d2fe;word-break:keep-all}.awk-next.max{background:#3b0764;border-color:#a855f7}
-.awk-note{font-size:11px;color:#9ca3af;line-height:1.5;margin-top:4px;word-break:keep-all}
-.awk-empty{font-size:13px;color:#9ca3af;padding:16px;text-align:center;word-break:keep-all}
-.awk-copy{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;background:#111827;border:1px solid #1f2937}.awk-copy.main{border-color:#fbbf24}
-.awk-copy .l{flex:1;min-width:0;display:flex;flex-direction:column}.awk-copy .l small{font-size:11px;color:#9ca3af}.awk-copy .l .warn{color:#fca5a5}
-.awk-copy .r{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.awk-copy .r i{font-style:normal;font-size:10px;font-weight:900;border-radius:999px;padding:1px 7px;background:#374151;color:#e5e7eb}.awk-copy .r i.main{background:#fbbf24;color:#111}.awk-copy .r i.use{background:#f97316;color:#fff}.awk-copy .r i.lock{background:#1f2937;color:#6b7280}
-.awk-copy .r button{font-size:11px;font-weight:800;color:#93c5fd}
-#awk-overlay{position:fixed;inset:0;z-index:10040;display:none;align-items:center;justify-content:center;background:rgba(5,3,15,.82);cursor:pointer}#awk-overlay.show{display:flex}
-.awk-fx{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:20px;animation:awkIn .5s cubic-bezier(.2,.9,.3,1.3)}
-.awk-fx .burst{position:absolute;top:10px;left:50%;width:260px;height:260px;margin-left:-130px;border-radius:50%;background:radial-gradient(circle,rgba(253,224,71,.55),rgba(245,158,11,.15) 45%,transparent 70%);animation:awkBurst 1.4s ease-out}
-.awk-fx .card{position:relative;width:150px;max-width:42vw;animation:awkSpin .9s ease-out}.awk-fx .card .player-card{width:100%}
-.awk-fx .t{position:relative;font-size:24px;font-weight:900;color:#fde68a;text-shadow:0 0 14px #f59e0b}.awk-fx .s{position:relative;font-size:15px;font-weight:800;line-height:1.5}.awk-fx .s small{font-size:12px;color:#c7d2fe;font-weight:600}.awk-fx .h{font-size:11px;color:#9ca3af}
-@keyframes awkIn{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}@keyframes awkBurst{from{transform:scale(.2);opacity:1}to{transform:scale(1.6);opacity:0}}@keyframes awkSpin{from{transform:rotateY(180deg) scale(.7)}to{transform:rotateY(0) scale(1)}}
-@media(max-width:1100px){.awk-wrap{grid-template-columns:minmax(200px,260px) minmax(0,1fr)}.awk-wrap>.awk-col:last-child{grid-column:1/-1}}
-@media(max-width:760px){#screen-awaken{overflow-y:auto}#screen-awaken>header{flex-wrap:wrap;gap:8px;padding:12px}#screen-awaken>header h1{font-size:20px}#screen-awaken>header>button{font-size:15px}.awk-wrap{display:flex;flex-direction:column;flex:none;padding:10px}.awk-col{flex:none}#awk-list{max-height:260px}.awk-scroll{overflow:visible}#awk-list.awk-scroll{overflow-y:auto}.awk-card{width:96px}}
-#curl-trail{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:19;transition:opacity .8s ease}#curl-trail.fade{opacity:0}
-#curl-trail polyline{fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
-#curl-trail .glow{stroke:rgba(253,224,71,.35);stroke-width:7px}#curl-trail .line{stroke:#fde047;stroke-width:2.5px;stroke-dasharray:6 5}
-#story-modal{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;padding:14px;background:#000b}
-#story-modal.open{display:flex}
-#story-modal .sm-box{width:min(100%,560px);max-height:88vh;overflow:auto;background:#171327;border:1px solid #6d5aa8;border-radius:16px;padding:18px;color:#fff}
-.stu-table{width:100%;font-size:13px;border-collapse:collapse}.stu-table th{background:#1e3a5f;padding:7px;text-align:center}.stu-table td{padding:7px;text-align:center;border-bottom:1px solid #1f2937}.stu-table td:first-child,.stu-table th:first-child{text-align:left}
-.stu-link{color:#7dd3fc;font-weight:800;cursor:pointer;background:none;border:0;padding:0}
-.gal-cmts .cv-re{padding-left:14px;opacity:.95}.gal-cmts .cv-at{color:#93c5fd;font-weight:800;margin-right:3px}.gal-cmts .cv-op{color:#fbbf24;font-weight:800;margin-right:3px}.gal-cmts .cv-like{color:#6b7280;font-size:10px;margin-left:6px}
-</style>
-<div id="story-modal" onclick="if(event.target===this)closeStory()"><div class="sm-box" id="story-body"></div></div>
-<script id="yfm-students">
-// =====================================================================================
-// 🎓 학생 콘텐츠 (v1.32): ✨ 각성(같은 학생 카드 합치기) · 📖 학생별 성장 서사·전용 기록 · 🎤 인터뷰 질문 다양화 · 💬 대화형 팬 댓글
-//   선수 = 우리 학교 학생들이라 새 선수를 만들지 않고, 같은 학생을 더 깊게 키우고 기록을 쌓는 방향
-// =====================================================================================
-(() => {
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const J = (w, p) => typeof josa === 'function' ? josa(w, p) : String(w) + p;
-const R1 = a => a[Math.floor(Math.random() * a.length)];
-const baseName = n => String(n || '').replace(/ \d+세$/, '');
-const sand = st => !st || st.online || st.mode === 'onlineFriendly' || st.mode === 'tutorial' || (typeof sandboxMode === 'function' && sandboxMode(st.mode));
-const POS_KO = { FW: '공격수', MF: '미드필더', DF: '수비수', GK: '골키퍼' };
-const TIER_KO = { 1: '천민급', 2: '노말급', 3: '종건급' };
-function seeded(seed) { let a = 0; const s = String(seed); for (let i = 0; i < s.length; i++) a = (a * 31 + s.charCodeAt(i)) | 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-
-// ---------------------------------------------------------------- ✨ 각성 ----------------------------------------------------------------
-const AWK_NEED = [1, 1, 2, 2, 3];                 // ★n → ★n+1 에 필요한 같은 학생 카드 수 (총 9장)
-const AWK_COST = { 1: 60, 2: 180, 3: 600 };         // 등급별 기본 비용 × 다음 단계
-// ✨ 각성 특성: ★1·★3에서 특성, ★5에서 전용 능력이 열린다. ★2·★4는 OVR만 오른다 (별 하나당 OVR +1, 최대 +5).
-//   특성은 특정 상황(박스 밖 슈팅·막판·지고 있을 때 등)에서만 발동해 전체 능력치 인플레이션을 막는다. 카드 등급이 높을수록 수치가 크고 좋은 특성이 열린다.
-const gd = p => Math.hypot(((p.isHome ? 97 : 3) - p.x) * MX, (50 - p.y) * MY);
-const isLate = (p, st) => !!st && st.time >= 75;
-const isTrail = (p, st) => !!st && (p.isHome ? st.scoreHome < st.scoreAway : st.scoreAway < st.scoreHome);
-const attThird = p => p.isHome ? p.x > 66 : p.x < 34;
-const ownHalf = p => p.isHome ? p.x < 50 : p.x > 50;
-const setPiece = (p, st) => !!st && !!st.sp && (st.sp.kind === 'corner' || st.sp.kind === 'fk');
-const pct = v => Math.round(v * 1000) / 10;
-const AWK_TRAITS = {
-    curl: { n: '감아차기 스페셜리스트', ic: '🌀', k: ['sho'], when: p => gd(p) > 16.5, v: [.04, .05, .06], curl: 1, fk: 1, min: 2, d: v => `페널티 박스 밖 슈팅·직접 프리킥 정확도 +${v}% · 중거리 시도 증가 · 휘어 들어가는 궤적이 화면에 보입니다` },
-    finish: { n: '침착한 마무리', ic: '🎯', k: ['sho'], when: p => gd(p) <= 16.5, v: [.03, .04, .05], d: v => `페널티 박스 안 슈팅 정확도 +${v}%` },
-    runner: { n: '침투 장인', ic: '⚡', k: ['pac'], when: attThird, v: [.03, .04, .05], d: v => `상대 진영 깊숙한 곳에서 속도 +${v}%` },
-    header: { n: '헤더 장인', ic: '🗣️', k: ['phy'], v: [.03, .04, .05], d: v => `공중볼 경합·몸싸움 +${v}%` },
-    clutch: { n: '막판 해결사', ic: '⏱️', k: ['sho', 'dri'], when: isLate, v: [.04, .05, .06], min: 2, d: v => `75분 이후 슈팅·드리블 +${v}%` },
-    pkTaker: { n: 'PK 스페셜리스트', ic: '🥅', k: [], pk: 1, v: [.04, .05, .06], d: v => `페널티킥 성공률 +${v}%` },
-    vision: { n: '킬패스', ic: '🔑', k: ['pas'], v: [.03, .04, .05], d: v => `패스 +${v}%` },
-    press: { n: '탈압박', ic: '🌪️', k: ['dri'], v: [.03, .04, .05], d: v => `드리블 +${v}%` },
-    engine: { n: '강철 심장', ic: '🫀', k: [], sta: 1, v: [.04, .05, .06], d: v => `경기 중 체력 소모 −${Math.round(v * 3)}%` },
-    setpiece: { n: '세트피스 마스터', ic: '🚩', k: ['pas'], when: setPiece, v: [.05, .07, .09], fk: 1, curlFk: 1, min: 2, d: v => `코너킥·프리킥 킥 정확도 +${v}% · 직접 프리킥이 휘어 들어갑니다` },
-    tackle: { n: '태클 마스터', ic: '🦵', k: ['def'], v: [.03, .04, .05], d: v => `수비 +${v}%` },
-    aerialD: { n: '공중볼 지배', ic: '🦒', k: ['phy'], v: [.03, .04, .05], d: v => `공중볼 경합·몸싸움 +${v}%` },
-    cover: { n: '커버 스피드', ic: '💨', k: ['pac'], when: ownHalf, v: [.03, .04, .05], d: v => `우리 진영에서 속도 +${v}%` },
-    build: { n: '빌드업', ic: '🧱', k: ['pas'], v: [.03, .04, .05], d: v => `패스 +${v}%` },
-    clutchD: { n: '막판 집중', ic: '🛡️', k: ['def'], when: isLate, v: [.04, .05, .06], d: v => `75분 이후 수비 +${v}%` },
-    reflex: { n: '반사신경', ic: '🧤', k: ['def', 'sta'], v: [.03, .04, .05], d: v => `선방·반응 +${v}%` },
-    claim: { n: '공중볼 장악', ic: '✋', k: ['phy', 'dri'], v: [.03, .04, .05], d: v => `크로스·공중볼 처리 +${v}%` },
-    pkKiller: { n: 'PK 킬러', ic: '🙅', k: [], pkSave: 1, v: [.06, .08, .1], d: v => `상대 페널티킥 성공률 −${v}%` },
-    sweep: { n: '스위퍼 키퍼', ic: '🏃', k: ['pac'], v: [.03, .04, .05], d: v => `뒷공간 커버 속도 +${v}%` },
-    // ★5 전용 능력 — 카드 등급마다 다르다 (천민급: 근성 · 노말급: 포지션 장인 · 종건급: 팀 전체에 영향을 주는 레전드 능력)
-    grit: { n: '잡초 근성', ic: '🌱', k: ['sho', 'pas', 'dri', 'def', 'phy', 'pac', 'sta'], when: isTrail, v: [.04, .04, .04], ex: 1, d: v => `지고 있을 때 모든 능력 +${v}%` },
-    nose: { n: '골 냄새', ic: '👃', k: ['sho'], when: p => gd(p) <= 16.5, mul: (p, st) => st && st.time >= 75 ? 2 : 1, v: [.05, .05, .05], ex: 1, d: v => `페널티 박스 안 슈팅 +${v}% · 75분 이후에는 두 배` },
-    maestro: { n: '마에스트로', ic: '🎼', k: ['pas', 'dri'], v: [.05, .05, .05], ex: 1, d: v => `패스·드리블 +${v}%` },
-    wall: { n: '통곡의 벽', ic: '🏯', k: ['def', 'phy'], v: [.05, .05, .05], ex: 1, d: v => `수비·몸싸움 +${v}%` },
-    spider: { n: '거미손', ic: '🕷️', k: ['def', 'sta', 'phy'], v: [.05, .05, .05], ex: 1, d: v => `선방·반응·공중볼 +${v}%` },
-    golden: { n: '황금 발', ic: '👑', k: ['sho'], v: [.06, .06, .06], curl: 1, fk: 1, ex: 1, d: v => `모든 슈팅·직접 프리킥 +${v}% · 박스 밖 슈팅은 휘어 들어가는 궤적` },
-    legend: { n: '레전드 오라', ic: '🌟', k: ['pas', 'dri'], v: [.04, .04, .04], team: { all: 1.015 }, ex: 1, d: v => `패스·드리블 +${v}% · 출전하면 팀 전체 능력 +1.5%` },
-    commander: { n: '수비 사령관', ic: '📣', k: ['def'], v: [.04, .04, .04], team: { def: 1.025 }, ex: 1, d: v => `수비 +${v}% · 출전하면 팀 전체 수비 +2.5%` },
-    guardian: { n: '수호신', ic: '🛡️', k: ['def', 'sta', 'phy'], v: [.06, .06, .06], pkSave: 1, ex: 1, d: v => `선방·반응·공중볼 +${v}% · 상대 페널티킥 성공률 −${v}%` }
-};
-const AWK_POOL1 = { FW: ['finish', 'runner', 'header', 'curl'], MF: ['vision', 'press', 'engine', 'curl'], DF: ['tackle', 'aerialD', 'cover', 'build'], GK: ['reflex', 'claim', 'build', 'sweep'] };
-const AWK_POOL3 = { FW: ['clutch', 'finish', 'curl', 'pkTaker', 'header'], MF: ['setpiece', 'clutch', 'vision', 'press', 'engine'], DF: ['clutchD', 'tackle', 'aerialD', 'cover'], GK: ['pkKiller', 'reflex', 'claim'] };
-const AWK_EX5 = { 1: { FW: 'grit', MF: 'grit', DF: 'grit', GK: 'grit' }, 2: { FW: 'nose', MF: 'maestro', DF: 'wall', GK: 'spider' }, 3: { FW: 'golden', MF: 'legend', DF: 'commander', GK: 'guardian' } };
-const awkLv = p => Math.max(0, Math.min(5, Number(p && p.awk) || 0));
-const awkOk = p => !!p && !(typeof isHalloweenPlayer === 'function' && isHalloweenPlayer(p));
-const awkTier = p => { const t = typeof getPlayerTier === 'function' ? getPlayerTier(p) : 1; return t >= 3 ? 3 : t >= 2 ? 2 : 1; };
-function awkHash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
-// 학생마다 정해진 각성 경로 (킹갓캐슬의 레벨별 특성 해금처럼, 미리 전부 볼 수 있다)
-function awkPath(p) {
-    const pos = AWK_POOL1[p.position] ? p.position : 'MF', t = awkTier(p), b = baseName(p.name);
-    const ok = id => (AWK_TRAITS[id].min || 1) <= t;
-    const P1 = AWK_POOL1[pos].filter(ok), a = P1[awkHash(b + '#awk1') % P1.length];
-    const P3 = AWK_POOL3[pos].filter(id => ok(id) && id !== a), c = P3[awkHash(b + '#awk3') % P3.length];
-    return [a, c, AWK_EX5[t][pos]];
-}
-function awkStep(p, i) {   // i = 0..4 → ★(i+1)
-    if (i === 1 || i === 3) return { ovr: 1 };
-    const id = awkPath(p)[i / 2], tr = AWK_TRAITS[id], v = tr.v[awkTier(p) - 1];
-    return { ovr: 1, id, tr, v, label: i === 4 ? '전용 능력' : '특성', desc: tr.d(pct(v)) };
-}
-function awkStepText(p, i) { const s = awkStep(p, i); return s.tr ? `OVR +1 · ${s.label} ${s.tr.ic} ${s.tr.n}` : 'OVR +1'; }
-window.awkStepText = awkStepText;
-window.awkTraitsFor = function (p) {
-    const lv = awkLv(p); if (!lv || !awkOk(p)) return null;
-    const out = []; [0, 2, 4].forEach(i => { if (lv > i) { const s = awkStep(p, i); out.push({ id: s.id, v: s.v, curl: !!s.tr.curl, curlFk: !!(s.tr.curl || s.tr.curlFk) }); } });
-    return out.length ? out : null;
-};
-window.awkF = function (p, k) {
-    const T = p.awkT; if (!T) return 1; const st = currentMatchState; let m = 1;
-    for (const t of T) { const e = AWK_TRAITS[t.id]; if (!e || !e.k.includes(k)) continue; if (e.when && !e.when(p, st)) continue; m *= 1 + t.v * (e.mul ? e.mul(p, st) : 1); }
-    return m;
-};
-window.awkPkF = function (tk, gk) { let m = 1; (tk && tk.awkT || []).forEach(t => { if (AWK_TRAITS[t.id].pk) m *= 1 + t.v; }); (gk && gk.awkT || []).forEach(t => { if (AWK_TRAITS[t.id].pkSave) m *= 1 - t.v; }); return m; };
-window.awkFkF = function (tk) { let m = 1; (tk && tk.awkT || []).forEach(t => { if (AWK_TRAITS[t.id].fk) m *= 1 + t.v; }); return m; };
-window.awkTeamRecalc = function (st) {
-    if (!st || !st.homePlayers) return; let T = null;
-    st.homePlayers.forEach(h => { if (h.isRedCarded || !h.awkT) return; h.awkT.forEach(t => { const tm = AWK_TRAITS[t.id].team; if (tm) { T = T || {}; Object.entries(tm).forEach(([k, v]) => T[k] = (T[k] || 1) * v); } }); });
-    st.awkTeam = T;
-};
-function awkApplyTo(h, src) {
-    h.awk = awkLv(src); h.awkT = awkTraitsFor(src); h.awkCurl = !!(h.awkT && h.awkT.some(t => t.curl)); h.awkCurlFk = !!(h.awkT && h.awkT.some(t => t.curlFk));
-    const eng = h.awkT && h.awkT.find(t => AWK_TRAITS[t.id].sta); h.awkSta = eng ? 1 - eng.v * 3 : 1;
-}
-let awkBusy = false;
-window.awakenPlayer = async function (id) {
-    const p = players.find(x => x.id === id); if (!p || awkBusy) return;
-    if (!awkOk(p)) return alert('이벤트 카드는 각성할 수 없습니다.');
-    const lv = awkLv(p); if (lv >= 5) return alert('이미 최대 각성(★5)입니다.');
-    const need = AWK_NEED[lv], mats = awkMats(p).slice(0, need);
-    if (mats.length < need) return alert(`각성하려면 같은 학생(${baseName(p.name)})의 카드가 ${need}장 필요합니다. (보유 ${mats.length}장 · 선발 선수는 재료로 쓸 수 없어요)`);
-    const cnt = { FW: 0, MF: 0, DF: 0, GK: 0 }; players.forEach(q => cnt[q.position] = (cnt[q.position] || 0) + 1); mats.forEach(m => cnt[m.position]--);
-    for (const pos of new Set(mats.map(m => m.position))) { const lim = pos === 'GK' ? 2 : 5; if (cnt[pos] < lim) return alert(`각성 후 ${J(POS_KO[pos], '가')} ${cnt[pos]}명이 되어 최소 인원(${lim}명)보다 적어집니다.`); }   // 재료로 빠지는 포지션만 확인
-    const cost = awkCost(p), lost = mats.filter(m => (m.level || 0) || (m.evo || 0) || (m.awk || 0)), stp = awkStep(p, lv);
-    if (!confirm(`✨ ${p.name} ★${lv} → ★${lv + 1} 각성\n\n재료: ${mats.map(m => `${m.name}(OVR ${getCalculatedOvr(m)}${m.level ? ` · +${m.level}` : ''})`).join(', ')}\n비용: ${cost.toLocaleString()}T\n효과: OVR +1${stp.tr ? `\n${stp.label} 해금: ${stp.tr.ic} ${stp.tr.n} — ${stp.desc}` : ''}${lost.length ? '\n\n⚠️ 재료 카드의 강화·진화·각성 단계는 사라집니다.' : ''}`)) return;
-    awkBusy = true;
-    try {
-        if (!await spendTokens(cost, 'enhancement', `awaken:${p.id}:${lv + 1}`)) return;
-        const ids = new Set(mats.map(m => m.id));
-        if (![...ids].every(i => players.some(q => q.id === i)) || !players.includes(p)) return alert('재료 카드가 바뀌었습니다. 다시 시도해 주세요.');
-        players = players.filter(q => !ids.has(q.id));
-        if (typeof benchIds !== 'undefined') benchIds = benchIds.filter(i => !ids.has(i));
-        if (typeof teamRoles === 'object' && teamRoles) { Object.keys(teamRoles).forEach(k => { if (ids.has(teamRoles[k])) teamRoles[k] = ''; }); if (Array.isArray(teamRoles.cornerStay)) teamRoles.cornerStay = teamRoles.cornerStay.filter(i => !ids.has(i)); }
-        if (S.ace && ids.has(S.ace)) S.ace = p.id;
-        awkMergeRecords(p, [...ids]);   // 재료 카드의 경기 기록은 본체 카드로 옮긴다
-        p.awk = lv + 1;
-        try { if (typeof cleanBench === 'function') cleanBench(); } catch (_) {}
-        const r = rec(p.name); addTL(r, '✨', `★${p.awk} 각성 — ${stp.tr ? `${stp.label} ‘${stp.tr.n}’ 해금` : 'OVR +1'}`); if (p.awk === 5) r.legend = 1;
-        saveStory(); saveData();
-        if (typeof addNews === 'function') addNews('✨', stp.tr ? `${J(p.name, '이')} ${stp.label} ‘${stp.tr.n}’${J(stp.tr.n, '을').slice(stp.tr.n.length)} 손에 넣었다` : `${p.name}, ${J('★' + p.awk, '로')} 각성`, stp.tr ? `${stp.desc}. 훈련장에서 눈빛부터 달라졌다는 이야기가 나옵니다.` : '조금씩 한계를 넘어서고 있습니다.', '팀 소식');
-        try { SFX.init(); SFX.enhanceSuccess(); } catch (_) {}
-        if (typeof managerToast === 'function') managerToast(`✨ ${p.name} ★${p.awk} 각성 완료!${stp.tr ? ` ${stp.tr.ic} ${stp.tr.n} 해금` : ''}`);
-        if (document.getElementById('screen-awaken')?.classList.contains('active')) { renderAwaken(); awkFx(p, stp); } else if (typeof showPlayerInfo === 'function') showPlayerInfo(p.id);
-        try { if (typeof renderPitch === 'function') renderPitch(); } catch (_) {}
-        try { if (typeof uploadAccountSnapshot === 'function') uploadAccountSnapshot(true).catch(() => {}); } catch (_) {}
-    } finally { awkBusy = false; }
-};
-function awkMats(p) {
-    const b = baseName(p.name);
-    return players.filter(q => q !== p && q.id !== p.id && baseName(q.name) === b && awkOk(q) && !q.isStarting)
-        .sort((a, c) => ((a.awk || 0) * 9 + (a.evo || 0) * 3 + (a.level || 0)) - ((c.awk || 0) * 9 + (c.evo || 0) * 3 + (c.level || 0)));
-}
-function awkCost(p) { return (AWK_COST[awkTier(p)] || 60) * (awkLv(p) + 1); }
-function awkPanel(p) {
-    if (!awkOk(p)) return `<div class="stu-box"><div class="stu-head">✨ 각성</div><div class="text-xs text-gray-400">이벤트 카드는 각성할 수 없습니다.</div></div>`;
-    const lv = awkLv(p), mats = awkMats(p), need = lv < 5 ? AWK_NEED[lv] : 0, ok = lv < 5 && mats.length >= need, t = awkTier(p);
-    const stars = Array.from({ length: 5 }, (_, i) => i < lv ? '<b>★</b>' : '☆').join('');
-    const rows = [0, 1, 2, 3, 4].map(i => { const s = awkStep(p, i), st = i < lv ? 'on' : i === lv ? 'next' : 'lock';
-        return `<div class="awk-node ${st} ${s.tr ? 'trait' : ''} ${i === 4 ? 'ex' : ''}"><div class="awk-lv">★${i + 1}</div><div class="awk-body">${s.tr ? `<b>${s.tr.ic} ${esc(s.tr.n)}</b> <span class="awk-tag">${s.label}</span><small>${esc(s.desc)}</small>` : '<b>OVR +1</b><small>능력치만 오릅니다</small>'}</div><div class="awk-st">${st === 'on' ? '✔' : st === 'next' ? '▶' : '🔒'}</div></div>`; }).join('');
-    return `<div class="stu-box"><div class="stu-head"><span>✨ 각성 <span class="awk-stars">${stars}</span></span><small class="text-gray-400">${TIER_KO[t]} 경로 · 같은 학생 카드 ${mats.length}장</small></div>
-        <div class="text-xs text-gray-400">같은 학생의 중복 카드를 합쳐 한계를 넘습니다. ★1·★3에서 특성, ★5에서 전용 능력이 열리고 별 하나마다 OVR +1입니다. 카드 등급이 높을수록 특성 수치가 크고, 종건급의 전용 능력은 팀 전체에 영향을 줍니다.</div>
-        <div class="awk-path">${rows}</div>
-        ${lv >= 5 ? '<div class="text-sm font-black text-amber-300">👑 레전드 각성 완료</div>' : `<button class="awk-btn" ${ok ? `onclick="awakenPlayer('${p.id}')"` : 'disabled'}>${ok ? `★${lv + 1} 각성 · 재료 ${need}장 · ${awkCost(p).toLocaleString()}T` : `재료 부족 — 같은 학생 카드 ${need}장 필요 (${mats.length}/${need})`}</button>`}</div>`;
-}
-// ---------------------------------------------------------------- ✨ 선수 합성 화면 ----------------------------------------------------------------
-// 같은 학생 카드를 모아 각성하는 전용 화면: ① 학생 목록 → ② 각성 경로·합성 → ③ 보유 카드(본체·재료) 확인
-let awkSel = null, awkOnlyReady = false, awkMainPick = {};
-function awkGroups() {
-    const G = {};
-    players.forEach(p => { if (awkOk(p)) (G[baseName(p.name)] ||= []).push(p); });
-    return Object.entries(G).map(([b, L]) => {
-        const main = awkMainOf(b, L), lv = awkLv(main), mats = awkMats(main), need = lv < 5 ? AWK_NEED[lv] : 0;
-        return { b, L, main, lv, mats, need, ready: lv < 5 && mats.length >= need, tier: awkTier(main) };
-    }).sort((x, y) => (y.ready - x.ready) || (y.L.length - x.L.length) || (y.lv - x.lv) || (y.tier - x.tier) || (getCalculatedOvr(y.main) - getCalculatedOvr(x.main)));
-}
-function awkMainOf(b, L) {
-    const pick = awkMainPick[b] && L.find(p => p.id === awkMainPick[b]); if (pick) return pick;
-    return [...L].sort((a, c) => (awkLv(c) - awkLv(a)) || ((c.isStarting ? 1 : 0) - (a.isStarting ? 1 : 0)) || (getCalculatedOvr(c) - getCalculatedOvr(a)))[0];
-}
-function awkRows(p) {
-    const lv = awkLv(p);
-    return [0, 1, 2, 3, 4].map(i => { const s = awkStep(p, i), st = i < lv ? 'on' : i === lv ? 'next' : 'lock';
-        return `<div class="awk-node ${st} ${s.tr ? 'trait' : ''} ${i === 4 ? 'ex' : ''}"><div class="awk-lv">★${i + 1}</div><div class="awk-body">${s.tr ? `<b>${s.tr.ic} ${esc(s.tr.n)}</b> <span class="awk-tag">${s.label}</span><small>${esc(s.desc)}</small>` : '<b>OVR +1</b><small>능력치만 오릅니다</small>'}</div><div class="awk-st">${st === 'on' ? '✔' : st === 'next' ? '▶' : '🔒'}</div></div>`; }).join('');
-}
-const starStr = lv => Array.from({ length: 5 }, (_, i) => i < lv ? '<b>★</b>' : '☆').join('');
-window.awkSelect = function (b) { awkSel = b; renderAwaken(); if (window.innerWidth <= 760) document.getElementById('awk-center')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
-window.awkSetMain = function (b, id) { awkMainPick[b] = id; renderAwaken(); };
-window.awkToggleReady = function () { awkOnlyReady = !awkOnlyReady; renderAwaken(); };
-window.renderAwaken = function () {
-    const list = document.getElementById('awk-list'), center = document.getElementById('awk-center'), cards = document.getElementById('awk-cards'); if (!list || !center || !cards) return;
-    const G = awkGroups(), shown = awkOnlyReady ? G.filter(g => g.ready) : G, ready = G.filter(g => g.ready).length;
-    if (!awkSel || !G.some(g => g.b === awkSel)) awkSel = (G.find(g => g.ready) || G[0] || {}).b || null;
-    document.getElementById('awk-ready-count').textContent = ready ? `합성 가능 ${ready}명` : '합성 가능한 학생 없음';
-    document.getElementById('awk-filter').textContent = awkOnlyReady ? '전체 보기' : '합성 가능만';
-    list.innerHTML = shown.length ? shown.map(g => `<button class="awk-row ${g.b === awkSel ? 'sel' : ''} ${g.ready ? 'ready' : ''}" onclick="awkSelect('${esc(g.b).replace(/'/g, '')}')"><span class="awk-dot t${g.tier}"></span><span class="nm"><b>${esc(g.b)}</b><small>${g.main.position} · ${TIER_KO[g.tier]} · 카드 ${g.L.length}장</small></span><span class="sr"><span class="awk-stars sm">${starStr(g.lv)}</span>${g.ready ? '<i>합성 가능</i>' : g.lv >= 5 ? '<i class="max">MAX</i>' : `<small>${g.mats.length}/${g.need}</small>`}</span></button>`).join('')
-        : '<div class="awk-empty">합성 가능한 학생이 없습니다. 같은 학생의 카드를 더 모아 보세요.</div>';
-    const g = G.find(x => x.b === awkSel);
-    if (!g) { center.innerHTML = '<div class="awk-empty">선수 영입에서 같은 학생 카드를 2장 이상 모으면 합성할 수 있어요.</div>'; cards.innerHTML = ''; return; }
-    const p = g.main, stp = g.lv < 5 ? awkStep(p, g.lv) : null;
-    center.innerHTML = `<div class="awk-hero"><div class="awk-card">${playerCardMarkup(p, { ovr: getCalculatedOvr(p) })}</div><div class="awk-info"><div class="awk-name">${esc(g.b)}</div><div class="awk-sub">${p.position} · ${TIER_KO[g.tier]} 경로 · OVR <b>${getCalculatedOvr(p)}</b>${g.lv < 5 ? ` → <b class="up">${getCalculatedOvr(p) + 1}</b>` : ''}</div><div class="awk-stars">${starStr(g.lv)}</div>
-        ${stp ? `<div class="awk-next"><small>다음 단계 ★${g.lv + 1}</small>${stp.tr ? `<b>${stp.tr.ic} ${stp.label} ‘${esc(stp.tr.n)}’ 해금</b><span>${esc(stp.desc)}</span>` : '<b>OVR +1</b><span>능력치만 오르는 단계입니다</span>'}</div>` : '<div class="awk-next max"><b>👑 레전드 각성 완료</b><span>모든 특성과 전용 능력이 열렸습니다</span></div>'}</div></div>
-        <div class="awk-path">${awkRows(p)}</div>
-        ${g.lv >= 5 ? '' : `<button class="awk-btn" ${g.ready ? `onclick="awakenPlayer('${p.id}')"` : 'disabled'}>${g.ready ? `✨ ★${g.lv + 1} 합성 · 재료 ${g.need}장 · ${awkCost(p).toLocaleString()}T` : `재료 부족 — 같은 학생 카드 ${g.need}장 필요 (${g.mats.length}/${g.need})`}</button>`}
-        <div class="awk-note">별 하나마다 OVR +1 · ★1·★3 특성, ★5 전용 능력 해금 · 카드 등급이 높을수록 특성 수치가 큽니다</div>`;
-    const use = new Set(g.mats.slice(0, g.need).map(m => m.id));
-    cards.innerHTML = [...g.L].sort((a, c) => (a === p ? -1 : c === p ? 1 : 0) || (use.has(c.id) - use.has(a.id))).map(c => {
-        const tag = c === p ? '<i class="main">본체</i>' : use.has(c.id) ? '<i class="use">이번 재료</i>' : c.isStarting ? '<i class="lock">선발 · 재료 제외</i>' : '<i>보관</i>';
-        const loss = c !== p && use.has(c.id) && ((c.level || 0) || (c.evo || 0) || (c.awk || 0)) ? '<small class="warn">⚠️ 강화·진화·각성 단계가 사라집니다</small>' : '';
-        return `<div class="awk-copy ${c === p ? 'main' : ''}"><div class="l"><b>OVR ${getCalculatedOvr(c)}</b><small>${c.level ? `강화 +${c.level}` : '강화 없음'}${c.evo ? ` · 진화 ★${c.evo}` : ''}${awkLv(c) ? ` · 각성 ★${awkLv(c)}` : ''}${c.isStarting ? ' · 선발' : ''}</small>${loss}</div><div class="r">${tag}${c !== p ? `<button onclick="awkSetMain('${esc(g.b).replace(/'/g, '')}','${c.id}')">본체로</button>` : ''}</div></div>`;
-    }).join('') + `<div class="awk-note">본체는 각성 단계가 높은 카드 → 선발 카드 → OVR 순으로 자동 선택되고, ‘본체로’를 눌러 바꿀 수 있어요. 재료는 선발이 아닌 카드 중 강화·진화가 낮은 카드부터 씁니다.</div>`;
-};
-function awkFx(p, stp) {
-    let ov = document.getElementById('awk-overlay'); if (!ov) { ov = document.createElement('div'); ov.id = 'awk-overlay'; ov.onclick = () => ov.classList.remove('show'); document.body.appendChild(ov); }
-    ov.innerHTML = `<div class="awk-fx"><div class="burst"></div><div class="card">${playerCardMarkup(p, { ovr: getCalculatedOvr(p) })}</div><div class="t">✨ ${esc(p.name)} ★${awkLv(p)} 각성!</div>${stp && stp.tr ? `<div class="s">${stp.tr.ic} ${stp.label} ‘${esc(stp.tr.n)}’ 해금<br><small>${esc(stp.desc)}</small></div>` : `<div class="s">OVR +1</div>`}<div class="h">화면을 누르면 닫힙니다</div></div>`;
-    ov.classList.remove('show'); void ov.offsetWidth; ov.classList.add('show');
-    clearTimeout(awkFx.t); awkFx.t = setTimeout(() => ov.classList.remove('show'), 3200);
-}
-function awkBadge() { const b = document.getElementById('fm-awk-badge'); if (!b) return; const n = awkGroups().filter(g => g.ready).length; b.style.display = n ? '' : 'none'; b.textContent = n > 9 ? '9+' : String(n); }
-window.awkBadge = awkBadge;
-if (typeof switchScreen === 'function') { const _ss = switchScreen; switchScreen = function (id) { const r = _ss.apply(this, arguments); try { if (id === 'screen-awaken') { awkSel = awkSel || null; renderAwaken(); const t = document.getElementById('token-display-awaken'); if (t) t.textContent = Number(tokens).toLocaleString(); } awkBadge(); } catch (e) { console.error(e); } return r; }; }
-if (typeof updateTokensUI === 'function') { const _ut = updateTokensUI; updateTokensUI = function () { const r = _ut.apply(this, arguments); try { const t = document.getElementById('token-display-awaken'); if (t) t.textContent = Number(tokens).toLocaleString(); } catch (_) {} return r; }; }
-if (typeof saveData === 'function') { const _sd = saveData; saveData = function () { const r = _sd.apply(this, arguments); try { awkBadge(); } catch (_) {} return r; }; }
-setTimeout(() => { try { awkBadge(); } catch (_) {} }, 1500);
-// 선수 정보 창에는 간단한 요약만 두고 합성 화면으로 안내
-function awkSummary(p) {
-    if (!awkOk(p)) return '';
-    const lv = awkLv(p), mats = awkMats(p), need = lv < 5 ? AWK_NEED[lv] : 0, s = lv < 5 ? awkStep(p, lv) : null, on = (awkTraitsFor(p) || []).map(t => AWK_TRAITS[t.id]);
-    return `<div class="stu-box"><div class="stu-head"><span>✨ 각성 <span class="awk-stars">${starStr(lv)}</span></span><small class="text-gray-400">같은 학생 카드 ${mats.length}장</small></div>
-        ${on.length ? `<div class="stu-hon">${on.map(t => `<span>${t.ic} ${esc(t.n)}</span>`).join('')}</div>` : '<div class="text-xs text-gray-400">아직 해금한 특성이 없습니다.</div>'}
-        ${s ? `<div class="text-xs text-gray-300 mt-2">다음 ★${lv + 1}: ${s.tr ? `${s.tr.ic} ${s.label} ‘${esc(s.tr.n)}’ — ${esc(s.desc)}` : 'OVR +1'}</div>` : ''}
-        <button class="awk-btn mt-2" onclick="closePlayerInfo();awkOpenFor('${esc(baseName(p.name)).replace(/'/g, '')}','${p.id}')">✨ 선수 합성에서 보기${lv < 5 && mats.length >= need ? ' · 지금 합성 가능' : ''}</button></div>`;
-}
-window.awkOpenFor = function (b, id) { awkSel = b; if (id) awkMainPick[b] = id; switchScreen('screen-awaken'); };
-
-// 카드에 각성 별 표시
-if (typeof playerCardMarkup === 'function') {
-    const _pcm = playerCardMarkup;
-    playerCardMarkup = function (p, o) { const h = _pcm.apply(this, arguments); const lv = awkLv(p); return lv ? h.replace(/<\/div>\s*$/, `<span class="card-awk">${'★'.repeat(lv)}</span></div>`) : h; };
-}
-// 경기 시작: 출전 선수에게 각성 특성을 붙이고, 해금된 특성을 중계로 알린다
-if (typeof prepareMatch === 'function') {
-    const _pm = prepareMatch;
-    prepareMatch = function () {
-        const r = _pm.apply(this, arguments);
-        try {
-            const st = currentMatchState; if (st && st.homePlayers && !st.online) {
-                st.homePlayers.forEach(h => { const src = players.find(p => p.id === h.id); if (src) awkApplyTo(h, src); });
-                awkTeamRecalc(st);
-                const L = st.homePlayers.filter(h => h.awkT).map(h => `${h.name} ${h.awkT.map(t => AWK_TRAITS[t.id].ic + AWK_TRAITS[t.id].n).join('·')}`);
-                if (L.length) setTimeout(() => { try { if (currentMatchState === st) comm(st, `✨ 각성 특성 — ${L.slice(0, 3).join(' / ')}${L.length > 3 ? ` 외 ${L.length - 3}명` : ''}`, 'info'); } catch (_) {} }, 900);
-            }
-        } catch (e) { console.error(e); }
-        return r;
-    };
-}
-// 🌀 감아차기 궤적: 박스 밖 슈팅·직접 프리킥이 바깥으로 휘었다가 골문 쪽으로 감겨 들어간다. 지나간 궤적은 빛나는 선으로 남는다.
-function curlify(st, f, sh) {
-    const dx = f.ex - f.sx, dy = f.ey - f.sy, L = Math.hypot(dx, dy) || 1; let side = Math.sign((f.sy - 50) * dx) || (Math.random() < 0.5 ? 1 : -1);
-    f.curve = side * (3.2 + Math.random() * 1.8); f.n = Math.max(f.n, Math.ceil(f.n * 1.8)); f.curlId = Date.now() + Math.random();
-    f.txt = f.txt ? `🌀 ${f.txt}` : f.txt;
-    comm(st, `🌀 ${J(sh.name, '이')} 감아 찹니다!`, 'info');
-}
-if (typeof launchShot === 'function') {
-    const _ls = launchShot;
-    launchShot = function (st, sh, res, gk, assist, how) {
-        const r = _ls.apply(this, arguments);
-        try { const f = st.ball && st.ball.fl, fk = how === 'fk' || (st.sp && st.sp.kind === 'fk');
-            if (f && sh && !st.online && how !== 'pk' && how !== 'header' && res !== 'block' && ((sh.awkCurl && (fk || gd(sh) > 16.5)) || (fk && sh.awkCurlFk))) curlify(st, f, sh); } catch (e) { console.error(e); }
-        return r;
-    };
-}
-window.curlTrail = function (st, f) {
-    const eng = document.getElementById('match-engine'); if (!eng) return;
-    let svg = document.getElementById('curl-trail');
-    if (!svg) { svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.id = 'curl-trail'; svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); eng.appendChild(svg); }
-    if (svg.dataset.id !== String(f.curlId)) { svg.dataset.id = String(f.curlId); svg.innerHTML = '<polyline class="glow" points=""/><polyline class="line" points=""/>'; svg.classList.remove('fade'); clearTimeout(svg._t); }
-    const dx = f.ex - f.sx, dy = f.ey - f.sy, L = Math.hypot(dx, dy) || 1, k = Math.min(1, f.t / f.n), pts = [];
-    for (let i = 0; i <= 24; i++) { const e = k * i / 24, off = Math.sin(Math.PI * e) * f.curve; pts.push(`${(f.sx + dx * e - dy / L * off).toFixed(2)},${(f.sy + dy * e + dx / L * off).toFixed(2)}`); }
-    svg.querySelectorAll('polyline').forEach(pl => pl.setAttribute('points', pts.join(' ')));
-    if (k >= 1) { clearTimeout(svg._t); svg._t = setTimeout(() => svg.classList.add('fade'), 900); }
-};
-
-// ---------------------------------------------------------------- 📖 학생 기록 ----------------------------------------------------------------
-function SR() { S.story = S.story || {}; return S.story; }
-function rec(name) { const R = SR(), b = baseName(name); return R[b] || (R[b] = { tl: [], mom: 0, hat: 0, brace: 0, late: 0, titles: [], win: 0, seasons: {}, best: 0 }); }
-function addTL(r, ic, t) { r.tl.push({ d: Date.now(), ic, t, s: typeof leagueState !== 'undefined' && leagueState ? leagueState.season : null }); if (r.tl.length > 80) r.tl.splice(0, r.tl.length - 80); }
-function saveStory() { if (window.__wiping) return; try { localStorage.setItem('fm_stats', JSON.stringify(S)); } catch (_) {} }
-function career(name) {
-    const b = baseName(name), c = { app: 0, sub: 0, g: 0, a: 0, cs: 0, yc: 0, rc: 0, rs: 0, rn: 0, mg: 0 };
-    Object.values(S.pl || {}).forEach(r => { if (!r || baseName(r.name) !== b) return; c.app += r.app || 0; c.sub += r.sub || 0; c.g += r.g || 0; c.a += r.a || 0; c.cs += r.cs || 0; c.yc += r.yc || 0; c.rc += r.rc || 0; c.rs += r.ratingSum || 0; c.rn += r.ratingCount || 0; c.mg = Math.max(c.mg, r.mg || 0); });
-    c.games = c.app + c.sub; c.avg = c.rn ? c.rs / c.rn : null; return c;
-}
-// 📚 업데이트 이전 기록 이어받기 (저장 데이터마다 한 번, 이후에는 다른 기기 기록과 합쳐져 새로 들어온 학생만)
-// 학생 기록은 v1.32에서 새로 생겼다. 그 전부터 쌓인 경기 기록(S.pl)·리그/대회 개인상·우승을 학생 기록에 옮겨,
-// 오래 뛴 학생이 '데뷔'·'첫 MOM'으로 다시 시작하거나 기록이 비어 보이지 않게 한다.
-const LEGACY_NOTE = 'MOM·해트트릭·최고 평점·시즌별 기록은 v1.32 업데이트 이후 경기부터 집계됩니다. 경기·골·도움·평균 평점·클린시트·개인상은 이전 기록까지 모두 반영했어요.';
-function storyMigrate() {
-    if (window.__wiping) return;
-    const R = SR(), L0 = (typeof leagueState !== 'undefined' && leagueState) || null, tl = (r, e) => { r.tl.unshift({ d: 0, s: null, legacy: 1, ...e }); };
-    const legacy = b => {   // 학생 기록이 생기기 전부터 뛰던 학생: 이전 기록 요약 + 이미 넘긴 통산 기록
-        const c = career(b); if (!c.games) return false;
-        const r = rec(b); if (!r.debut) r.debut = { legacy: 1 };
-        const top = (L, v) => L.filter(n => v >= n).pop();
-        const g = top([10, 25, 50, 75, 100, 150, 200], c.g), a = top([10, 20, 30, 50], c.a), ap = top([10, 30, 50, 100, 150, 200], c.games);
-        if (ap) tl(r, { ic: '🎖️', t: `통산 ${ap}경기 출장` });
-        if (a) tl(r, { ic: '🎯', t: `통산 ${a}도움 달성` });
-        if (g) tl(r, { ic: '🎉', t: `통산 ${g}골 달성` });
-        if (c.mg >= 3) tl(r, { ic: '🎩', t: `한 경기 ${c.mg}골 기록` });
-        tl(r, { ic: '📚', t: `업데이트 이전 기록 이어받음 — ${c.games}경기 ${c.g}골 ${c.a}도움` });
-        return true;
-    };
-    const names = new Set(Object.values(S.pl || {}).map(r => r && baseName(r.name)).filter(Boolean));
-    if ((S.storyV || 0) >= 1) {   // 이미 옮긴 저장 데이터: 다른 기기 기록과 합쳐지며 새로 들어온 학생만 처리
-        let changed = false; names.forEach(b => { const r = R[b]; if ((!r || (!r.debut && !(r.tl || []).length)) && legacy(b)) changed = true; }); if (changed) saveStory(); return;
-    }
-    // ① 이 수정 전에 만들어진 기록: 이미 뛰던 학생에게 붙은 '데뷔'·'첫 MOM' 문구를 바로잡는다
-    Object.values(R).forEach(r => {
-        if (!r || !Array.isArray(r.tl)) return;
-        if (r.debut && !r.debut.legacy) { r.tl = r.tl.filter(e => e.ic !== '🌱'); r.debut = { legacy: 1 }; }
-        r.tl.forEach(e => { e.t = String(e.t || '').replace(/첫 MOM/, 'MOM 선정').replace(/^통산 (\d+)번째 MOM$/, 'MOM $1회째 (v1.32 이후)'); });
-    });
-    // ② 경기 기록이 있는 학생
-    names.forEach(legacy);
-    // ③ 리그 개인상(득점왕·도움왕)과 그 시즌 리그 우승
-    const champSeason = new Set([...((L0 && L0.history) || []).filter(h => h && h.rank === 1).map(h => h.season), ...(L0 && L0.status === 'finished' && L0.rank === 1 ? [L0.season] : [])]);
-    (S.awards || []).filter(x => x && x.mine && x.n).forEach(x => {
-        const r = rec(x.n); tl(r, { ic: x.t === '득점왕' ? '👟' : '🅰️', t: `시즌 ${x.s} ${x.l} ${x.t} (${x.v}${x.t === '득점왕' ? '골' : '도움'})`, s: x.s });
-        const tt = `시즌 ${x.s} ${x.l} 우승`; if (champSeason.has(x.s) && !r.titles.includes(tt)) r.titles.unshift(tt);
-    });
-    // ④ 대회 개인상(챔스·유로파·월드컵)과 그 대회 우승
-    (S.cupAwards || []).filter(x => x && x.mine && x.n).forEach(x => {
-        const ed = x.ed ? `제${x.ed}회 ` : '', r = rec(x.n); tl(r, { ic: x.ic || '🏅', t: `${ed}${x.comp} ${x.t}${x.v ? ` (${x.v})` : ''}` });
-        const tt = `${ed}${x.comp} 우승`; if (x.champ && !r.titles.includes(tt)) r.titles.unshift(tt);
-    });
-    // ⑤ 이미 각성한 카드: 재료로 쓰인 카드의 경기 기록을 본체 카드로 모은다 (기록실 '내 팀'에서 기록이 사라져 보이지 않게)
-    players.filter(p => awkLv(p) > 0).forEach(p => { const own = new Set(players.map(q => q.id)), b = baseName(p.name); awkMergeRecords(p, Object.keys(S.pl || {}).filter(id => !own.has(id) && S.pl[id] && baseName(S.pl[id].name) === b)); });
-    Object.values(R).forEach(r => { if (r && r.tl && r.tl.length > 80) r.tl.splice(0, r.tl.length - 80); });
-    S.storyV = 1; saveStory();
-}
-// 합성 재료 카드의 경기 기록(S.pl)을 본체 카드 기록에 더한다. 학생 통산 합계는 그대로다.
-function awkMergeRecords(main, ids) {
-    if (!main || !ids || !ids.length) return; S.pl = S.pl || {};
-    const t = S.pl[main.id] || (S.pl[main.id] = { name: main.name, app: 0, sub: 0, g: 0, a: 0, yc: 0, rc: 0, mg: 0, ma: 0, tw: 0, po: 0 });
-    ids.forEach(id => {
-        const f = S.pl[id]; if (!f || id === main.id) return;
-        ['app', 'sub', 'g', 'a', 'yc', 'rc', 'tw', 'po', 'cs', 'ratingSum', 'ratingCount', 'rs', 'rn'].forEach(k => { if (f[k]) t[k] = (t[k] || 0) + f[k]; });
-        t.mg = Math.max(t.mg || 0, f.mg || 0); t.ma = Math.max(t.ma || 0, f.ma || 0);
-        delete S.pl[id];
-    });
-}
-const HONORS = [
-    ['g', [[100, '💯', '100골의 사나이'], [50, '⚽', '50골 클럽'], [25, '⚽', '골잡이'], [10, '🥅', '두 자릿수 득점']], c => c.g],
-    ['a', [[50, '🎯', '도움 장인'], [20, '🅰️', '플레이메이커'], [10, '🅰️', '찬스 메이커']], c => c.a],
-    ['app', [[200, '🏛️', '살아 있는 전설'], [100, '🎖️', '100경기 출장'], [50, '🏅', '50경기 출장'], [20, '👟', '주전 멤버']], c => c.games],
-    ['cs', [[30, '🧱', '통곡의 벽'], [10, '🧤', '클린시트 장인']], c => c.cs],
-    ['mom', [[20, '👑', 'MOM 단골'], [10, '🌟', '해결사'], [3, '⭐', '믿고 보는 선수']], (c, r) => r.mom],
-    ['hat', [[3, '🎩', '해트트릭 수집가'], [1, '🎩', '해트트릭 경험']], (c, r) => r.hat],
-    ['tit', [[5, '🏆', '우승 청부사'], [1, '🏆', '우승 멤버']], (c, r) => r.titles.length],
-    ['late', [[3, '🎭', '극장골 전문'], [1, '🎭', '극장골의 주인공']], (c, r) => r.late],
-    ['awk', [[5, '👑', '레전드 각성'], [3, '✨', '각성자']], (c, r, p) => p ? awkLv(p) : 0]
-];
-function honors(name) {
-    const c = career(name), r = rec(name), p = players.filter(x => baseName(x.name) === baseName(name)).sort((a, b) => awkLv(b) - awkLv(a))[0], out = [];
-    HONORS.forEach(([, tiers, f]) => { const v = f(c, r, p) || 0; const t = tiers.find(([n]) => v >= n); if (t) out.push([t[1], t[2]]); });
-    if (c.rn >= 15 && c.avg >= 7.4) out.push(['📈', '꾸준함의 아이콘']);
-    return out;
-}
-function bio(name) {
-    const b = baseName(name), c = career(b), r = SR()[b], p = players.filter(x => baseName(x.name) === b).sort((x, y) => getCalculatedOvr(y) - getCalculatedOvr(x))[0];
-    const pos = p ? POS_KO[p.position] || '선수' : '선수', tier = p && typeof getPlayerTier === 'function' ? TIER_KO[getPlayerTier(p)] : '', per = p ? personaOf(p) : null, out = [];
-    out.push(`${J(b, '은')} ${tier ? tier + ' ' : ''}${pos}${per ? `, ${per.n} 성향` : ''}의 학생 선수다.`);
-    if (!c.games) { out.push('아직 공식 경기 기록이 없다. 첫 출전 기회를 기다리고 있다.'); return out.join(' '); }
-    if (r && r.debut && !r.debut.legacy) out.push(`${r.debut.comp} ${r.debut.opp}전에서 데뷔한 뒤`); else out.push('지금까지');
-    { const line = `${c.g}골 ${c.a}도움${c.cs && p && (p.position === 'GK' || p.position === 'DF') ? `, 클린시트 ${c.cs}회` : ''}`; out[out.length - 1] += ` ${c.games}경기에 나서 ${J(line, '을')} 기록했다.`; }
-    if (r && r.hat) out.push(`해트트릭만 ${r.hat}번 작성한 득점 기계다.`); else if (c.mg >= 2) out.push(`한 경기 최다 ${c.mg}골을 넣은 적이 있다.`);
-    if (r && r.mom >= 3) out.push(`MOM에 ${r.mom}번 뽑혀 팬들 사이에서 "믿고 보는 선수"로 통한다.`); else if (r && r.mom) out.push(`MOM에 ${r.mom}번 선정됐다.`);
-    if (r && r.late) out.push(`85분 이후 결정적인 골을 ${r.late}번 넣어 '극장'이라는 별명이 붙었다.`);
-    if (r && r.titles.length) out.push(`${J(r.titles.slice(-1)[0], '을')} 포함해 우승 트로피를 ${r.titles.length}번 들어 올렸다.`);
-    if (p && awkLv(p)) out.push(awkLv(p) >= 5 ? '같은 학생 카드 9장을 모아 레전드 각성에 도달했다.' : `★${awkLv(p)} 각성으로 한계를 넘어섰다.`);
-    if (p && typeof mentalOf === 'function') { const m = mentalOf(p); if (m <= 7) out.push('여론과 기사에 쉽게 흔들리는 편이라 주장과 동료들의 다독임이 필요하다.'); else if (m >= 16) out.push('어떤 압박에도 표정 하나 바뀌지 않는 강철 멘탈이다.'); }
-    if (r && r.best >= 8) out.push(`${r.debut && r.debut.legacy ? 'v1.32 이후 ' : '커리어 '}최고 평점은 ${r.best.toFixed(1)}${r.bestOpp ? ` (${r.bestOpp}전)` : ''}.`);
-    const rt = p && (p.rts || []).slice(-3); if (rt && rt.length >= 2) { const av = rt.reduce((x, y) => x + y, 0) / rt.length; out.push(av >= 7.3 ? '최근 폼이 절정이다.' : av < 6.2 ? '최근 몇 경기는 기대에 못 미쳐 반등이 필요하다.' : '최근 컨디션은 무난하다.'); }
-    return out.join(' ');
-}
-const fmtD = d => { if (!d) return '이전'; const x = new Date(d); return `${x.getMonth() + 1}.${x.getDate()}`; };
-function storyPanel(p) {
-    const b = baseName(p.name), c = career(b), r = SR()[b] || { tl: [], mom: 0, titles: [] }, H = honors(b);
-    const tiles = [['경기', c.games], ['골', c.g], ['도움', c.a], ['MOM', r.mom || 0], ['평균 평점', c.avg == null ? '-' : c.avg.toFixed(2)], ['우승', (r.titles || []).length]];
-    return `<div class="stu-box"><div class="stu-head"><span>📖 ${esc(b)}의 학생 기록</span><button class="stu-link" onclick="openStory('${esc(b).replace(/'/g, '')}')">전체 기록 ›</button></div>
-        <div class="stu-tiles">${tiles.map(([k, v]) => `<div class="stu-tile"><b>${v}</b><small>${k}</small></div>`).join('')}</div>
-        ${H.length ? `<div class="stu-hon">${H.map(([i, t]) => `<span>${i} ${esc(t)}</span>`).join('')}</div>` : ''}
-        <div class="stu-bio">${esc(bio(b))}</div>
-        ${(r.tl || []).length ? `<div class="stu-tl">${r.tl.slice(-5).reverse().map(e => `<div><small>${fmtD(e.d)}</small>${e.ic} ${esc(e.t)}</div>`).join('')}</div>` : ''}
-        <div class="text-[11px] text-gray-500 mt-2">같은 학생의 모든 카드(판매·각성 재료 포함) 기록을 합산합니다.${r.debut && r.debut.legacy ? ` ${LEGACY_NOTE}` : ''}</div></div>`;
-}
-window.openStory = function (name) {
-    const b = baseName(name), c = career(b), r = SR()[b] || { tl: [], mom: 0, titles: [], seasons: {} }, H = honors(b), el = document.getElementById('story-body'); if (!el) return;
-    const seasons = Object.entries(r.seasons || {}).sort((x, y) => Number(y[0].slice(1)) - Number(x[0].slice(1)));
-    el.innerHTML = `<div class="flex justify-between items-start mb-2"><div><div class="text-xs text-violet-300 font-black tracking-widest">STUDENT RECORD</div><h2 class="text-2xl font-black">📖 ${esc(b)}</h2></div><button onclick="closeStory()" class="text-3xl text-gray-400">×</button></div>
-        <div class="stu-tiles">${[['경기', c.games], ['골', c.g], ['도움', c.a], ['MOM', r.mom || 0], ['해트트릭', r.hat || 0], ['클린시트', c.cs], ['평균 평점', c.avg == null ? '-' : c.avg.toFixed(2)], ['최고 평점', r.best ? r.best.toFixed(1) : '-'], ['한 경기 최다 골', c.mg || 0], ['우승', (r.titles || []).length]].map(([k, v]) => `<div class="stu-tile"><b>${v}</b><small>${k}</small></div>`).join('')}</div>
-        ${H.length ? `<div class="stu-hon">${H.map(([i, t]) => `<span>${i} ${esc(t)}</span>`).join('')}</div>` : ''}
-        <div class="stu-bio">${esc(bio(b))}</div>
-        ${(r.titles || []).length ? `<div class="stu-box"><div class="stu-head">🏆 우승 기록</div>${r.titles.map(t => `<div class="text-sm">🏆 ${esc(t)}</div>`).join('')}</div>` : ''}
-        ${seasons.length ? `<div class="stu-box"><div class="stu-head">📅 리그 시즌별 기록</div><table class="stu-table"><tr><th>시즌</th><th>리그</th><th>경기</th><th>골</th><th>도움</th><th>MOM</th></tr>${seasons.map(([k, s]) => `<tr><td>${k.slice(1)}</td><td>${esc(s.l)}</td><td>${s.app}</td><td>${s.g}</td><td>${s.a}</td><td>${s.mom}</td></tr>`).join('')}</table></div>` : ''}
-        <div class="stu-box"><div class="stu-head">🕰️ 성장 타임라인</div>${(r.tl || []).length ? `<div class="stu-tl">${r.tl.slice().reverse().map(e => `<div><small>${fmtD(e.d)}${e.s ? ` · S${e.s}` : ''}</small>${e.ic} ${esc(e.t)}</div>`).join('')}</div>` : '<div class="text-sm text-gray-400">아직 기록된 장면이 없습니다. 경기에 나서면 데뷔·첫 골·MOM 같은 순간이 쌓입니다.</div>'}</div>
-        ${r.debut && r.debut.legacy ? `<div class="text-[11px] text-gray-500 mt-2">※ ${LEGACY_NOTE}</div>` : ''}`;
-    document.getElementById('story-modal').classList.add('open');
-};
-window.closeStory = function () { document.getElementById('story-modal')?.classList.remove('open'); };
-// 선수 정보 창: 학생 기록 + 각성
-if (typeof showPlayerInfo === 'function') {
-    const _spi = showPlayerInfo;
-    showPlayerInfo = function (id) { const r = _spi.apply(this, arguments); try { const p = players.find(x => x.id === id), body = document.getElementById('player-modal-body'); if (p && body) body.insertAdjacentHTML('beforeend', storyPanel(p) + awkSummary(p)); } catch (e) { console.error(e); } return r; };
-}
-function modeLabel(st) {
-    try { if (st.mode === 'league' && leagueState) return st.leaguePlayoff ? `${LG[leagueState.li].n} 승격 플레이오프` : LG[leagueState.li].n; } catch (_) {}
-    return ({ career: '챔피언스리그', europa: '유로파리그', worldcup: '월드컵', saudi: '사우디 친선', rogue: '원정' })[st.mode] || '공식전';
-}
-// 경기 후 학생 기록 갱신 (recordMatch가 S.pl을 갱신한 직후)
-function storyAfterMatch(st, rewardText) {
-    if (sand(st) || st.forfeit || st.storyDone) return; st.storyDone = true;
-    const Rt = st.ratings || {}, RA = st.ratingsAway || {}, played = [...st.homePlayers, ...(st.homeOut || [])], opp = st.enemy.name, comp = modeLabel(st);
-    const H = st.scoreHome, A = st.scoreAway, win = H > A || st.penWinner === 'home', gl = st.goalLog || [];
-    let best = null; played.forEach(p => { const v = parseFloat(Rt[p.id]); if (v && (!best || v > best.v)) best = { p, v }; });
-    const awayTop = Math.max(0, ...Object.values(RA).map(Number).filter(Number.isFinite)), mom = best && best.v >= awayTop ? best.p : null;
-    const sk = st.mode === 'league' && leagueState && !st.leaguePlayoff ? `L${leagueState.season}` : null;
-    const seen = new Set();
-    played.forEach(hp => {
-        const b = baseName(hp.name); if (seen.has(b)) return; seen.add(b);
-        const r = rec(b), ps = st.playerStats[hp.id] || {}, g = ps.goals || 0, a = ps.assists || 0, v = parseFloat(Rt[hp.id]) || 0, c = career(b), pg = c.g - g, pa = c.a - a, papp = c.games - 1;
-        if (!r.debut) { if (papp <= 0) { r.debut = { d: Date.now(), opp, comp }; addTL(r, '🌱', `${comp} ${opp}전에서 데뷔${hp.subIn ? ' (교체 출전)' : ' (선발)'}`); } else r.debut = { legacy: 1 }; }
-        if (g && pg <= 0) addTL(r, '⚽', `${opp}전에서 통산 첫 골`);
-        if (a && pa <= 0) addTL(r, '🅰️', `${opp}전에서 통산 첫 도움`);
-        if (g >= 3) { r.hat++; addTL(r, '🎩', `${opp}전 ${g >= 4 ? g + '골 폭발' : '해트트릭'}`); } else if (g === 2) r.brace++;
-        [10, 25, 50, 75, 100, 150, 200].forEach(n => { if (pg < n && c.g >= n) addTL(r, '🎉', `통산 ${n}골 달성 (${opp}전)`); });
-        [10, 20, 30, 50].forEach(n => { if (pa < n && c.a >= n) addTL(r, '🎯', `통산 ${n}도움 달성`); });
-        [10, 30, 50, 100, 150, 200].forEach(n => { if (papp < n && c.games >= n) addTL(r, '🎖️', `통산 ${n}경기 출장`); });
-        if (mom === hp) { r.mom++; const lg = r.debut && r.debut.legacy; if (r.mom === 1) addTL(r, '⭐', `${opp}전 ${lg ? 'MOM 선정' : '첫 MOM'} (평점 ${v.toFixed(1)})`); else if ([5, 10, 20, 30, 50].includes(r.mom)) addTL(r, '👑', lg ? `MOM ${r.mom}회째 (v1.32 이후)` : `통산 ${r.mom}번째 MOM`); }
-        if (v > (r.best || 0)) { if (r.best && v >= 8.5) addTL(r, '📈', `커리어 최고 평점 경신 ${v.toFixed(1)} (${opp}전)`); r.best = v; r.bestOpp = opp; }
-        const lateG = gl.filter(x => x.home && x.scorer === hp.name && x.time >= 85 && x.homeBefore <= x.awayBefore);
-        if (lateG.length && (win || H === A)) { r.late = (r.late || 0) + 1; addTL(r, '🎭', `${lateG[lateG.length - 1].lab || lateG[lateG.length - 1].time}분 ${win ? '극장 결승골' : '극장 동점골'} (${opp}전)`); }
-        if (hp.isRedCarded) addTL(r, '🟥', `${opp}전 퇴장`);
-        if (win) r.win++;
-        if (sk) { const s = r.seasons[sk] || (r.seasons[sk] = { l: LG[leagueState.li].n, app: 0, g: 0, a: 0, mom: 0 }); s.app++; s.g += g; s.a += a; if (mom === hp) s.mom++; }
-    });
-    if (/🏆/.test(rewardText || '') && st.mode !== 'league') seen.forEach(b => { const r = rec(b); r.titles.push(comp + ' 우승'); addTL(r, '🏆', `${comp} 우승`); });
-    saveStory();
-}
-if (typeof recordMatch === 'function') {
-    const _rm = recordMatch;
-    recordMatch = function (st, rewardText) { const r = _rm.apply(this, arguments); try { storyAfterMatch(st, rewardText); } catch (e) { console.error(e); } return r; };
-}
-// 리그 시즌 종료: 우승·승격·시즌 기록
-if (typeof finishLeagueSeason === 'function') {
-    const _fls = finishLeagueSeason;
-    finishLeagueSeason = function () {
-        const l = leagueState, li = l && l.li, season = l && l.season; const out = _fls.apply(this, arguments);
-        try {
-            const sk = `L${season}`, L = LG[li].n, champ = l.champion === 'user', up = l.nextLi > li;
-            Object.entries(SR()).forEach(([b, r]) => { const s = r.seasons && r.seasons[sk]; if (!s || !s.app) return;
-                if (champ) { r.titles.push(`시즌 ${season} ${L} 우승`); addTL(r, '🏆', `시즌 ${season} ${L} 우승 (${s.app}경기 ${s.g}골 ${s.a}도움)`); }
-                else if (up) addTL(r, '⬆️', `시즌 ${season} ${L} 승격 (${s.app}경기 ${s.g}골 ${s.a}도움)`);
-                else if (s.app >= 3) addTL(r, '📅', `시즌 ${season} ${L} ${l.rank}위 마감 (${s.app}경기 ${s.g}골 ${s.a}도움)`);
-                if (l.awards && l.awards.g && l.awards.g.c === 'user' && baseName(l.awards.g.n) === b) addTL(r, '👟', `시즌 ${season} ${L} 득점왕 (${l.awards.g.g}골)`);
-                if (l.awards && l.awards.a && l.awards.a.c === 'user' && baseName(l.awards.a.n) === b) addTL(r, '🅰️', `시즌 ${season} ${L} 도움왕 (${l.awards.a.a}개)`); });
-            saveStory();
-        } catch (e) { console.error(e); }
-        return out;
-    };
-}
-// 기록실: 🎓 학생 기록 탭 (명예의 전당)
-if (typeof renderStats === 'function') {
-    const _rs = renderStats;
-    renderStats = function () {
-        const r = _rs.apply(this, arguments);
-        try {
-            const tabs = document.getElementById('stats-tabs'); if (!tabs) return r;
-            tabs.classList.remove('grid-cols-4'); tabs.classList.add('grid-cols-5');
-            tabs.insertAdjacentHTML('beforeend', `<button onclick="showStatsTab('stu')" class="py-4 rounded-xl font-black text-xl ${statsTab === 'stu' ? 'bg-sky-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}">학생</button>`);
-            if (statsTab === 'stu') document.getElementById('stats-body').innerHTML = hallHtml();
-        } catch (e) { console.error(e); }
-        return r;
-    };
-}
-function hallHtml() {
-    const names = new Set([...Object.values(S.pl || {}).map(r => baseName(r && r.name)), ...Object.keys(SR())].filter(Boolean));
-    const rows = [...names].map(n => { const c = career(n), r = SR()[n] || {}; return { n, c, r, mine: players.some(p => baseName(p.name) === n) }; }).filter(x => x.c.games || (x.r.tl || []).length);
-    if (!rows.length) return '<div class="p-6 text-gray-400">아직 학생 기록이 없습니다. 경기를 치르면 학생별 기록과 성장 서사가 쌓입니다.</div>';
-    const top = (k, f, n = 10) => rows.filter(x => f(x) > 0).sort((a, b) => f(b) - f(a)).slice(0, n);
-    const tb = (title, k, f, fmt = v => v) => { const L = top(k, f); return `<div class="stu-box"><div class="stu-head">${title}</div>${L.length ? `<table class="stu-table"><tr><th>학생</th><th>기록</th><th>경기</th></tr>${L.map((x, i) => `<tr><td>${i + 1}. <button class="stu-link" onclick="openStory('${esc(x.n).replace(/'/g, '')}')">${esc(x.n)}</button>${x.mine ? '' : ' <small class="text-gray-500">(방출)</small>'}</td><td><b>${fmt(f(x))}</b></td><td>${x.c.games}</td></tr>`).join('')}</table>` : '<div class="text-sm text-gray-500">기록 없음</div>'}</div>`; };
-    return `<div class="p-4"><div class="text-sm text-gray-300 mb-2">🎓 학생 명예의 전당 · 학생 이름을 누르면 성장 서사와 전체 기록을 볼 수 있어요</div><div class="text-[11px] text-gray-500 mb-2">※ ${LEGACY_NOTE}</div><div class="grid gap-3 md:grid-cols-2">
-        ${tb('⚽ 통산 득점', 'g', x => x.c.g)}${tb('🅰️ 통산 도움', 'a', x => x.c.a)}${tb('🎖️ 통산 출장', 'app', x => x.c.games)}${tb('⭐ MOM', 'mom', x => x.r.mom || 0)}${tb('🏆 우승 횟수', 'tit', x => (x.r.titles || []).length)}${tb('📈 평균 평점 (10경기 이상)', 'avg', x => x.c.rn >= 10 ? x.c.avg : 0, v => v.toFixed(2))}</div></div>`;
-}
-
-// ---------------------------------------------------------------- 🎤 MOM 인터뷰 ----------------------------------------------------------------
-const OPEN = {
-    pro: ['솔직히 특별한 건 없었습니다.', '준비한 대로 했을 뿐입니다.', '개인 기록보다 팀 결과가 먼저입니다.', '침착하게 하자고만 생각했습니다.'],
-    amb: ['이 정도로 만족하지 않습니다.', '아직 배고픕니다.', '이게 제 실력이라고 생각합니다.', '더 큰 무대가 욕심납니다.'],
-    loyal: ['다 팀 덕분이에요.', '이 유니폼을 입고 뛰는 게 늘 자랑스럽습니다.', '형들, 친구들이 다 같이 만든 결과예요.'],
-    hot: ['와, 아직도 심장이 뛰어요!', '오늘은 진짜 미쳤던 것 같아요!', '경기 내내 피가 끓었습니다!'],
-    soft: ['아직도 실감이 안 나요…', '떨렸는데 동료들이 많이 도와줬어요.', '이런 상을 받아도 되나 싶어요.']
-};
-const CLOSE = ['다음 경기도 이 기세로 가겠습니다.', '팬분들 응원 덕분입니다.', `팬분들 사랑합니다!`, '오늘은 푹 쉬고 다시 준비하겠습니다.', '감독님 믿음에 보답하고 싶었어요.', '내일 회복 훈련부터 다시 시작입니다.'];
-window.momInterview = function (st, p) {
-    const k = personaOf(p).k, R = st.ratings || {}, v = parseFloat(R[p.id]) || 0, ps = st.playerStats[p.id] || {}, g = ps.goals || 0, a = ps.assists || 0, O = st.enemy.name;
-    const H = st.scoreHome, A = st.scoreAway, win = H > A || st.penWinner === 'home', lose = A > H || st.penWinner === 'away', gl = st.goalLog || [];
-    const myG = gl.filter(x => x.home && x.scorer === p.name), late = myG.find(x => x.time >= 85 && x.homeBefore <= x.awayBefore), comeback = win && gl.length && !gl[0].home;
-    const assister = (myG.find(x => x.assist) || {}).assist, gk = p.role === 'GK', df = p.role === 'DF', cs = A === 0;
-    const c = career(p.name), firstG = g && c.g === g, mile = [10, 25, 50, 100, 150].find(n => c.g >= n && c.g - g < n), lv = awkLv(players.find(x => x.id === p.id));
-    const cap = p.isCaptain, run = (typeof exRuns === 'function' ? exRuns() : { win: 0 }), pr = typeof exPressure === 'function' ? exPressure() : 0;
-    let fr = null; try { fr = exRelations(players).find(r => r.k === 'friend' && (r.a.id === p.id || r.b.id === p.id)); } catch (_) {}
-    const friend = fr ? (fr.a.id === p.id ? fr.b.name : fr.a.name) : null;
-    const C = [];
-    const add = (w, q, body, goal) => C.push({ w, q, body, goal: goal !== false && !!g });
-    if (g >= 3) add(10, R1(['"해트트릭입니다! 경기 공은 챙기셨나요?"', `"혼자 ${g}골을 넣었습니다. 오늘 컨디션이 어땠길래요?"`, '"세 번째 골이 들어갔을 때 어떤 기분이었나요?"']), { pro: '세 번째 골은 동료가 거의 다 만들어 준 거라 숟가락만 얹었어요.', amb: `${g}골이요? 한 골 더 넣을 수 있었는데 그게 아쉽네요.`, loyal: '공은 집에 가져가서 가족이랑 사진 찍을 거예요.', hot: '세 번째 골 들어가는 순간 관중석을 봤는데 소름이 쫙 돋았어요!', soft: `${g}골이나 넣을 줄은 몰랐어요. 공은 부모님께 드리려고요.` });
-    if (late) add(9, R1([`"${late.lab || late.time}분 ${win ? '결승골' : '동점골'}이었습니다. 그 순간 무슨 생각이 들었나요?"`, '"다들 끝났다고 생각했을 때 골이 터졌습니다. 포기하지 않은 비결은요?"']), { pro: '마지막까지 위치를 지키면 기회는 온다고 믿었습니다.', amb: '이런 순간을 위해 축구하는 거죠. 큰 경기일수록 제가 해결하고 싶어요.', loyal: '끝까지 응원해 준 팬분들 목소리가 들렸어요. 그분들께 드리는 골입니다.', hot: '머리가 하얘졌어요! 골망 흔들리는 거 보고 그냥 미친 듯이 뛰었습니다!', soft: '사실 다리가 풀려서 제대로 차질 못했는데… 그냥 들어갔어요. 운이 좋았어요.' });
-    if (firstG) add(9, R1(['"공식 경기 첫 골입니다. 지금 기분이 어떤가요?"', '"기다리던 첫 골이 터졌습니다. 소감 부탁드립니다."']), { pro: '첫 골은 시작일 뿐입니다. 꾸준히 넣는 선수가 되겠습니다.', amb: '드디어 터졌네요. 이제부터 계속 넣을 겁니다.', loyal: '가족이랑 친구들이요. 다들 경기장에 와 있었거든요.', hot: '드디어!!! 진짜 오래 기다렸어요. 오늘 밤 잠 못 잘 것 같아요!', soft: '눈물 날 뻔했어요… 첫 골은 평생 못 잊을 것 같아요.' });
-    if (mile && !firstG) add(8, `"통산 ${mile}골 고지를 밟았습니다. 감회가 남다를 것 같은데요?"`, { pro: '숫자는 동료들이 만들어 준 겁니다. 다음 목표만 생각하겠습니다.', amb: `${mile}골은 지나가는 숫자예요. 훨씬 더 높이 갈 겁니다.`, loyal: `이 팀에서 ${mile}골을 넣었다는 게 제일 자랑스러워요.`, hot: '벌써 그렇게 됐어요? 기념 세리머니라도 할 걸 그랬네요!', soft: '처음 골 넣던 날이 생각나요. 여기까지 올 줄 몰랐어요.' });
-    if (g === 2) add(7, R1(['"멀티골 활약이었습니다. 두 골 중 더 마음에 드는 골은요?"', '"두 골을 넣었는데, 해트트릭 욕심은 없었나요?"']), { pro: '두 번째 골이요. 훈련 때 연습한 움직임이 그대로 나왔습니다.', amb: '솔직히 해트트릭 욕심났어요. 다음엔 꼭 하겠습니다.', loyal: `${assister ? `${J(assister, '이')} 만들어 준 골이요.` : '첫 골이요.'} 동료가 만들어 준 골이라 더 기뻐요.`, hot: '둘 다요! 골은 넣을 때마다 짜릿하니까요!', soft: '두 골이나 넣을 줄 몰랐어요. 그냥 열심히 뛰었어요.' });
-    if (a >= 2 && !g) add(7, `"도움만 ${a}개, 오늘은 완벽한 조력자였는데요?"`, { pro: '골이 안 터져도 팀에 도움이 되면 그걸로 충분합니다.', amb: '도움도 좋지만 다음엔 제가 직접 넣고 싶네요.', loyal: '동료가 골 넣는 게 제가 넣는 것보다 더 기뻐요.', hot: '패스 찔러 줄 때마다 들어갈 것 같았어요! 다들 잘 넣어 줬죠!', soft: '골 넣은 친구들 덕분에 제가 상을 받은 것 같아요.' });
-    if (gk && cs) add(8, R1(['"무실점 선방쇼였습니다. 가장 어려웠던 장면은요?"', '"오늘 골문을 완벽하게 지켰습니다. 비결이 있다면요?"']), { pro: '수비수들이 슈팅 각도를 잘 좁혀 줘서 판단이 쉬웠습니다.', amb: '무실점은 기본이죠. 이번 시즌 최소 실점 골키퍼가 목표입니다.', loyal: '수비수 형들, 친구들이 몸을 날려 줬어요. 무실점은 다 같이 한 거예요.', hot: '그 1:1 막을 때 진짜 짜릿했어요! 오늘은 아무것도 안 들어갈 것 같았어요!', soft: '사실 한 번은 공이 손에 맞고 운 좋게 나갔어요… 감사할 따름이에요.' });
-    if (df && cs && !gk) add(7, '"상대 공격을 꽁꽁 묶었습니다. 오늘 수비 비결은요?"', { pro: '라인 간격을 좁게 유지하자고 경기 전에 많이 얘기했습니다.', amb: '오늘 상대 공격수한테는 아무것도 허락하지 않겠다고 마음먹었어요.', loyal: '골키퍼랑 수비진 모두 같이 만든 무실점입니다.', hot: '몸싸움에서 절대 안 밀리겠다고 이를 악물었어요!', soft: '실수할까 봐 떨렸는데 옆에서 계속 말해 줘서 버틸 수 있었어요.' });
-    if (comeback) add(7, '"선제골을 내주고 뒤집었습니다. 하프타임 라커룸 분위기는 어땠나요?"', { pro: '당황하지 말고 준비한 걸 하자고 했습니다. 그게 통했어요.', amb: '지고 있을 때가 제일 불타오릅니다. 뒤집을 자신 있었어요.', loyal: '아무도 고개 숙이지 않았어요. 그게 우리 팀입니다.', hot: '라커룸에서 다들 소리 질렀어요! 이대로는 못 끝낸다고!', soft: '저는 좀 불안했는데 형들이 괜찮다고 해 줘서 힘이 났어요.' });
-    if (p.subIn) add(8, R1(['"교체로 들어가 경기를 바꿨습니다. 감독님이 뭐라고 하셨나요?"', '"벤치에서 시작했는데, 들어갈 때 각오가 남달랐나요?"']), { pro: '들어가서 템포를 올리라는 지시였습니다. 그대로 했을 뿐이에요.', amb: '벤치에서 시작하는 건 솔직히 싫어요. 그래서 더 보여주고 싶었습니다.', loyal: '언제 들어가든 팀을 위해 뛸 준비는 돼 있습니다.', hot: '몸 풀 때부터 들어가면 뭔가 하겠다 싶었어요!', soft: '들어가면서 엄청 떨렸는데 동료들이 공을 잘 줬어요.' });
-    if (lose) add(9, R1(['"팀은 졌지만 오늘 최고의 선수였습니다. 기분이 어떤가요?"', '"MOM에 뽑혔지만 웃을 수 없는 날인데요?"']), { pro: '개인상은 의미 없습니다. 진 경기에서 배울 걸 찾겠습니다.', amb: '제가 더 했어야 했어요. 이런 상은 이긴 날 받고 싶습니다.', loyal: '팬분들께 죄송합니다. 상보다 승점이 필요했어요.', hot: '솔직히 화가 납니다. 이런 경기는 절대 지면 안 돼요.', soft: '상을 받아도 기쁘지가 않아요… 동료들한테 미안해요.' });
-    else if (!win) add(6, '"무승부지만 MOM입니다. 아쉬움이 더 큰가요?"', { pro: '승점 1점도 소중합니다. 놓친 장면은 영상으로 다시 보겠습니다.', amb: '비기려고 뛴 게 아닙니다. 제가 한 골 더 넣었어야 했어요.', loyal: '끝까지 버텨 준 동료들 덕분에 얻은 승점이에요.', hot: '이길 수 있었어요! 진짜 분합니다!', soft: '그래도 지지 않아서 다행이에요. 다음엔 꼭 이기고 싶어요.' });
-    if (lv >= 3) add(6, '"각성 이후 확 달라졌다는 평가입니다. 본인도 느끼나요?"', { pro: '몸이 가벼워진 건 맞습니다. 그만큼 관리도 더 신경 쓰고 있어요.', amb: '이제 시작입니다. 더 높은 단계까지 갈 거예요.', loyal: '저를 믿고 키워 준 팀에 보답하고 싶었어요.', hot: '요즘 공이 발에 착착 붙어요! 저도 신기합니다!', soft: '아직도 제가 이렇게 할 수 있다는 게 믿기지 않아요.' });
-    if (cap) add(5, '"주장 완장을 차고 MOM까지 받았습니다. 리더로서 오늘 경기는 어땠나요?"', { pro: '주장은 말보다 행동이라고 생각합니다. 오늘은 그걸 보여 줬다고 생각해요.', amb: '주장이라면 결정적인 순간에 해결해야죠.', loyal: '완장보다 동료들이 더 중요해요. 다 같이 만든 경기예요.', hot: '주장이니까 제일 많이 뛰어야죠! 애들한테 계속 소리 질렀어요!', soft: '주장이라 부담이 컸는데 동료들이 많이 도와줬어요.' });
-    if (win && run.win >= 2) add(5, `"팀이 ${run.win + 1}연승입니다. 요즘 라커룸 분위기는 어떤가요?"`, { pro: '연승은 신경 쓰지 않으려 합니다. 다음 경기만 봅니다.', amb: '이 흐름이면 우승까지 노려 볼 만합니다.', loyal: '요즘 훈련장 가는 게 제일 즐거워요.', hot: '지금 우리 분위기면 누구랑 붙어도 안 져요!', soft: '다들 웃고 있어서 저도 덩달아 신나요.' });
-    if (pr >= 0.35) add(6, '"최근 팀을 향한 비판 여론이 컸는데, 오늘 활약으로 답한 건가요?"', { pro: '기사나 댓글은 최대한 안 보려고 합니다. 경기력으로 말하는 게 맞죠.', amb: '비판은 오히려 동기부여가 됐습니다. 계속 증명하겠습니다.', loyal: '팬분들 실망하신 거 알아요. 그래서 더 이기고 싶었어요.', hot: '솔직히 댓글 보고 화났었어요. 그래서 오늘 더 미친 듯이 뛰었습니다!', soft: '사실 댓글 보고 많이 힘들었어요… 그래도 오늘 조금은 보답한 것 같아요.' });
-    add(2, '"MOM에 선정됐습니다. 소감 한마디 부탁드립니다."', { pro: '오늘은 팀 전체가 좋았습니다. 저는 제 역할을 했을 뿐입니다.', amb: '기분 좋습니다. 이 상을 더 자주 받고 싶어요.', loyal: '저보다 동료들이 더 받아야 할 상이에요.', hot: '오늘은 그냥 다 잘됐어요! 이런 날이 계속됐으면 좋겠어요!', soft: '저보다 잘한 친구들이 많은데 제가 받아서 미안할 정도예요.' });
-    add(2, `"평점 ${v.toFixed(1)}입니다. 본인이 매긴다면 몇 점인가요?"`, { pro: `${Math.max(5, Math.floor(v) - 1)}점 정도요. 놓친 장면이 두세 개 있었습니다.`, amb: `${Math.min(10, Math.floor(v) + 1)}점이요. 아니, 아직 부족해요. 더 올라가야죠.`, loyal: '점수는 동료들한테 나눠 주고 싶어요. 다 같이 뛴 거니까요.', hot: '10점이요! 농담이고요, 오늘은 진짜 몸이 가벼웠어요!', soft: '저는 6점 정도…? 다들 칭찬해 주셔서 쑥스러워요.' });
-    add(2, `"${O}전 활약의 비결이 있다면요?"`, { pro: `${O} 경기 영상을 많이 봤습니다. 수비 뒷공간이 보였어요.`, amb: '어떤 상대든 제가 더 낫다고 생각하고 들어갑니다.', loyal: '동료들이 제가 잘하는 걸 할 수 있게 도와줬어요.', hot: '그냥 이기고 싶은 마음이 더 컸던 것 같아요!', soft: '특별한 건 없어요. 실수만 하지 말자고 생각했어요.' }, false);
-    const tot = C.reduce((s, x) => s + x.w, 0); let t = Math.random() * tot, ch = C[0]; for (const x of C) { if ((t -= x.w) <= 0) { ch = x; break; } }
-    const parts = [], body = ch.body[k] || ch.body.pro, op = R1(OPEN[k] || OPEN.pro);
-    // 여는 말과 본문이 같은 말투로 겹치지 않게 (둘 다 감탄사 · 같은 단어로 시작하면 생략)
-    if (Math.random() < 0.6 && !(op.slice(0, 2) === body.slice(0, 2)) && !(/!$/.test(op) && /!/.test(body.slice(0, 20)))) parts.push(op);
-    parts.push(body);
-    if (ch.goal && assister && !/동료가|만들어 준|패스/.test(body) && Math.random() < 0.45) parts.push(R1([`${J(assister, '이')} 넣기 좋게 줬어요.`, `${assister} 패스가 워낙 좋았습니다.`, `${assister}한테 밥 한번 사야겠어요.`]));
-    if (friend && Math.random() < 0.3) parts.push(`${J(friend, '이')} 옆에서 계속 힘이 돼 줬어요.`);
-    if (Math.random() < 0.6) parts.push(R1(CLOSE));
-    return { q: ch.q.replace(/^"|"$/g, ''), a: parts.join(' ') };
-};
-
-// ---------------------------------------------------------------- 🎤 감독 기자회견 질문 다양화 ----------------------------------------------------------------
-function rankInfo() {
-    try { if (typeof leagueState === 'undefined' || !leagueState || leagueState.status !== 'playing') return null; const tb = leagueTable(), i = tb.findIndex(t => t.id === 'user'); return { rank: i + 1, n: tb.length, lead: i > 0 ? tb[0].pts - tb[i].pts : (tb[1] ? tb[0].pts - tb[1].pts : 0), league: LG[leagueState.li].n, left: lgTotal() - leagueState.myPlayed }; } catch (_) { return null; }
-}
-function postPool(st) {
-    const H = st.scoreHome, A = st.scoreAway, win = H > A || st.penWinner === 'home', lose = A > H || st.penWinner === 'away', O = st.enemy.name, R = st.ratings || {}, X = st.stats || {};
-    const mine = [...st.homePlayers, ...(st.homeOut || [])], gl = st.goalLog || [], P = [], run = typeof exRuns === 'function' ? exRuns() : { loss: 0, winless: 0, win: 0 };
-    const ri = rankInfo(), tp = (X.homePos + X.awayPos) || 1, pos = Math.round((X.homePos || 0) / tp * 100), cap = mine.find(p => p.isCaptain);
-    const subG = gl.find(g => g.home && mine.some(p => p.name === g.scorer && p.subIn)), inj = players.filter(p => p.inj > 0).length, cards = (X.home_yc || 0) + (X.home_rc || 0) * 2;
-    const lateC = gl.find(g => !g.home && g.time >= 85), pr = typeof exPressure === 'function' ? exPressure() : 0, E = EX();
-    if (win && run.win >= 2) P.push({ q: `"${run.win + 1}연승입니다. 상승세의 비결이 뭡니까?"`, a: [
-        { tone: '겸손', t: '"연승은 잊겠습니다. 다음 경기가 더 중요합니다."', fx: { focus: 4 }, media: 2, why: '방심 방지 · 언론 호감' },
-        { tone: '공로', t: '"선수들이 서로를 믿기 시작했습니다. 그게 전부입니다."', chem: 3, team: 1, why: '라커룸 분위기↑' },
-        { tone: '자신감', t: '"지금 우리 팀이 리그에서 제일 무섭다고 생각합니다."', fan: 3, fx: { conf: 4, oppFire: 3 }, media: -1, why: '팬·자신감↑ · 상대 자극' }] });
-    if (!win && (run.loss >= 1 || run.winless >= 2)) P.push({ q: run.loss >= 1 && lose ? `"${run.loss + 1}연패입니다. 반등할 해법이 있습니까?"` : `"벌써 ${run.winless + 1}경기째 승리가 없습니다. 무엇이 문제입니까?"`, a: [
-        { tone: '책임', t: '"감독인 제 문제입니다. 선수들을 향한 비판은 제가 받겠습니다."', chem: 3, team: 2, media: 2, why: '선수 보호 · 압박 완화' },
-        { tone: '변화', t: '"다음 경기에는 변화를 주겠습니다. 경쟁은 이미 시작됐습니다."', fx: { motiv: 5 }, team: -1, media: 1, why: '투지↑ · 주전 일부 불안' },
-        { tone: '버티기', t: '"축구는 흐름입니다. 지금은 버텨야 할 때입니다."', fan: -1, media: 0, fx: { nerves: -3 }, why: '긴장 완화 · 팬 일부 실망' }] });
-    if (ri && ri.rank === 1) P.push({ q: ri.lead >= 5 ? `"2위와 승점 ${ri.lead}점 차 선두입니다. 우승이 보이십니까?"` : '"선두를 지키고 있습니다. 추격이 거센데 부담은 없습니까?"', a: [
-        { tone: '경계', t: `"아직 ${ri.left}경기가 남았습니다. 우승이라는 단어는 아직 이릅니다."`, fx: { focus: 4 }, media: 2, why: '방심 방지' },
-        { tone: '선언', t: '"이 자리는 내주지 않겠습니다. 우승하겠습니다."', fan: 4, fx: { conf: 4, claim: 'win' }, media: 0, why: '팬 열광 · 다음 경기 지면 역풍' },
-        { tone: '즐기기', t: '"선두는 즐기라고 있는 자리죠. 선수들도 즐기고 있습니다."', fx: { nerves: -4 }, fan: 1, why: '긴장↓' }] });
-    else if (ri && ri.rank <= 3) P.push({ q: `"현재 ${ri.rank}위, 승격 플레이오프권입니다. 목표는 직행입니까?"`, a: [
-        { tone: '야망', t: `"1위와 ${ri.lead}점 차입니다. 직행 승격을 포기하지 않습니다."`, fx: { motiv: 4 }, fan: 2, why: '투지↑ · 팬 기대↑' },
-        { tone: '현실', t: '"플레이오프권만 지켜도 기회는 옵니다. 한 경기씩 가겠습니다."', fx: { focus: 3, nerves: -2 }, media: 1, why: '안정감' },
-        { tone: '도발', t: '"선두 팀이 우리를 더 신경 쓰고 있을 겁니다."', fan: 2, media: -1, fx: { conf: 3 }, why: '자신감↑' }] });
-    else if (ri && ri.rank >= ri.n - 2 && ri.n > 6) P.push({ q: `"리그 ${ri.rank}위까지 내려왔습니다. 팬들의 걱정이 큽니다."`, a: [
-        { tone: '약속', t: '"이 순위는 우리 자리가 아닙니다. 반드시 끌어올리겠습니다."', fan: 3, fx: { motiv: 4 }, why: '팬 지지↑' },
-        { tone: '인정', t: '"지금은 우리 실력이 이 정도라는 걸 인정해야 합니다."', media: 2, team: -2, fan: -1, why: '언론 호감 · 선수 사기↓' },
-        { tone: '보호', t: '"선수들은 최선을 다하고 있습니다. 시간이 필요합니다."', chem: 2, team: 1, fan: -1, why: '선수 보호' }] });
-    if (win && A === 0) P.push({ q: '"무실점 승리입니다. 수비 조직력에 만족하십니까?"', a: [
-        { tone: '칭찬', t: '"오늘은 수비진 전원이 MOM입니다."', mor: Object.fromEntries(mine.filter(p => p.role === 'DF' || p.role === 'GK').map(p => [p.id, 3])), chem: 1, why: '수비진 사기↑' },
-        { tone: '분석', t: '"라인 간격을 좁힌 게 통했습니다. 계속 다듬겠습니다."', media: 2, fx: { focus: 2 }, why: '언론 호감' },
-        { tone: '공격 아쉬움', t: '"수비는 좋았지만 득점이 더 나왔어야 합니다."', team: -1, fx: { motiv: 3 }, why: '공격진 투지↑' }] });
-    if (lateC && !win) P.push({ q: `"${lateC.lab || lateC.time}분에 실점했습니다. 막판 집중력 문제 아닙니까?"`, a: [
-        { tone: '인정', t: '"마지막 10분 관리는 반드시 고치겠습니다."', fx: { focus: 5 }, media: 1, why: '다음 경기 집중력↑' },
-        { tone: '체력', t: '"일정이 빡빡해 선수들이 지쳤습니다. 로테이션을 고민하겠습니다."', media: 1, team: 1, why: '선수 공감' },
-        { tone: '운', t: '"축구는 그럴 때도 있습니다. 운이 없었습니다."', fan: -2, media: -1, why: '팬 실망' }] });
-    if (subG) P.push({ q: `"교체 투입한 ${J(subG.scorer, '이')} 골을 넣었습니다. 노림수였습니까?"`, a: [
-        { tone: '전술', t: '"상대 수비가 지칠 타이밍을 노렸습니다. 계획대로였습니다."', media: 3, why: '언론 평판↑' },
-        { tone: '선수', t: `"${J(subG.scorer, '은')} 벤치에서도 늘 준비돼 있는 선수입니다."`, mor: { [(mine.find(p => p.name === subG.scorer) || {}).id]: 6 }, team: 1, why: '교체 선수 사기↑' },
-        { tone: '겸손', t: '"제 판단보다 선수가 잘한 겁니다."', chem: 1, media: 1, why: '무난' }] });
-    if (pos <= 40 && win) P.push({ q: `"점유율 ${pos}%로 이겼습니다. 실리 축구라는 평가인데요?"`, a: [
-        { tone: '실리', t: '"공을 오래 갖는 것보다 이기는 게 중요합니다."', fan: 1, media: 1, why: '무난' },
-        { tone: '전술', t: '"내려앉아 역습을 노린 건 의도된 선택이었습니다."', media: 3, why: '언론 평판↑' },
-        { tone: '반성', t: '"내용은 더 좋아져야 합니다. 이기고도 반성할 게 많습니다."', fx: { focus: 3 }, media: 2, why: '집중력↑' }] });
-    if (!win && (X.homeShots || 0) >= 12 && H <= 1) P.push({ q: `"슈팅 ${X.homeShots}개에 ${H}골입니다. 결정력이 문제 아닙니까?"`, a: [
-        { tone: '보호', t: '"기회를 만든 건 긍정적입니다. 골은 곧 터집니다."', team: 1, fx: { nerves: -3 }, why: '공격진 긴장↓' },
-        { tone: '요구', t: '"공격수라면 넣어야 합니다. 훈련에서 더 요구하겠습니다."', fx: { motiv: 4 }, team: -1, why: '투지↑ · 공격진 부담' },
-        { tone: '상대', t: '"상대 골키퍼가 오늘 너무 잘했습니다."', media: 1, why: '무난' }] });
-    if (cards >= 4) P.push({ q: `"오늘 카드가 ${X.home_yc || 0}장 나왔습니다. 경기가 너무 거칠지 않았습니까?"`, a: [
-        { tone: '투지', t: '"투쟁심의 표현입니다. 선수들을 탓할 생각은 없습니다."', team: 1, media: -1, why: '선수 지지 · 언론 비판' },
-        { tone: '규율', t: '"불필요한 카드는 줄여야 합니다. 따로 이야기하겠습니다."', media: 2, fx: { focus: 2 }, why: '규율↑' },
-        { tone: '판정', t: '"주심 기준이 조금 엄격했다고 생각합니다."', fan: 1, media: -2, ref: 1, why: '징계 위험' }] });
-    if (inj >= 2) P.push({ q: `"부상자가 ${inj}명입니다. 남은 일정이 걱정되진 않습니까?"`, a: [
-        { tone: '기회', t: '"다른 학생들에게는 기회입니다. 누구든 준비돼 있습니다."', team: 2, why: '후보 선수 사기↑' },
-        { tone: '현실', t: '"솔직히 힘든 상황입니다. 회복에 집중하겠습니다."', media: 1, fan: 0, why: '무난' },
-        { tone: '관리', t: '"로테이션으로 버티겠습니다. 체력 관리가 핵심입니다."', media: 2, why: '언론 호감' }] });
-    if (cap && (parseFloat(R[cap.id]) || 0) >= 6.5) P.push({ q: `"주장 ${J(cap.name, '이')} 오늘 경기장에서 리더 역할을 잘해 줬습니까?"`, a: [
-        { tone: '신뢰', t: `"${J(cap.name, '은')} 라커룸과 경기장 모두에서 저의 오른팔입니다."`, mor: { [cap.id]: 5 }, chem: 2, why: '주장 사기↑ · 분위기↑' },
-        { tone: '요구', t: '"주장이라면 더 많은 걸 보여 줘야 합니다."', mor: { [cap.id]: -2 }, ply: { [cap.id]: { motivation: 6 } }, why: '주장 투지↑' },
-        { tone: '팀', t: '"주장 한 명이 아니라 모두가 리더였습니다."', chem: 2, team: 1, why: '분위기↑' }] });
-    if (pr >= 0.35) P.push({ q: '"언론과 팬들의 비판이 거셉니다. 선수들이 흔들리지는 않습니까?"', a: [
-        { tone: '방패', t: '"비판은 감독에게 하십시오. 선수들은 건드리지 마세요."', chem: 3, team: 2, media: -2, why: '선수 보호 · 언론 악화' },
-        { tone: '수용', t: '"비판은 당연합니다. 결과로 바꾸겠습니다."', media: 3, fan: 2, fx: { motiv: 3 }, why: '여론 완화' },
-        { tone: '멘탈', t: '"어린 선수들이라 댓글을 보지 말라고 했습니다. 멘탈 관리도 제 몫입니다."', fx: { nerves: -5 }, media: 1, why: '긴장↓ (멘탈 약한 선수 보호)' }] });
-    if (E.fan >= 80) P.push({ q: '"오늘도 관중석이 뜨거웠습니다. 팬들에게 한마디 하시죠."', a: [
-        { tone: '감사', t: '"이런 응원이면 선수들이 지칠 수가 없습니다. 감사합니다."', fan: 3, why: '팬 지지↑' },
-        { tone: '약속', t: '"이 응원에 트로피로 보답하겠습니다."', fan: 4, fx: { claim: 'win' }, why: '기대↑ · 지면 역풍' }] });
-    if (win) P.push({ q: `"상대 ${O} 감독이 '오늘은 운이 없었다'고 했는데요?"`, a: [
-        { tone: '존중', t: '"상대도 좋은 경기를 했습니다. 운도 실력이라고 생각합니다."', media: 2, why: '언론 호감' },
-        { tone: '반박', t: '"90분 동안 우리가 더 좋은 팀이었습니다. 결과가 증명합니다."', fan: 3, media: -1, fx: { oppFire: 2 }, why: '팬 열광 · 상대 자극' },
-        { tone: '농담', t: '"그럼 다음에도 운을 챙겨 가겠습니다 (웃음)."', fan: 2, media: 1, why: '분위기 좋음' }] });
-    return P;
-}
-function postLead(st, q0) {
-    const H = st.scoreHome, A = st.scoreAway, win = H > A || st.penWinner === 'home', lose = A > H || st.penWinner === 'away', home = st.venue === 'home', O = st.enemy.name, comp = modeLabel(st);
-    const V = win ? [q0, '"승리 소감 부탁드립니다."', `"${O}전 승리, 가장 만족스러운 부분은 어디였습니까?"`, home ? '"홈 팬들 앞에서 승리했습니다. 기분이 어떻습니까?"' : '"원정에서 귀한 승점 3점을 가져왔습니다."', `"${comp}에서 중요한 승리였습니다. 오늘 경기 평가해 주시죠."`]
-        : lose ? [q0, '"패배 원인을 어디서 찾으십니까?"', `"${O}에게 무엇이 밀렸다고 보십니까?"`, home ? '"홈에서 진 경기입니다. 팬들에게 할 말이 있습니까?"' : '"원정에서 고전했습니다. 무엇이 문제였습니까?"']
-        : [q0, '"무승부, 어떻게 평가하십니까?"', `"${O}전 승점 1점, 얻은 겁니까 잃은 겁니까?"`];
-    return R1(V);
-}
-if (typeof exPostQuestions === 'function') {
-    const _pq = exPostQuestions;
-    exPostQuestions = function (st) {
-        const Q = _pq.apply(this, arguments);
-        try {
-            if (Q[0]) Q[0].q = postLead(st, Q[0].q);
-            const pool = postPool(st).sort(() => Math.random() - 0.5), hurt = (st.refErr || []).some(e => e.hurtHome);
-            if (pool.length && Q.length >= 3 && !hurt && Math.random() < 0.85) Q[2] = pool.shift();
-            if (pool.length && Q.length >= 2 && Math.random() < 0.45) Q[1] = pool.shift();
-            if (pool.length && Math.random() < 0.3) Q.push(pool.shift());   // 가끔 추가 질문 하나 더
-        } catch (e) { console.error(e); }
-        return Q;
-    };
-}
-function prePool(mode, e) {
-    const P = [], ri = rankInfo(), starters = players.filter(p => p.isStarting), cond = starters.length ? starters.reduce((s, p) => s + (p.cond ?? 100), 0) / starters.length : 100;
-    const inj = players.filter(p => p.inj > 0), cap = typeof hubCaptain === 'function' ? hubCaptain() : null, pr = typeof exPressure === 'function' ? exPressure() : 0;
-    const weak = starters.filter(p => typeof mentalOf === 'function' && mentalOf(p) <= 8), awk = starters.filter(p => awkLv(p) >= 3).sort((a, b) => awkLv(b) - awkLv(a))[0];
-    if (ri && ri.rank <= 3) P.push({ q: `"리그 ${ri.rank}위로 ${e.name}전을 맞습니다. 순위 경쟁에서 중요한 경기죠?"`, a: [
-        { tone: '집중', t: '"승점 6점짜리 경기라고 생각합니다. 모든 걸 걸겠습니다."', fx: { motiv: 5, nerves: 3 }, why: '투지↑ · 긴장↑' },
-        { tone: '평정', t: '"리그는 길어요. 평소처럼 하겠습니다."', fx: { nerves: -4, focus: 2 }, why: '긴장↓' }] });
-    if (cond < 72) P.push({ q: `"주전들의 체력이 ${Math.round(cond)}% 수준입니다. 로테이션 계획이 있습니까?"`, a: [
-        { tone: '로테이션', t: '"오늘은 몇 자리를 바꿀 겁니다. 경쟁이 팀을 강하게 만듭니다."', team: 1, fx: { motiv: 2 }, why: '후보 선수 사기↑' },
-        { tone: '정면돌파', t: '"지금 멤버로 갑니다. 정신력으로 버틸 수 있습니다."', fx: { motiv: 4 }, media: -1, why: '투지↑ · 혹사 우려' }] });
-    if (inj.length >= 2) P.push({ q: `"${inj.slice(0, 2).map(p => p.name).join(', ')} 등 부상자가 많습니다. 공백을 어떻게 메웁니까?"`, a: [
-        { tone: '믿음', t: '"대신 나서는 학생들을 믿습니다. 준비는 끝났습니다."', team: 2, fx: { conf: 3 }, why: '후보 사기↑' },
-        { tone: '변화', t: '"전술을 조금 바꿔 대응하겠습니다."', media: 2, fx: { focus: 2 }, why: '언론 호감' }] });
-    if (cap) P.push({ q: `"주장 ${J(cap.name, '이')} 경기 전 선수단에게 무슨 말을 했습니까?"`, a: [
-        { tone: '공개', t: `"${J(cap.name, '이')} '오늘은 우리 축구를 하자'고 했습니다. 그게 제가 하고 싶은 말이기도 합니다."`, chem: 2, mor: { [cap.id]: 3 }, why: '분위기↑' },
-        { tone: '비밀', t: '"라커룸 얘기는 라커룸에 두겠습니다."', media: -1, chem: 1, why: '무난' }] });
-    if (weak.length && pr >= 0.3) P.push({ q: '"최근 비판 여론 때문에 어린 선수들이 위축됐다는 얘기가 있습니다."', a: [
-        { tone: '보호', t: '"그런 선수들은 제가 지킵니다. 오늘 경기장에서 웃게 해 주고 싶습니다."', fx: { nerves: -6 }, chem: 2, why: '멘탈 약한 선수 긴장↓' },
-        { tone: '성장', t: '"압박을 이겨 내는 것도 성장입니다."', fx: { motiv: 3, nerves: 3 }, media: 1, why: '투지↑ · 긴장↑' }] });
-    if (awk) P.push({ q: `"★${awkLv(awk)} 각성을 마친 ${J(awk.name, '이')} 오늘 키 플레이어로 꼽힙니다."`, a: [
-        { tone: '기대', t: `"${J(awk.name, '은')} 요즘 훈련장에서 제일 빛나는 선수입니다. 기대하셔도 좋습니다."`, fx: { ply: { [awk.id]: { confidence: 6 } } }, fan: 1, why: `${awk.name} 자신감↑` },
-        { tone: '분산', t: '"한 명에게 기대지 않습니다. 11명이 함께 싸웁니다."', chem: 2, why: '분위기↑' }] });
-    P.push({ q: `"${e.name}의 최근 흐름을 어떻게 분석했습니까?"`, a: [
-        { tone: '분석', t: '"측면 전환이 약점입니다. 그 부분을 집중적으로 공략할 겁니다."', media: 2, fx: { focus: 3 }, why: '집중력↑' },
-        { tone: '자신감', t: '"상대보다 우리가 더 준비됐습니다."', fx: { conf: 4, oppFire: 3 }, fan: 1, why: '자신감↑ · 상대 자극' }] });
-    return P;
-}
-if (typeof exPreQuestions === 'function') {
-    const _prq = exPreQuestions;
-    exPreQuestions = function (mode, e) {
-        const Q = _prq.apply(this, arguments);
-        try { const pool = prePool(mode, e).sort(() => Math.random() - 0.5); if (pool.length && Q.length >= 3 && Math.random() < 0.8) Q[2] = pool.shift(); else if (pool.length && Q.length < 3) Q.push(pool.shift()); if (pool.length && Q.length >= 2 && Math.random() < 0.35) Q[1] = pool.shift(); } catch (x) { console.error(x); }
-        return Q;
-    };
-}
-
-// ---------------------------------------------------------------- 💬 대화형 팬 댓글 ----------------------------------------------------------------
-// 실제 커뮤니티처럼: 질문 → 답변, 주장 → 반박 → 재반박, 사실 정정, 작성자 답글, 공감 댓글이 서로 이어진다.
-// 기존 드립 댓글은 그대로 살리고, 경기 기록(득점자·시간·평점·점유율·슈팅·순위)을 근거로 대화를 덧붙인다.
-function matchCtx(st, flip) {
-    const X = st.stats || {}, gl = st.goalLog || [], mine = [...st.homePlayers, ...(st.homeOut || [])], theirs = st.awayPlayers || [];
-    const R = flip ? (st.ratingsAway || {}) : (st.ratings || {}), list = flip ? theirs : mine;
-    const rated = list.map(p => ({ n: p.name, r: parseFloat(R[p.id]) || 0 })).filter(x => x.r).sort((a, b) => b.r - a.r);
-    const H = flip ? st.scoreAway : st.scoreHome, A = flip ? st.scoreHome : st.scoreAway, tp = (X.homePos + X.awayPos) || 1;
-    const goals = gl.filter(g => flip ? !g.home : g.home).map(g => ({ n: g.scorer, m: g.lab || g.time, t: g.time })), against = gl.filter(g => flip ? g.home : !g.home).map(g => ({ n: g.scorer, m: g.lab || g.time, t: g.time }));
-    const win = H > A || st.penWinner === (flip ? 'away' : 'home'), lose = A > H || st.penWinner === (flip ? 'home' : 'away');
-    return { T: flip ? st.enemy.name : teamName, O: flip ? teamName : st.enemy.name, H, A, win, lose, draw: !win && !lose, goals, against, mom: rated[0], second: rated[1], worst: rated[rated.length - 1],
-        pos: Math.round((flip ? X.awayPos : X.homePos) / tp * 100), sh: flip ? X.awayShots : X.homeShots, osh: flip ? X.homeShots : X.awayShots, xg: Number((flip ? X.awayXG : X.homeXG) || 0).toFixed(1), oxg: Number((flip ? X.homeXG : X.awayXG) || 0).toFixed(1),
-        cards: (X.home_yc || 0) + (X.away_yc || 0), ref: st.ref && st.ref.n, varNo: st.varNo || [], refErr: st.refErr || [], ri: flip ? null : rankInfo(), run: flip ? null : (typeof exRuns === 'function' ? exRuns() : null), li: !flip && typeof leagueState !== 'undefined' && leagueState ? leagueState.li : 0 };
-}
-const SPICE = ['', '', '', ' ㅋㅋ', ' ㅋㅋㅋ', '…', ' ㄹㅇ', ' ㅠㅠ', '!!', ' 🔥', ' ㅎㅎ'];
-function topics(c, r) {
-    const pk = a => a[Math.floor(r() * a.length)], T = [];
-    const gtxt = c.goals.length ? c.goals.map(g => `${g.n} ${g.m}분`).join(', ') : '';
-    T.push(() => [{ t: pk(['오늘 골 누가 넣음? 학원이라 못 봄ㅠ', '야자 끝나고 왔는데 몇 대 몇임?', '하이라이트 아직 안 떴냐', '경기 놓쳤다… 요약 좀']), who: 'ask' },
-        { t: `${c.H}:${c.A}${gtxt ? ` / ${gtxt}` : ''}${c.mom ? ` / MOM ${c.mom.n} ${c.mom.r.toFixed(1)}` : ''}`, re: 0 },
-        ...(r() < 0.6 ? [{ t: pk(['ㄳㄳ 하이라이트 보러 감', '헐 고마워', '와 ' + (c.win ? '이겼네 개꿀' : c.lose ? '졌구나…' : '비겼네 아깝') ]), re: 1, same: 0 }] : [])]);
-    if (c.mom) T.push(() => [{ t: `MOM ${c.mom.n} 인정?${pk(SPICE)}` },
-        { t: `인정 ${c.mom.r.toFixed(1)}점이면 할 말 없지`, re: 0 },
-        ...(c.second ? [{ t: `난 ${c.second.n} 줌. 평점은 ${c.second.r.toFixed(1)}인데 보이지 않는 데서 다 막았음`, re: 0 }, { t: pk(['ㅇㅈ 둘 다 잘함', '그건 좀 억지 ㅋㅋ', '수비 가담은 진짜 미쳤었음']), re: 2 }] : [])]);
-    if (c.worst && c.worst.r && c.worst.r < 6.3 && !c.win) T.push(() => [{ t: `${c.worst.n} 오늘 왜 저럼${pk(['', '?', ' 진짜'])}` },
-        { t: `${c.worst.r.toFixed(1)}점이긴 한데 너무 뭐라 하지 말자. 걔도 학생이다`, re: 0 },
-        { t: pk(['ㄴㄴ 선발이면 결과로 말해야지', '그래 다음 경기 보고 판단하자', '컨디션 안 좋아 보이긴 했음']), re: 1 },
-        ...(r() < 0.5 ? [{ t: '둘 다 맞는 말 같음 ㅋㅋ 싸우지 마셈', re: 2 }] : [])]);
-    T.push(() => { const good = (c.win && Number(c.xg) >= Number(c.oxg)) || (c.lose && Number(c.xg) < Number(c.oxg));
-        return [{ t: `점유율 ${c.pos}% · 슈팅 ${c.sh}-${c.osh} · xG ${c.xg} 대 ${c.oxg}. ${good ? '결과랑 내용 다 맞음' : c.win ? '솔직히 내용은 밀렸음' : '내용은 우리가 더 좋았는데'}`, who: 'data' },
-            { t: good ? pk(['데이터 정리 ㄳ', '역시 숫자는 거짓말 안 함']) : pk(['xG가 다는 아니지. 결정력도 실력임', '이기면 됐지 뭔 내용 ㅋㅋ', '그니까 운이 좀 따랐던 듯']), re: 0 },
-            ...(r() < 0.5 && !good ? [{ t: pk(['ㄴ 그 결정력이 매번 터지진 않잖아', '맞음 결국 이기는 팀이 강팀']), re: 1 }] : [])]; });
-    if (c.goals.length) { const g = c.goals[Math.floor(r() * c.goals.length)], wrong = Math.max(1, (Number(g.t) || 10) + (r() < 0.5 ? 3 : -2));
-        T.push(() => [{ t: `${g.n} ${wrong}분 골 미쳤다${pk(SPICE)}` }, { t: `${g.m}분이었음 ㅋㅋ 근데 미친 건 맞음`, re: 0 }, ...(r() < 0.5 ? [{ t: '아 맞네 흥분해서 ㅋㅋ', re: 1, same: 0 }] : [])]); }
-    const late = c.goals.find(g => g.t >= 85);
-    if (late && (c.win || c.draw)) T.push(() => [{ t: `${late.m}분 ${late.n}!!!! 나 소리 질러서 엄마한테 혼남` }, { t: pk(['ㅋㅋㅋㅋ 나도 독서실에서 소리 지를 뻔', '이래서 축구는 끝까지 봐야 함', '심장 터지는 줄']), re: 0 }]);
-    if (c.varNo.length) { const v = c.varNo[0]; T.push(() => [{ t: `${v.scorer} 골 ${J(v.reason, '로')} 취소된 거 리플레이 보니까 맞더라` }, { t: 'ㄹㅇ? 난 아직도 모르겠음', re: 0 }, { t: v.reason.startsWith('오프사이드') ? '선 그은 거 보면 확실히 발 하나 나가 있음' : '느린 화면 보면 손 쓴 거 보임', re: 1 }]); }
-    if (c.refErr.length) T.push(() => [{ t: `${c.refErr[0].lab}분 판정은 진짜 아니지 않냐` }, { t: pk(['오심 맞음. 중계에서도 다시 보여줌', 'VAR실 졸았나 봄', '심판도 사람이니까… 근데 화는 남']), re: 0 }]);
-    if (c.cards >= 5 && c.ref) T.push(() => [{ t: `주심 ${c.ref} 오늘 카드 ${c.cards}장 ㅋㅋ 주머니에 카드 공장 있냐` }, { t: '그래도 VAR은 제대로 보더라', re: 0 }]);
-    if (c.ri) T.push(() => [{ t: `이제 ${c.ri.league} ${c.ri.rank}위네${pk(SPICE)}` },
-        { t: c.ri.rank === 1 ? pk(['선두 수성 가자', '이대로 우승 가즈아']) : c.ri.rank <= 3 ? pk(['플옵권 꼭 지키자', '1위랑 ' + c.ri.lead + '점 차면 아직 몰라']) : pk(['아직 ' + c.ri.left + '경기 남았다', '이번 시즌은 쉽지 않겠다…']), re: 0 },
-        ...(r() < 0.4 ? [{ t: pk(['김칫국 금지 ㅋㅋ', '그 말 지난 시즌에도 들음', '희망회로 돌리는 중']), re: 1 }] : [])]);
-    if (c.run && c.run.loss >= 2) T.push(() => [{ t: `${c.run.loss}연패… 감독 바꿔야 하는 거 아님?` }, { t: '아직 이르다. 부상자 돌아오면 달라짐', re: 0 }, { t: '그 소리 3경기째 듣는 중 ㅋㅋ', re: 1 }, ...(r() < 0.5 ? [{ t: '그래도 응원은 해야지. 학생들인데', re: 2 }] : [])]);
-    if (c.run && c.run.win >= 2 && c.win) T.push(() => [{ t: `${c.run.win + 1}연승 실화냐${pk(SPICE)}` }, { t: '지금 분위기면 누구랑 붙어도 안 짐', re: 0 }, { t: pk(['방심하면 바로 진다 ㅋㅋ', '설레발 금지']), re: 1 }]);
-    if (c.li > 0 && r() < 0.6) T.push(() => [{ t: pk([`K리그2 시절부터 본 사람으로서 감개무량하다…`, '처음 리그 시작할 때 생각하면 진짜 많이 컸다']) }, { t: pk(['고인물 인정합니다', '그때 멤버 아직 남아 있는 거 실화?', '이런 분들 덕에 팀이 있는 거']), re: 0 }]);
-    return T;
-}
-function buildConvo(st, seeds, flip, seed, max) {
-    const r = seed != null ? seeded(seed) : Math.random, c = matchCtx(st, flip), out = [], sd = (seeds || []).slice();
-    // 대화 묶음(질문→답, 주장→반박) 사이사이에 기존 드립 댓글을 끼워 넣는다 — 묶음 안의 답글 대상은 그대로 유지
-    const groups = topics(c, r).sort(() => r() - 0.5).slice(0, 2 + Math.floor(r() * 2)).map(f => f());
-    const order = [...(sd.length ? [[{ t: sd.shift() }]] : []), ...groups]; sd.forEach(t => order.splice(1 + Math.floor(r() * order.length), 0, [{ t }]));
-    order.forEach(seq => { const base = out.length; seq.forEach(m => out.push({ t: m.t, re: m.re != null ? base + m.re : null, same: m.same != null ? base + m.same : null })); });
-    return out.slice(0, max || 12);
-}
-function nameConvo(conv, nickFn, op, opName) {
-    const names = [], used = new Set();
-    conv.forEach((m, i) => {
-        if (m.same != null && names[m.same]) { names[i] = names[m.same]; return; }
-        let n, g = 0; do { n = nickFn(); } while (used.has(n) && g++ < 6); used.add(n); names[i] = n;
-    });
-    if (op && conv.length > 2 && Math.random() < 0.45) { const i = conv.findIndex((m, j) => j > 0 && m.re != null); if (i > 0) conv[i].op = 1; }
-    return conv.map((m, i) => ({ n: m.op ? (opName || '작성자') : names[i], t: m.t, re: m.re != null ? names[m.re] : null, op: !!m.op, like: Math.floor(Math.random() * (m.re != null ? 30 : 120)) }));
-}
-window.galConvoHtml = function (st, post, seeds, opp, mood) {
-    try {
-        const conv = nameConvo(buildConvo(st, seeds, opp, null, 9), opp ? () => R1(typeof OPP_FANS !== 'undefined' ? OPP_FANS : ['원정팬']) + (Math.random() < 0.5 ? '' : Math.floor(Math.random() * 90 + 10)) : (typeof GAL_NICK === 'function' ? GAL_NICK : () => 'ㅇㅇ'), true, post && post.n);
-        return conv.map(m => `<div class="${m.re ? 'cv-re' : ''}"><span>${leagueEsc(m.n)}</span>${m.op ? '<b class="cv-op">[작성자]</b>' : ''}${m.re ? `<b class="cv-at">@${leagueEsc(m.re)}</b>` : ''}${leagueEsc(m.t)}${m.like > 15 ? `<i class="cv-like">♡${m.like}</i>` : ''}</div>`).join('');
-    } catch (e) { console.error(e); return (seeds || []).map(x => `<div><span>${leagueEsc(typeof GAL_NICK === 'function' ? GAL_NICK() : 'ㅇㅇ')}</span>${leagueEsc(x)}</div>`).join(''); }
-};
-const FEED_NICK = ['축잘알', '직관러', '10년차팬', '눈팅러', '전술충', '새벽축구', '유니폼수집가', '응원단장', '골대뒤석', '시즌권러', '중립기어', '데이터덕후', '야자도망러', '급식먹고직관', '교실뒷자리', '독서실탈출', '반박시내말맞음', '혼축러'];
-const fnick = () => R1(FEED_NICK) + (Math.random() < 0.4 ? Math.floor(Math.random() * 99) : '');
-// 소셜 피드: 이번 경기 게시물에 실제 사람처럼 이어지는 답글 스레드
-if (typeof buildMatchSocial === 'function') {
-    const _bms = buildMatchSocial;
-    buildMatchSocial = function (st) {
-        const before = (S.social || []).length ? S.social[0] : null; const r = _bms.apply(this, arguments);
-        try {
-            if (!st || st.online || st.mode === 'onlineFriendly') return r;
-            const fresh = []; for (const x of (S.social || [])) { if (x === before) break; fresh.push(x); }
-            const c = matchCtx(st, false);
-            fresh.forEach((x, i) => {
-                if (x.thread && x.thread.length) return;
-                let lines = null;
-                if (x.type === 'fan' || x.type === 'meme') lines = nameConvo(buildConvo(st, x.reply ? [x.reply] : [], false, null, 4), fnick, false);
-                else if (x.type === 'opp') lines = nameConvo([{ t: c.win ? R1(['ㅋㅋ 졌으면 조용히 해라', '리턴매치 때 보자 ㅎㅎ', '오늘은 인정하자 좀']) : R1(['…할 말 없음', '다음엔 우리가 이긴다', '오늘 운 좋았다 진짜']) }, { t: R1(['ㄴ 상대 팬이랑 싸우지 마셈 ㅋㅋ', '그래도 매너 있게 가자', '이게 더비지 ㅋㅋ']), re: 0 }], fnick, false);
-                else if (x.type === 'journalist' || x.type === 'media') lines = nameConvo([{ t: c.mom ? `기사 잘 봤습니다. 근데 ${c.mom.n} 평점 ${c.mom.r.toFixed(1)}이면 더 칭찬해도 될 듯` : '기사 잘 봤습니다' }, { t: R1(['기자님 오늘 경기 직관하심?', '제목 어그로 ㅋㅋ', '분석 깔끔하네요']), re: null }, ...(Math.random() < 0.5 ? [{ t: R1(['ㄴ 직관 사진 올리셨던데', 'ㄴ 이 기자 원래 이럼 ㅋㅋ']), re: 1 }] : [])], fnick, false);
-                else if (x.type === 'pundit' || x.type === 'data') lines = nameConvo([{ t: R1([`점유율 ${c.pos}%면 ${c.pos >= 55 ? '주도한 거 맞음' : '내려앉은 거 맞음'}`, '이런 분석 좋다 계속 올려주세요', '숫자로 보니까 확 와닿네']) }, { t: R1(['근데 숫자가 다는 아님', 'ㄹㅇ 데이터는 거짓말 안 함', '해설위원님 말씀이 맞는 듯']), re: 0 }], fnick, false);
-                if (lines && lines.length) x.thread = lines.slice(0, 4).map(m => ({ name: '@' + m.n, text: (m.re ? `@${m.re} ` : '') + m.t }));
-            });
-        } catch (e) { console.error(e); }
-        return r;
-    };
-}
-// 팬 커뮤니티 게시판: 인기 글마다 댓글끼리 이어지는 대화
-if (typeof exThreads === 'function') {
-    const _ext = exThreads;
-    exThreads = function () {
-        const T = _ext.apply(this, arguments);
-        try {
-            const E = EX(), last = (S.lastRes || []).slice(-1)[0];
-            T.forEach(t => {
-                const r = seeded(`${t.id}|${E.mc}`), pk = a => a[Math.floor(r() * a.length)], n1 = pk(FEED_NICK), n2 = pk(FEED_NICK.filter(x => x !== n1)), n3 = pk(FEED_NICK.filter(x => x !== n1 && x !== n2));
-                const base = (t.cm || []).slice(0, 3), first = base[0] || t.title;
-                const reply = [
-                    `${n1}: ${first}`,
-                    ...base.slice(1).map((c, i) => `${i ? n3 : n2}: ${c}`),
-                    `↳ ${n3} → @${n1} ${pk(t.id === 'tac' ? ['전술보다 선수 컨디션 문제 같음', '감독 인터뷰 보면 다 계획이 있더라', '맞음 상대가 다 읽고 나옴'] : t.id === 'weak' ? ['한두 경기로 판단하긴 이르다', '훈련 영상 보면 몸은 괜찮던데', '솔직히 폼 떨어진 건 맞음'] : t.id === 'bench' ? ['전술 때문에 못 쓰는 거임', '다음 경기엔 무조건 나온다에 한 표', '벤치 멤버가 이렇게 좋은 게 행복한 고민'] : t.id === 'ace' ? ['절대 못 보냄 ㅠㅠ', '좋은 오퍼면 보내 주는 게 선수한테도 맞음', '루머일 확률 90%'] : ['ㄹㅇ 공감', '반대 의견 있음 ㅋㅋ', '이건 좀 지켜보자'])}`,
-                    ...(r() < 0.6 ? [`↳ ${n1} → @${n3} ${pk(['그건 그렇네 ㅋㅋ', 'ㄴㄴ 내 말이 맞다니까', '오케이 다음 경기 보고 다시 얘기하자', last === 'W' ? '이겼으니까 오늘은 넘어간다' : '결과가 말해 주겠지'])}`] : [])
-                ];
-                t.cm = reply;
-            });
-        } catch (e) { console.error(e); }
-        return T;
-    };
-}
-try { storyMigrate(); } catch (e) { console.error(e); }
-})();
-</script>
-
-<style id="yfm-talk-style">
-.ivc{display:flex;flex-direction:column;gap:6px;margin-top:8px}.ivc .b{max-width:88%;padding:8px 11px;border-radius:13px;font-size:13px;line-height:1.5;word-break:keep-all}
-.ivc .p{align-self:flex-start;background:#1f2937;border:1px solid #374151;border-top-left-radius:4px}.ivc .m{align-self:flex-end;background:#4c1d95;border:1px solid #7c3aed;border-top-right-radius:4px}
-.ivc .who{font-size:10px;color:#9ca3af;margin-bottom:2px}.ivc .fx{align-self:center;font-size:11px;color:#86efac}.ivc .fx.neg{color:#fca5a5}
-.ivc-opts{display:flex;flex-direction:column;gap:5px;margin-top:4px}.ivc-opts button{text-align:left;padding:8px 11px;border-radius:10px;background:#312e81;border:1px solid #6366f1;font-size:13px;font-weight:700}.ivc-opts button:hover{background:#3730a3}
-.rep-th{margin-top:6px;padding-left:10px;border-left:2px solid #4b5563;display:flex;flex-direction:column;gap:3px}.rep-th div{font-size:12px;color:#cbd5e1}.rep-th b{color:#fff;margin-right:4px}.rep-th .club{color:#c4b5fd}
-</style>
-<script id="yfm-talk">
-// =====================================================================================
-// 🗣️ 사람과 대화하듯: 감독↔선수 면담 다회차 대화 · 팬↔구단 공식 답글에 이어지는 팬 반응 · 선수끼리 SNS 티키타카
-// =====================================================================================
-(() => {
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const J = (w, p) => typeof josa === 'function' ? josa(w, p) : String(w) + p;
-const R1 = a => a[Math.floor(Math.random() * a.length)];
-const per = p => personaOf(p).k;
-const relOf = p => { try { return exRelations(players).filter(r => r.a === p || r.b === p).map(r => ({ o: r.a === p ? r.b : r.a, k: r.k })); } catch (_) { return []; } };
-const NICKS = ['축잘알', '직관러', '10년차팬', '눈팅러', '전술충', '새벽축구', '유니폼수집가', '응원단장', '골대뒤석', '시즌권러', '중립기어', '데이터덕후', '야자도망러', '급식먹고직관', '교실뒷자리', '독서실탈출', '반박시내말맞음', '혼축러'];
-const nick = () => R1(NICKS) + (Math.random() < 0.4 ? Math.floor(Math.random() * 99) : '');
-
-// ---------------------------------------------------------------- 감독 ↔ 선수 면담: 이어지는 대화 ----------------------------------------------------------------
-// 첫 답변 뒤 선수가 성격·상황대로 말을 이어 가고, 감독이 다시 고르는 방식으로 2턴 더 대화한다 (효과는 작게: 사기·신뢰 ±1~4)
-const CLOSE = { pro: '알겠습니다. 내일 훈련 때 뵙겠습니다.', amb: '좋습니다. 기대하셔도 됩니다.', loyal: '감사합니다, 감독님. 저 이 팀에서 끝까지 갈게요.', hot: '오케이! 바로 운동장 나가 보겠습니다!', soft: '이야기 들어 주셔서 감사해요. 마음이 좀 편해졌어요.' };
-function ivTurn(p, topic, good) {
-    const k = per(p), rel = relOf(p), fr = (rel.find(r => r.k === 'friend') || {}).o, rv = (rel.find(r => r.k === 'rival') || {}).o, recent = (p.rts || []).slice(-3), rt = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : null;
-    const say = o => o[k] || o.pro;
-    if (topic === 'time' || topic === 'unhappy') return good ? {
-        p: say({ pro: '근데 감독님, 제가 구체적으로 어떤 부분을 더 보여 드려야 할까요?', amb: '솔직히 저는 지금 주전이랑 차이가 크다고 생각 안 해요. 뭘 더 하면 될까요?', loyal: '팀에 도움이 된다면 어디서든 뛸게요. 혹시 제가 부족한 부분이 있을까요?', hot: '그럼 다음 훈련 경기에서 제대로 보여 드릴게요. 뭘 보시면 되나요?', soft: '사실 제가 잘하고 있는 건지 잘 모르겠어요… 어떤 점이 부족한가요?' }),
-        o: [['def', '📋 "수비 가담을 더 해 줘. 그게 선발 조건이야"', { m: 1, trust: 2 }, say({ pro: '수비 가담이요. 메모해 두겠습니다.', amb: '수비요? …알겠습니다. 그것까지 해내면 선발이죠?', loyal: '네! 공 뺏기면 끝까지 따라가겠습니다.', hot: '수비 그거 하나면 되는 거죠? 미친 듯이 뛰어 보겠습니다!', soft: '수비… 열심히 배워 볼게요. 모르는 건 물어봐도 되죠?' })],
-            ['keep', '⚡ "지금처럼만 해. 기회는 곧 온다"', { m: 2 }, say({ pro: '네, 페이스 유지하겠습니다.', amb: '곧이 언제인지 정해 주시면 더 좋겠네요 ㅎㅎ', loyal: '믿고 기다리겠습니다.', hot: '알겠습니다! 그 기회 오면 무조건 잡습니다!', soft: '네… 조급해하지 않을게요.' })],
-            ['tac', '🧠 "전술 이해도를 같이 높여 보자. 영상 미팅 하자"', { m: 1, trust: 3, boost: 1 }, say({ pro: '좋습니다. 상대 분석 영상도 같이 보고 싶습니다.', amb: '영상 미팅이요? 좋아요, 빨리 배우는 편입니다.', loyal: '감독님이랑 따로 미팅이라니 영광이에요.', hot: '영상은 좀 졸린데… 해 보겠습니다 ㅋㅋ', soft: '혼자 보면 잘 모르겠던데, 같이 봐 주시면 좋겠어요.' })]]
-    } : {
-        p: say({ pro: '솔직히 말씀드리면, 출전 시간이 계속 이러면 저도 고민이 됩니다.', amb: '솔직히 다른 팀에서 연락이 온 적도 있어요. 저는 뛰고 싶습니다.', loyal: '이 팀이 좋은데… 요즘은 제가 필요 없는 사람 같아서 힘들어요.', hot: '감독님, 저 진짜 답답합니다. 뭐가 문제인지 말이라도 해 주세요.', soft: '제가 뭘 잘못했는지 계속 생각하게 돼요…' }),
-        o: [['need', '🤝 "너는 우리 팀에 꼭 필요한 선수야"', { m: ['loyal', 'soft'].includes(k) ? 4 : 1, trust: 3 }, say({ pro: '그 말씀 믿겠습니다. 결과로 증명하겠습니다.', amb: '말씀은 감사한데… 출전으로 보여 주시면 좋겠어요.', loyal: '그 말 듣고 싶었어요. 다시 힘내 볼게요.', hot: '진짜죠? 그럼 저 더 이를 악물고 하겠습니다.', soft: '정말요…? 다행이에요. 조금 힘이 나요.' })],
-            ['free', '😐 "선택은 네 몫이다. 붙잡지는 않겠다"', { m: -3, trust: -2, move: k === 'amb' || k === 'hot' }, say({ pro: '…알겠습니다. 생각해 보겠습니다.', amb: '알겠습니다. 저도 제 길을 생각해 보겠습니다.', loyal: '그런 말씀은 좀 서운하네요…', hot: '하, 그렇게 말씀하시면 저도 할 말 없습니다.', soft: '…네. (고개를 숙이고 방을 나섭니다)' })],
-            ['wait', '⏳ "한 달만 지켜봐 줘. 분명히 기회 준다"', { m: 1, trust: 1 }, say({ pro: '한 달이요. 알겠습니다.', amb: '한 달이요? 그 뒤엔 정말 기대하겠습니다.', loyal: '기다리는 건 자신 있어요.', hot: '한 달… 길긴 한데 참아 보겠습니다!', soft: '네, 그때까지 열심히 할게요.' })]]
-    };
-    if (topic === 'form') return good ? {
-        p: say({ pro: `요즘 평점이 ${rt ? rt.toFixed(1) : '좀'} 정도라 저도 원인을 찾고 있었어요. 첫 터치가 문제인 것 같습니다.`, amb: '사실 요즘 너무 잘하려고 하다 보니 오히려 꼬였던 것 같아요.', loyal: '팀에 피해 주는 것 같아서 마음이 무거웠어요.', hot: '경기 끝나고 혼자 슈팅 연습했는데도 안 들어가서 미치겠더라고요!', soft: '사실 요즘 댓글 보고 많이 위축됐었어요…' }),
-        o: [['video', '🎥 "영상 같이 보면서 하나씩 고치자"', { m: 2, trust: 2, boost: 1 }, say({ pro: '좋습니다. 내일 아침에 분석실로 가겠습니다.', amb: '좋아요. 빨리 고치고 다시 올라가겠습니다.', loyal: '감독님이 직접 봐 주시면 든든해요.', hot: '오케이! 문제만 알면 바로 고칩니다!', soft: '네… 같이 봐 주시면 덜 무서울 것 같아요.' })],
-            ['soon', '😄 "골은 곧 터진다. 너무 신경 쓰지 마"', { m: 3 }, say({ pro: '네, 과정에 집중하겠습니다.', amb: '터지면 한 번에 몰아칠게요 ㅎㅎ', loyal: '감사해요. 마음이 좀 가벼워졌어요.', hot: '그 말 믿고 다음 경기 슈팅 10개 때립니다!', soft: '그렇게 말해 주시니까 눈물 날 것 같아요…' })],
-            ['sns', '📵 "당분간 SNS랑 댓글은 끊자"', { m: k === 'soft' ? 4 : 1, nerve: 1 }, say({ pro: '원래 잘 안 보긴 하는데, 더 신경 쓰겠습니다.', amb: '…사실 몰래 다 보고 있었어요. 끊어 볼게요.', loyal: '팬분들 응원 글만 보고 싶은데… 알겠어요.', hot: '악플 보면 열 받아서 더 못 하겠더라고요. 끊겠습니다!', soft: '네… 그게 맞는 것 같아요. 고맙습니다.' })]]
-    } : {
-        p: say({ pro: '…알겠습니다. 다만 저도 이유가 있었다는 건 알아 주셨으면 해요.', amb: '이대로면 곤란하다는 말씀, 저한텐 좀 크게 들리네요.', loyal: '실망시켜 드려서 죄송합니다. 저도 많이 답답했어요.', hot: '저도 알아요! 근데 그렇게 말씀하시면 더 부담돼요.', soft: '죄송해요… 저도 어떻게 해야 할지 모르겠어요.' }),
-        o: [['sorry', '🙏 "말이 좀 셌다. 너를 믿어서 한 말이야"', { m: 3, trust: 2 }, say({ pro: '네, 그 뜻 알겠습니다.', amb: '알겠습니다. 다시 증명할게요.', loyal: '저도 감독님 믿어요.', hot: '…알겠습니다. 저도 욱해서 죄송합니다.', soft: '정말요…? 다행이에요.' })],
-            ['firm', '📏 "프로라면 결과로 답해야 한다"', { m: k === 'pro' || k === 'hot' ? 1 : -2, boost: k === 'pro' || k === 'hot' ? 1 : 0 }, say({ pro: '맞는 말씀입니다. 결과로 답하겠습니다.', amb: '좋습니다. 다음 경기 끝나고 다시 얘기하시죠.', loyal: '…네, 더 노력하겠습니다.', hot: '보여 드리겠습니다. 다음 경기 지켜보세요!', soft: '(대답 없이 고개만 끄덕입니다)' })],
-            ['capt', `🫂 "주장${typeof hubCaptain === 'function' && hubCaptain() ? `(${hubCaptain().name})` : ''}이랑도 한번 얘기해 봐"`, { m: 1, chem: 1 }, say({ pro: '네, 주장이랑 이야기해 보겠습니다.', amb: '주장이요? …그래도 들어 볼게요.', loyal: '주장 형한테는 원래 다 얘기해요 ㅎㅎ', hot: '주장한테 혼나는 거 아니죠? ㅋㅋ 가 볼게요.', soft: '주장이 잘 들어 주니까 좋아요.' })]]
-    };
-    if (topic === 'praise') return {
-        p: say({ pro: `감사합니다. 사실 요즘 ${fr ? J(fr.name, '랑') + ' 따로' : '혼자'} 추가 훈련을 하고 있어요.`, amb: '감사합니다. 근데 저는 여기서 멈출 생각 없어요.', loyal: '다 같이 잘해서 그래요. 저 혼자 한 거 아니에요.', hot: '와, 감독님한테 칭찬받으니까 더 신나요!', soft: '칭찬받으니까 쑥스러워요… 진짜 열심히 했거든요.' }),
-        o: [['duo', fr ? `👏 "${J(fr.name, '이랑')} 둘 다 대단하다"` : '👏 "그 노력 다 보고 있다"', { m: 2, pair: fr ? fr.id : null }, say({ pro: fr ? `${J(fr.name, '한테')}도 전해 주겠습니다.` : '감사합니다. 계속하겠습니다.', amb: '보고 계셨다니 더 열심히 하겠습니다.', loyal: fr ? `${J(fr.name, '이')} 엄청 좋아하겠네요 ㅎㅎ` : '감사합니다!', hot: '더 해야겠다! 내일 6시에 나오겠습니다!', soft: '알아봐 주셔서 너무 감사해요.' })],
-            ['goal', '🎯 "목표를 더 높게 잡자. 다음 시즌 득점왕 어때?"', { m: k === 'amb' ? 4 : k === 'soft' ? -1 : 2, boost: k === 'amb' ? 1 : 0 }, say({ pro: '현실적인 목표부터 하나씩 가겠습니다.', amb: '득점왕이요? 좋아요, 그거 하겠습니다.', loyal: '팀이 이기는 게 먼저지만… 해 보고 싶네요.', hot: '득점왕 콜! 약속했습니다!', soft: '득점왕은 너무 큰 거 같은데… 노력해 볼게요.' })],
-            ['meal', '😆 "그럼 오늘 밥은 네가 사라"', { m: 2, chem: 1 }, say({ pro: '…제가요? 알겠습니다 (웃음)', amb: '제가 사는 대신 다음 경기 선발이죠? ㅎㅎ', loyal: '좋죠! 다 같이 가요!', hot: '고기 콜! 근데 많이는 못 사요 ㅋㅋ', soft: '헉 제가요…? 그래도 좋아요 ㅎㅎ' })]]
-    };
-    if (topic === 'injury') return {
-        p: say({ pro: '재활 일정은 계획대로 가고 있습니다. 다만 경기 감각이 걱정이에요.', amb: '빨리 돌아가고 싶어서 미치겠어요. 제 자리 없어지는 거 아니죠?', loyal: '동료들이 뛰는 거 보면서 미안하기만 해요.', hot: '재활 진짜 지루해요! 내일이라도 뛰고 싶어요!', soft: '혹시 다시 다칠까 봐 좀 무서워요…' }),
-        o: [['seat', '💺 "네 자리는 비워 둔다"', { m: k === 'amb' ? 4 : 2, trust: 2 }, say({ pro: '감사합니다. 완벽하게 준비해서 돌아가겠습니다.', amb: '그 말 들으니까 살 것 같아요.', loyal: '그럼 더 빨리, 더 확실하게 돌아갈게요.', hot: '좋습니다! 재활도 경기처럼 하겠습니다!', soft: '정말요? 마음이 놓여요.' })],
-            ['slow', '🐢 "천천히, 완벽하게. 서두르면 더 오래 쉰다"', { m: k === 'soft' ? 4 : 1, inj: -0 }, say({ pro: '맞는 말씀입니다.', amb: '…알겠습니다. 조금만 참아 볼게요.', loyal: '네, 팀을 위해서라도 확실히 낫겠습니다.', hot: '천천히는 제 성격에 안 맞지만… 해 보겠습니다.', soft: '그렇게 말씀해 주셔서 다행이에요.' })]]
-    };
-    // 가벼운 대화 (chat): 선수가 먼저 꺼내는 화제마다 감독이 고를 답이 다르다. 같은 면담에서 같은 화제는 반복하지 않는다.
-    const used = (ivChat && ivChat.id === p.id && ivChat.used) || [];
-    const SM = [
-        { id: 'goal', w: k === 'amb' ? 3 : 1, p: say({ pro: '감독님이 생각하시는 이번 시즌 목표가 궁금합니다.', amb: '감독님은 이번 시즌 목표가 어디까지예요?', loyal: '이번 시즌에 다 같이 꼭 뭔가 이뤘으면 좋겠어요. 감독님 목표는요?', hot: '감독님, 이번 시즌 목표 크게 잡으시죠? ㅋㅋ', soft: '감독님은 이번 시즌 어디까지 갈 수 있을 것 같으세요?' }),
-          o: [['top', '🏆 "목표는 당연히 우승이지"', { m: k === 'amb' ? 3 : 1 }, say({ pro: '그럼 저도 거기에 맞춰 준비하겠습니다.', amb: '역시! 그 말 기다렸어요.', loyal: '우승하면 다 같이 운동장에서 사진 찍어요!', hot: '우승 콜!!', soft: '우승… 상상만 해도 떨려요.' })],
-              ['step', '⬆️ "한 단계씩 올라가는 게 먼저야"', { m: k === 'pro' ? 2 : 1 }, say({ pro: '현실적인 목표라 좋습니다.', amb: '한 단계씩이요? 저는 두 단계씩 가고 싶은데요 ㅎㅎ', loyal: '천천히 가도 같이 가면 좋아요.', hot: '그래도 이번엔 좀 빨리 올라가요!', soft: '그게 마음이 편해요.' })],
-              ['fun', '🙂 "너희가 즐기면서 뛰는 게 목표다"', { m: k === 'soft' || k === 'loyal' ? 3 : 0 }, say({ pro: '즐기면서도 결과는 챙기겠습니다.', amb: '이기는 게 제일 재밌죠!', loyal: '그 말 너무 좋아요.', hot: '이기면 더 재밌으니까 이기겠습니다!', soft: '그렇게 말해 주시니까 부담이 줄어요.' })]] },
-        { id: 'scout', w: k === 'pro' ? 3 : 1, p: say({ pro: '다음 상대 분석 자료를 먼저 받아 볼 수 있을까요?', amb: '다음 상대 수비수 영상 좀 미리 볼 수 있을까요? 약점 찾고 싶어요.', loyal: '다음 상대 분석 영상, 저도 같이 볼 수 있을까요? 팀에 도움이 되고 싶어요.', hot: '다음 상대 영상 있으면 주세요! 벌써 몸이 근질근질해요!', soft: '다음 상대 영상을 미리 보면 덜 떨릴 것 같은데, 받아 볼 수 있을까요?' }),
-          o: [['send', '📂 "오늘 저녁에 바로 보내 줄게"', { m: 1, trust: 2 }, say({ pro: '감사합니다. 정리해서 의견 드리겠습니다.', amb: '좋아요. 약점 찾으면 바로 말씀드릴게요.', loyal: '네! 꼼꼼히 볼게요.', hot: '오케이 밤새 볼게요 ㅋㅋ', soft: '네, 미리 보면 덜 떨릴 것 같아요.' })],
-              ['body', '😄 "넌 몸만 준비해. 머리는 내가 쓴다"', { m: k === 'hot' ? 3 : 1, cond: 2 }, say({ pro: '알겠습니다. 컨디션 관리에 집중하겠습니다.', amb: '그래도 저도 알고 들어가고 싶은데요 ㅎㅎ', loyal: '감독님 믿고 뛰겠습니다!', hot: '좋아요! 그게 제 스타일이에요 ㅋㅋ', soft: '네… 그럼 저는 뛰는 것만 생각할게요.' })],
-              ['calm', '🧊 "상대보다 우리가 뭘 할지가 중요하다"', { m: 1, nerve: k === 'soft' ? 1 : 0 }, say({ pro: '맞습니다. 우리 축구에 집중하겠습니다.', amb: '그 말씀 좋네요. 우리가 더 강하니까요.', loyal: '네, 우리 할 것만 하면 돼요.', hot: '맞아요! 상대가 누구든 상관없어요!', soft: '그렇게 생각하니까 좀 덜 무서워요.' })]] },
-        { id: 'tired', w: k === 'soft' ? 3 : 1, p: say({ pro: '요즘 학교 일정이랑 훈련이 겹쳐서 회복이 조금 늦습니다.', amb: '솔직히 좀 피곤한데, 그래도 빠지고 싶진 않아요.', loyal: '요즘 좀 지치긴 했는데 팀 때문에 버티고 있어요.', hot: '요즘 시험 기간이라 잠을 못 자서 죽겠어요 ㅋㅋ', soft: '요즘 학교랑 훈련 병행하느라 좀 피곤하긴 해요…' }),
-          o: [['rest', '🛌 "피곤하면 말해. 훈련량 조절해 줄게"', { m: 2, cond: 4 }, say({ pro: '감사합니다. 회복에 신경 쓰겠습니다.', amb: '괜찮다니까요 ㅎㅎ 그래도 감사합니다.', loyal: '감독님 진짜 최고예요.', hot: '쉬는 건 싫은데… 감사합니다!', soft: '정말요? 너무 감사해요…' })],
-              ['exam', '📚 "시험 기간엔 훈련 강도 낮추자. 공부도 중요하다"', { m: 2, chem: 1 }, say({ pro: '그렇게 해 주시면 집중이 잘될 것 같습니다.', amb: '공부까지 챙겨 주시네요 ㅎㅎ', loyal: '다른 친구들도 좋아할 거예요!', hot: '와 감독님 최고!! 애들한테 말할게요!', soft: '사실 그게 제일 걱정이었어요. 감사해요.' })],
-              ['push', '💪 "조금만 버티자. 이번 경기만 끝나면 쉬게 해 줄게"', { m: k === 'amb' || k === 'hot' ? 1 : -1 }, say({ pro: '알겠습니다. 버틸 수 있습니다.', amb: '좋아요, 이번 경기 끝나고 쉬겠습니다.', loyal: '네, 버텨 볼게요.', hot: '오케이! 대신 약속하신 거예요!', soft: '…네, 열심히 해 볼게요.' })]] },
-        ...((fr || rv) ? [{ id: 'mate', w: 2, p: rv ? say({ pro: `${J(rv.name, '이랑')} 포지션 경쟁이 좀 신경 쓰입니다.`, amb: `솔직히 ${J(rv.name, '보다')} 제가 낫다고 생각해요.`, loyal: `${J(rv.name, '이랑')} 사이가 좀 어색한데 팀에 방해될까 봐 걱정이에요.`, hot: `솔직히 ${J(rv.name, '이랑')}은 좀 안 맞아요 ㅋㅋ`, soft: `${J(rv.name, '이')} 저를 별로 안 좋아하는 것 같아요…` }) : say({ pro: `요즘 ${J(fr.name, '이랑')} 호흡이 잘 맞습니다.`, amb: `${J(fr.name, '이랑')} 같이 뛰면 골이 잘 나와요.`, loyal: `${J(fr.name, '이랑')} 훈련 끝나고 맨날 같이 다녀요 ㅎㅎ`, hot: `${J(fr.name, '이랑')} 세리머니 새로 짰어요 ㅋㅋ 기대하세요`, soft: `${J(fr.name, '이')} 제가 힘들 때마다 챙겨 줘요.` }),
-          o: rv ? [['meal', `🍖 "${J(rv.name, '과')} 한번 같이 밥 먹어 봐"`, { m: 1, pair: rv.id, chem: 1 }, say({ pro: '…감독님이 그러시면 한번 해 보겠습니다.', amb: '밥이요? 뭐… 한 번 정도는요.', loyal: '네, 팀을 위해서라면요.', hot: '아 진짜요? ㅋㅋ 알겠어요, 한 번만입니다!', soft: '조금 어색하겠지만 해 볼게요.' })],
-                   ['comp', '⚔️ "경쟁은 좋은 거다. 훈련장에서 보여 줘"', { m: k === 'amb' || k === 'hot' ? 2 : 0, boost: k === 'amb' ? 1 : 0 }, say({ pro: '네, 경쟁은 실력으로 하겠습니다.', amb: '좋아요. 훈련장에서 확실히 보여 드리죠.', loyal: '네… 그래도 사이는 좋게 지내고 싶어요.', hot: '오케이! 훈련 경기 때 제대로 붙어 보겠습니다!', soft: '경쟁은 좀 무섭지만… 해 볼게요.' })]]
-             : [['duo', `🤝 "${J(fr.name, '이랑')} 같이 뛰는 시간 늘려 볼게"`, { m: 2, pair: fr.id }, say({ pro: '좋습니다. 연계 플레이 더 다듬겠습니다.', amb: '그럼 골 더 넣을게요!', loyal: '와 진짜요? 걔도 엄청 좋아할 거예요!', hot: '오 둘이 같이 뛰면 무조건 골입니다!', soft: '정말요? 너무 좋아요 ㅎㅎ' })],
-                ['cele', '🕺 "세리머니는 미리 나한테 보여 줘라"', { m: 2, chem: 1 }, say({ pro: '(웃음) 검수받겠습니다.', amb: '골 넣으면 보여 드릴게요 ㅎㅎ', loyal: '다 같이 하는 버전도 있어요!', hot: '스포일러는 안 됩니다 ㅋㅋㅋ', soft: '부끄러워서 보여 드리긴 좀… ㅎㅎ' })]] }] : []),
-        { id: 'mood', w: k === 'loyal' ? 3 : 1, p: say({ pro: '요즘 팀 분위기는 안정적입니다. 다만 몇몇은 출전 시간에 예민해요.', amb: '팀 분위기는 좋은데 다들 선발 욕심이 커요 ㅎㅎ', loyal: '요즘 팀 분위기 진짜 좋아요. 다들 서로 챙겨요.', hot: '요즘 훈련 너무 재밌어요! 다들 미쳤어요 ㅋㅋ', soft: '요즘 다들 친절해서 팀에 오는 게 즐거워요.' }),
-          o: [['you', '🫶 "그 분위기 너희가 만든 거야"', { m: 2, chem: 1 }, say({ pro: '감사합니다. 유지하겠습니다.', amb: '제 지분도 있죠? ㅎㅎ', loyal: '감독님 덕분이에요!', hot: '맞아요 우리가 짱이에요 ㅋㅋ', soft: '그렇게 말해 주시니까 기뻐요.' })],
-              ['warn', '⚠️ "분위기 좋을 때 방심하는 거다"', { m: 0, nerve: 0, boost: k === 'pro' ? 1 : 0 }, say({ pro: '맞습니다. 긴장 늦추지 않겠습니다.', amb: '알겠습니다. 방심 안 합니다.', loyal: '네, 다들한테도 말할게요.', hot: '방심은 없습니다!', soft: '네… 조심할게요.' })]] }
-    ].filter(x => x.w > 0 && !used.includes(x.id));
-    const tot = SM.reduce((a, x) => a + x.w, 0); let t = Math.random() * tot, pickd = SM[0];
-    for (const x of SM) { if ((t -= x.w) <= 0) { pickd = x; break; } }
-    if (!pickd) return { p: CLOSE[k], o: null };
-    if (ivChat && ivChat.id === p.id) (ivChat.used = ivChat.used || []).push(pickd.id);
-    return { p: pickd.p, o: pickd.o };
-}
-function ivChatHtml(log, p, opts) {
-    return `<div class="ivc">${log.map(l => l.fx ? `<div class="fx ${l.neg ? 'neg' : ''}">${esc(l.fx)}</div>` : `<div class="b ${l.me ? 'm' : 'p'}"><div class="who">${l.me ? '감독' : esc(p.name)}</div>${esc(l.t)}</div>`).join('')}</div>${opts ? `<div class="ivc-opts">${opts.map((o, i) => `<button onclick="ivChatPick('${p.id}',${i})">${esc(o[1])}</button>`).join('')}</div>` : ''}`;
-}
-let ivChat = null;
-window.ivChatPick = function (id, i) {
-    const C = ivChat, p = players.find(x => x.id === id); if (!C || !p || C.id !== id) return;
-    const o = C.opts && C.opts[i]; if (!o) return;
-    const fx = o[2] || {}, notes = [];
-    C.log.push({ me: 1, t: o[1].replace(/^\S+\s/, '').replace(/^"|"$/g, '') });
-    C.log.push({ t: o[3] });
-    if (fx.m) { bumpMorale(p, fx.m); notes.push(`사기 ${fx.m > 0 ? '+' : ''}${fx.m}`); }
-    if (fx.trust) { p.trust = Math.max(0, Math.min(100, (p.trust ?? 60) + fx.trust)); notes.push(`신뢰 ${fx.trust > 0 ? '+' : ''}${fx.trust}`); }
-    if (fx.boost) { p.ivBoost = 1; notes.push('다음 경기 자신감↑'); }
-    if (fx.cond) { p.cond = Math.min(100, (p.cond ?? 100) + fx.cond); notes.push(`체력 +${fx.cond}`); }
-    if (fx.chem) { exBump('chem', fx.chem); notes.push(`라커룸 분위기 +${fx.chem}`); }
-    if (fx.pair) { const q = players.find(x => x.id === fx.pair); if (q) { exRelAdjust(p, q, 5); bumpMorale(q, 1); notes.push(`${J(q.name, '와')}의 관계 +5`); } }
-    if (fx.nerve) { exAddNext({ ply: { [p.id]: { nervousness: -8 } } }); notes.push('다음 경기 긴장↓'); }
-    if (fx.move && !p.wantMove && Math.random() < 0.5) { p.wantMove = { t: Date.now() }; notes.push('⚠️ 이적을 고민하기 시작했습니다'); }
-    if (notes.length) C.log.push({ fx: notes.join(' · '), neg: (fx.m || 0) < 0 });
-    C.step++;
-    if (C.step >= 2 || (fx.m || 0) < 0) { C.log.push({ t: (fx.m || 0) < 0 ? R1(['…그럼 이만 가 보겠습니다.', '(말없이 꾸벅 인사하고 나갑니다)', '생각 좀 해 볼게요.']) : CLOSE[per(p)] }); C.opts = null; }
-    else { const nxt = ivTurn(p, 'chat', (fx.m || 0) >= 0); C.log.push({ t: nxt.p }); C.opts = nxt.o; if (!nxt.o) C.step = 9; }
-    saveData();
-    const el = document.getElementById('iv-chat'); if (el) el.innerHTML = ivChatHtml(C.log, p, C.opts);
-    if (!C.opts) { try { if (typeof hubLog === 'function') hubLog('🗣️', `${p.name} 면담: ${C.log.filter(l => l.t && !l.me).slice(-2).map(l => l.t).join(' ')}`); } catch (_) {} }
-};
-if (typeof doInterview === 'function') {
-    const _di = doInterview;
-    doInterview = async function (id, topic, k) {
-        const p = players.find(x => x.id === id), cd0 = p ? (p.talkCd || 0) : 1, m0 = p ? mor(p) : 0;
-        const r = await _di.apply(this, arguments);
-        try {
-            if (!p || cd0 > 0 || (p.talkCd || 0) <= 0) return r;   // 면담이 실제로 진행된 경우만
-            ivChat = { id: p.id, used: [] };
-            const good = mor(p) >= m0, t = ivTurn(p, topic, good), box = document.getElementById('iv-result'); if (!box || !t.o) return r;
-            ivChat = { id: p.id, topic, step: 0, used: ivChat && ivChat.id === p.id ? ivChat.used : [], log: [{ t: t.p }], opts: t.o };
-            box.insertAdjacentHTML('beforeend', `<div class="text-xs text-gray-400 mt-2">${esc(p.name)}의 이야기가 이어집니다</div><div id="iv-chat">${ivChatHtml(ivChat.log, p, ivChat.opts)}</div>`);
-        } catch (e) { console.error(e); }
-        return r;
-    };
-}
-
-// ---------------------------------------------------------------- 팬 ↔ 구단: 공식 답글에 이어지는 반응 ----------------------------------------------------------------
-function repThread(x, line) {
-    const E = EX(), T = teamName, p = x.type === 'player' ? players.find(q => q.name === x.name) : null, pk = p ? per(p) : 'pro';
-    const meme = /짤|ㅋㅋ|😂|😄/.test(line), sorry = /죄송|잘하겠/.test(line), gift = /유니폼/.test(line), proud = /자랑스럽|부탁해|연습/.test(line), fix = /정정/.test(line);
-    const L = [];
-    if (x.type === 'player') {
-        L.push({ n: x.name, t: R1(proud ? ({ pro: ['감사합니다 감독님. 계속 이렇게 하겠습니다.'], amb: ['감독님 이거 캡처해 둡니다 ㅎㅎ 다음 경기도 맡겨 주세요'], loyal: ['감독님 💙 이 팀이라 행복합니다'], hot: ['감독님 공계 답글 실화예요?? ㅋㅋㅋ 다음 경기 두 골 갑니다'], soft: ['헉 감독님… 진짜 감사해요 ㅠㅠ'] })[pk] : ({ pro: ['(진지) 연습하겠습니다.'], amb: ['세리머니도 1등 하겠습니다 ㅋㅋ'], loyal: ['감독님 ㅋㅋ 단체 세리머니 준비할게요'], hot: ['세리머니 연습 오늘 밤부터 들어갑니다 🕺'], soft: ['부끄러워요 ㅋㅋ 그래도 해 볼게요'] })[pk]), me: 0 });
-        L.push({ n: nick(), t: R1(['감독이랑 선수 케미 미쳤다 ㅋㅋ', '이 팀 분위기 진짜 좋아 보임', '공계 댓글 단 거 실화냐', '이런 거 보려고 팬 한다']) });
-        if (Math.random() < 0.5) L.push({ n: nick(), t: `@${x.name} ${R1(['다음 경기 골 약속한 거다?', '세리머니 기대한다 ㅋㅋ', '오늘도 수고했어요!!'])}` });
-    } else if (x.type === 'journalist' || x.type === 'pundit') {
-        L.push({ n: x.name, t: fix ? R1(['정정 요청 확인했습니다. 해당 부분 수정하겠습니다.', '구단 입장 반영해 기사 업데이트했습니다.']) : meme ? R1(['다음엔 칭찬 기사 쓸 수 있게 이겨 주세요 ㅎㅎ', '하하, 좋은 경기 부탁드립니다.']) : R1(['감사합니다. 다음 경기도 현장에서 뵙겠습니다.', '좋게 봐 주셔서 감사합니다.']) });
-        L.push({ n: nick(), t: fix ? R1(['구단이 직접 정정 요청 ㄷㄷ', '이건 구단 말이 맞음', '기자님 빠른 수정 ㄱㅅ']) : R1(['구단이랑 기자 사이 좋아 보이네', '공식 계정 일 잘한다', 'ㅋㅋ 훈훈하다']) });
-    } else if (x.type === 'opp') {
-        L.push({ n: x.name, t: meme ? R1(['아 짤로 받아치네 ㅋㅋㅋ 인정', '…졌다 진짜 ㅋㅋ', '공계가 이래도 됨?? ㅋㅋㅋ']) : /품위|감사/.test(line) ? R1(['…매너는 인정한다', '이렇게 나오면 할 말이 없네', '다음엔 우리가 이긴다. 좋은 경기였음']) : R1(['ㅋㅋ 다음 맞대결 기다린다', '말은 누가 못 하냐', '리턴매치 때 보자']) });
-        L.push({ n: nick(), t: R1(['공계 참교육 ㅋㅋㅋ', '상대 팬이랑 공계 티키타카 ㅋㅋ', '이게 라이벌전이지']) });
-        if (Math.random() < 0.5) L.push({ n: x.name, t: `@${nick()} ${R1(['너네도 다음 경기 조심해라', '그래 오늘은 내가 졌다', 'ㅋㅋ 할 말 없음'])}` });
-    } else {
-        L.push({ n: x.name, t: gift ? R1(['헐 대박 진짜요?? 평생 간직할게요 ㅠㅠㅠ', '와 공계 답글에 유니폼까지… 오늘 잠 못 잔다', 'DM 확인하겠습니다!!! 사랑합니다']) : sorry ? R1(['말보다 다음 경기 결과로 보여 주세요', '…알겠습니다. 그래도 응원은 할게요', '답글 달아 준 건 고맙네요']) : meme ? R1(['공계 드립력 무엇 ㅋㅋㅋ', '아 공계 관리자 누구냐 ㅋㅋㅋ', '관리자 퇴근 안 하심?? ㅋㅋ']) : /최선|선수들은/.test(line) ? R1(['최선은 기본이죠. 결과가 필요합니다', '선수 감싸는 건 좋은데 전술도 돌아봐 주세요', '…알겠습니다']) : R1(['공식 계정이 답글 달아 줬다!!', '헉 감사합니다 💙', '저야말로 감사합니다 ㅠㅠ']) });
-        L.push({ n: nick(), t: gift ? `@${x.name} ${R1(['부럽다 진짜…', '나도 댓글 달걸 ㅠㅠ', '인증 꼭 올려 주세요'])}` : sorry ? R1(['@' + x.name + ' 이 정도면 화 풀자', '공계도 고생 많다', '사과했으면 됐지 뭐']) : R1(['공계 일 잘하네', '이 팀 소통 잘한다 ㅋㅋ', `${T} 공계 최고`]) });
-        if (Math.random() < 0.45) L.push({ n: x.name, t: `@${L[1].n} ${R1(['ㅋㅋ 그쵸', '맞아요 다음 경기 직관 가요', '고마워요 ㅎㅎ'])}` });
-    }
-    return L.slice(0, 4);
-}
-window.exRepThreadHtml = function (key) {
-    const E = EX(), th = (E.repTh || {})[key]; if (!th || !th.length) return '';
-    return `<div class="rep-th">${th.map(m => `<div><b>${m.n === teamName + ' 공식' ? `<span class="club">${esc(m.n)}</span>` : esc(m.n)}</b>${esc(m.t)}</div>`).join('')}</div>`;
-};
-if (typeof exReply === 'function') {
-    const _er = exReply;
-    exReply = async function (key, i) {
-        const E = EX(), had = !!E.replied[key], x = typeof exSocialIndex !== 'undefined' ? exSocialIndex[key] : null;
-        const r = await _er.apply(this, arguments);
-        try { if (!had && E.replied[key] && x) { E.repTh = E.repTh || {}; E.repTh[key] = repThread(x, E.replied[key]); const ks = Object.keys(E.repTh); if (ks.length > 80) delete E.repTh[ks[0]]; exSave(); exRefreshSocial(); } } catch (e) { console.error(e); }
-        return r;
-    };
-}
-
-// ---------------------------------------------------------------- 선수 ↔ 선수: SNS에서 서로 주고받는 대화 ----------------------------------------------------------------
-function banterExtra(st, post) {
-    const p = players.find(q => q.name === post.name); if (!p || !post.thread) return;
-    const k = per(p), ps = (st && st.playerStats && st.playerStats[p.id]) || {}, gl = (st && st.goalLog) || [];
-    const assistTo = gl.find(g => g.home && g.assist === p.name), assistFrom = gl.find(g => g.home && g.scorer === p.name && g.assist);
-    const out = [];
-    post.thread.slice(0, 3).forEach(c => {
-        if (!c.name || c.name.startsWith('@')) return;   // 팬 댓글은 건너뛰고 선수 댓글에만 답한다
-        const q = players.find(x => x.name === c.name); if (!q) return;
-        const rel = (relOf(p).find(r => r.o === q) || {}).k;
-        out.push({ name: p.name, text: `@${q.name} ` + (rel === 'rival' ? R1(['다음 경기도 내가 넣는다 ㅋㅋ', '박수 이모지 하나는 너무하잖아', '…고맙다. 진심으로 하는 말임']) : rel === 'mentor' ? R1(['네 형! 영상 보면서 다시 연습할게요', '첫 터치 진짜 연습할게요 ㅠㅠ', '형 덕분이에요 🙏']) : R1(['밥은 내가 산다 ㅋㅋ 메뉴 골라', '세리머니 합 다음엔 더 맞추자', '너 없었으면 못 넣었음 진짜', '고생했다 내일 회복 훈련 늦지 마라 ㅋㅋ'])) });
-        if (Math.random() < 0.5) out.push({ name: q.name, text: `@${p.name} ` + (rel === 'rival' ? R1(['두고 보자 ㅋㅋ', '그래 인정. 오늘만', '말은 잘한다']) : R1(['고기로 간다 ㅋㅋ', '콜 내일 6시', 'ㅋㅋㅋ 알겠어 늦으면 네가 사'])) });
-    });
-    if (assistTo && Math.random() < 0.7) { const s = assistTo.scorer; out.push({ name: s, text: `@${p.name} ${R1(['패스 미쳤다 진짜 넣기만 하면 됐음', '어시 고마워!! 다음에도 부탁해', '이 패스는 내가 액자에 걸어 둔다'])}` }); out.push({ name: p.name, text: `@${s} ${R1(['다음에도 거기 있어 줘 ㅋㅋ', '넣어 줘서 고마움 ㅎㅎ', '자리 잡는 거 보고 바로 줬다'])}` }); }
-    if (assistFrom && Math.random() < 0.6) out.push({ name: p.name, text: `@${assistFrom.assist} ${R1(['오늘 골 반은 네 거다', '그 패스 아니었으면 못 넣었다', '밥 산다 진짜로'])}` });
-    // 원래 댓글 중 동료 두 명이 똑같은 말을 한 경우 다른 표현으로 바꾼다
-    const ALT = ['ㅋㅋㅋ 오늘 진짜 미쳤다', '역시 믿고 있었다 👍', '다음 경기도 이대로 가자', '고생했다 오늘 푹 쉬어', '나도 다음엔 넣는다 ㅋㅋ', '세리머니 각도 좋았음 ㅋㅋ'], seenT = new Set();
-    post.thread.forEach(c => { if (seenT.has(c.text)) c.text = ALT.filter(a => !seenT.has(a))[Math.floor(Math.random() * 4)] || c.text; seenT.add(c.text); });
-    if (out.length) post.thread = [...post.thread, ...out.slice(0, 4)];
-}
-if (typeof hubBanter === 'function') {
-    const _hb = hubBanter;
-    hubBanter = function (st) {
-        const before = (S.social || [])[0]; const r = _hb.apply(this, arguments);
-        try { for (const x of (S.social || [])) { if (x === before) break; if (x.type === 'player') banterExtra(st, x); } } catch (e) { console.error(e); }
-        return r;
-    };
-}
-})();
-</script>
-
-<style id="yfm-chat-style">
-.gc{display:flex;flex-direction:column;gap:7px;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:12px}
-.gc-day{align-self:center;font-size:11px;color:#94a3b8;background:#1e293b;border-radius:999px;padding:2px 10px}
-.gc-m{display:flex;gap:7px;align-items:flex-start;max-width:92%}.gc-m .av{width:28px;height:28px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff}
-.gc-m .bx{display:flex;flex-direction:column}.gc-m .nm{font-size:11px;color:#94a3b8;margin-bottom:2px}.gc-m .tx{background:#1f2937;border-radius:4px 12px 12px 12px;padding:7px 10px;font-size:13px;line-height:1.45;color:#e5e7eb;word-break:keep-all}
-.gc-m.me{align-self:flex-end;flex-direction:row-reverse}.gc-m.me .tx{background:#facc15;color:#111827;border-radius:12px 4px 12px 12px}.gc-m.me .nm{text-align:right}
-.gc-sys{align-self:center;font-size:11px;color:#86efac}
-.gc-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.gc-opts button{padding:7px 11px;border-radius:999px;background:#334155;font-size:12px;font-weight:800}.gc-opts button:hover{background:#475569}
-</style>
-<script id="yfm-chat">
-// =====================================================================================
-// 💬 선수단 단톡방: 경기가 끝나면 학생 선수들이 카톡처럼 수다를 떤다. 감독도 경기마다 한 번 메시지를 남길 수 있고, 선수들이 성격대로 답한다.
-// =====================================================================================
-(() => {
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const J = (w, p) => typeof josa === 'function' ? josa(w, p) : String(w) + p;
-const R1 = a => a[Math.floor(Math.random() * a.length)];
-const per = p => personaOf(p).k;
-const COL = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#db2777', '#0891b2', '#65a30d', '#dc2626'];
-const col = n => { let h = 0; for (const c of String(n)) h = (h * 31 + c.charCodeAt(0)) | 0; return COL[Math.abs(h) % COL.length]; };
-const short = n => { const s = String(n || ''); return s.length >= 3 ? s.slice(1) : s; };   // 친구끼리 부르는 이름 (성 빼고)
-const voc = n => { const s = short(n), c = s.charCodeAt(s.length - 1), b = c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28; return s + (b ? '아' : '야'); };   // 민성아 · 승재야
-function GC() { const E = EX(); E.gc = E.gc || []; return E.gc; }
-function relOf(p) { try { return exRelations(players).filter(r => r.a === p || r.b === p).map(r => ({ o: r.a === p ? r.b : r.a, k: r.k })); } catch (_) { return []; } }
-function makeChat(st) {
-    const H = st.scoreHome, A = st.scoreAway, win = H > A || st.penWinner === 'home', lose = A > H || st.penWinner === 'away', O = st.enemy.name, R = st.ratings || {};
-    const played = [...st.homePlayers, ...(st.homeOut || [])].map(h => players.find(p => p.id === h.id)).filter(Boolean);
-    const rt = p => parseFloat(R[p.id]) || 0, gl = st.goalLog || [], M = [], say = (p, t) => p && t && M.push({ n: p.name, t });
-    const cap = (typeof hubCaptain === 'function' && hubCaptain()) || played.find(p => per(p) === 'loyal') || played[0];
-    const scorers = played.filter(p => (st.playerStats[p.id] || {}).goals).sort((a, b) => st.playerStats[b.id].goals - st.playerStats[a.id].goals);
-    const mom = [...played].sort((a, b) => rt(b) - rt(a))[0], worst = played.filter(p => rt(p)).sort((a, b) => rt(a) - rt(b))[0];
-    const benched = players.filter(p => !played.includes(p) && !p.inj && ['amb', 'hot'].includes(per(p)));
-    const pick = (L, not) => R1(L.filter(p => p && !(not || []).includes(p))) || null;
-    // 1) 주장(또는 충성파)이 먼저 연다
-    say(cap, win ? R1(['다들 수고했다!! 🔥', '오늘 진짜 잘했다 얘들아', `${O} 잡았다 ㅋㅋㅋ 다들 고생함`]) : lose ? R1(['다들 고개 들자. 다음 경기 있다', '오늘은 잊고 푹 자자', '수고했다… 다음엔 꼭 이기자']) : R1(['아쉽다 그래도 승점 1점', '비긴 거 아깝다 진짜', '다들 수고했어 다음엔 이기자']));
-    // 2) 득점자 자랑 / 겸손 → 친구가 놀림 → 득점자 받아침
-    const sc = scorers[0];
-    if (sc) {
-        const g = st.playerStats[sc.id].goals, k = per(sc), fr = (relOf(sc).find(r => r.k === 'friend') || {}).o, asg = gl.find(x => x.home && x.scorer === sc.name && x.assist), as = asg && players.find(p => p.name === asg.assist);
-        say(sc, ({ hot: [`오늘 내 ${g >= 2 ? g + '골' : '골'} 봤냐 ㅋㅋㅋㅋ`, '나 오늘 좀 미쳤던 듯 ㅋㅋ'], amb: [g >= 2 ? `${g}골인데 하나 더 넣을 수 있었음` : '골 넣었으니 다음 경기도 선발이죠?'], loyal: [as ? `${voc(as.name)} 패스 고마워 ㅠㅠ` : '골은 다 같이 넣은 거다'], pro: ['골보다 이겨서 다행', as ? `${short(as.name)} 패스 좋았음` : '다음 경기 준비하자'], soft: ['골 넣었는데 아직도 실감 안 남…', '나 골 넣은 거 맞지..?'] })[k] && R1(({ hot: [`오늘 내 ${g >= 2 ? g + '골' : '골'} 봤냐 ㅋㅋㅋㅋ`, '나 오늘 좀 미쳤던 듯 ㅋㅋ'], amb: [g >= 2 ? `${g}골인데 하나 더 넣을 수 있었음` : '골 넣었으니 다음 경기도 선발이죠?'], loyal: [as ? `${voc(as.name)} 패스 고마워 ㅠㅠ` : '골은 다 같이 넣은 거다'], pro: ['골보다 이겨서 다행', as ? `${short(as.name)} 패스 좋았음` : '다음 경기 준비하자'], soft: ['골 넣었는데 아직도 실감 안 남…', '나 골 넣은 거 맞지..?'] })[k]));
-        if (fr) { const pr = R1([[`세리머니 그게 뭐냐 ㅋㅋㅋㅋ`, R1(['연습한 거임 ㅋㅋ', '다음엔 같이 하자 그 세리머니', '멋있었잖아 인정해라'])], [`오늘 밥은 ${J(short(sc.name), '이')} 사는 거다`, R1(['콜 내일 급식 끝나고', '떡볶이까지만 ㅋㅋ', '나 용돈 받는 날까지만 기다려'])], [`${short(sc.name)} 오늘 좀 함 ㅇㅈ`, R1(['ㅋㅋㅋㅋ 인정', '오늘만 좀 한 거 아님 ㅋㅋ', '니가 패스 잘 줘서 그럼'])], ['하이라이트 내가 제일 먼저 올림 ㅋㅋ', R1(['조회수 내 덕분이다 ㅋㅋ', '내 얼굴 이상하게 나온 거 지워라', '링크 ㄱㄱ'])]]); say(fr, pr[0]); say(sc, pr[1]); }
-        if (as && as !== sc) say(as, R1(['패스는 내가 했는데 왜 니가 주인공임 ㅋㅋ', '어시 1개 적립 ㅎㅎ', '넣어 줘서 고맙다']));
-    }
-    // 3) MOM에게 한턱 요구
-    if (mom && rt(mom) >= 7.5 && mom !== sc) { const x = pick(played, [mom]); say(x, `MOM ${short(mom.name)} 밥 사라 ㅋㅋㅋ`); say(mom, R1(['콜 ㅋㅋ 떡볶이로', '나 돈 없음 ㅠ', 'ㅋㅋㅋ 다음 MOM이 사는 걸로'])); }
-    // 4) 극장골
-    const late = gl.find(x => x.home && x.time >= 85 && x.homeBefore <= x.awayBefore);
-    if (late) { const x = pick(played); say(x, `${late.lab || late.time}분 ${short(late.scorer)} 극장골 아직도 소름임`); say(pick(played, [x]), '나 그때 다리 풀려서 주저앉았음 ㅋㅋ'); }
-    // 5) 패배 후 자책하는 학생 → 친구·주장이 다독임
-    if (!win && worst && rt(worst) < 6.3) {
-        const k = per(worst);
-        say(worst, ({ soft: '오늘 나 때문에 진 것 같아… 미안', hot: '아 오늘 진짜 열 받는다 내가 망침', pro: '오늘 내 실수 영상 보고 고칠게', amb: '오늘 내 경기력 별로였음. 다음엔 다를 거', loyal: '다들 미안하다 내가 더 뛰었어야 했는데' })[k]);
-        const fr = (relOf(worst).find(r => r.k !== 'rival') || {}).o || pick(played, [worst]);
-        say(fr, R1([`아니야 ${voc(worst.name)} 우리 다 못했어`, '한 경기 가지고 뭘 ㅋㅋ 신경 쓰지 마', '내일 같이 영상 보자']));
-        if (cap && cap !== worst && cap !== fr) say(cap, `${voc(worst.name)} 신경 쓰지 마. 다음 경기에 같이 갚자`);
-        if (worst) bumpMorale(worst, 1);
-    }
-    // 6) 벤치 학생의 아쉬움
-    if (benched.length && Math.random() < 0.6) { const b = R1(benched); say(b, R1(['다음엔 나도 좀 뛰고 싶다…', '벤치에서 보는데 나도 들어가고 싶어서 미치는 줄', '나 언제 뛰냐 ㅋㅋ ㅠㅠ'])); say(pick(played, [b]), R1(['곧 기회 온다 ㅋㅋ', '감독님한테 직접 말해 봐', '훈련 때 보여 주면 됨'])); }
-    // 7) 학교생활 수다
-    if (Math.random() < 0.7) { const a = pick(played), b = pick(played, [a]), c = pick(players, [a, b]); const z = R1([['내일 수학 수행평가 있는 사람?', '나… 망했다 ㅋㅋ', '그거 다음 주 아님?'], ['회복 훈련 몇 시였지?', '9시', '8시 반 아님? 감독님한테 물어보자'], ['급식 내일 뭐 나옴', '돈가스!!', '오 그럼 경기 이긴 기념 ㅋㅋ'], ['축구화 끈 빌려줄 사람', '내 거 써', '나 여분 있음'], ['오늘 경기 하이라이트 유튜브에 올라옴 ㅋㅋ', '댓글 보지 마라…', '나 나오는 장면 몇 초임?']]); say(a, z[0]); say(b, z[1]); say(c, z[2]); }
-    // 8) 다음 경기
-    try { if (typeof lobbyNext === 'function') { const n = lobbyNext(); if (n && n.name) { const x = pick(played); say(x, `다음 상대 ${J(n.name, '이라').replace(/라$/, '지')}? 다들 준비하자`); say(pick(played, [x]), R1(['이번엔 무조건 이긴다', '저번에 걔네한테 고전했던 거 기억나지', 'ㄱㄱ 바로 영상 본다'])); } } } catch (_) {}
-    return M.slice(0, 16);
-}
-const MGR_OPTS = [
-    { k: 'thx', t: '👏 "다들 수고했다. 푹 쉬어라"', fx: { team: 1 } },
-    { k: 'rest', t: '🛌 "내일 회복 훈련은 10시로 늦춘다"', fx: { cond: 4, chem: 1 } },
-    { k: 'next', t: '🎯 "오늘은 잊고 다음 경기 준비하자"', fx: { focus: 3 } },
-    { k: 'food', t: '🍗 "주말에 치킨 쏜다" (80T)', fx: { chem: 3, team: 2 }, cost: 80 },
-    { k: 'warn', t: '📵 "단톡 그만하고 일찍 자라 ㅋㅋ"', fx: { cond: 2 } }
-];
-function mgrReplies(o, win) {
-    const L = players.filter(p => !p.inj).sort(() => Math.random() - 0.5).slice(0, 3), out = [];
-    const T = {
-        thx: { pro: ['감사합니다 감독님', '네 감독님도 쉬세요'], amb: ['다음 경기도 맡겨 주세요!', '넵 다음엔 더 잘할게요'], loyal: ['감독님도 고생 많으셨어요 💙', '감독님 최고 💙'], hot: ['넵!! 내일 또 달립니다', '감사합니다!!!'], soft: ['감사합니다 ㅠㅠ', '감독님 덕분이에요 ㅎㅎ'] },
-        rest: { pro: ['감사합니다. 컨디션 관리하겠습니다', '넵 회복에 집중하겠습니다'], amb: ['오 늦잠 가능 ㅋㅋ', '그럼 아침에 개인 운동 하고 가겠습니다'], loyal: ['감독님 최고예요', '애들아 감독님 천사다 ㅋㅋ'], hot: ['와아아아 10시!!!', '알람 끄고 잔다 ㅋㅋㅋ'], soft: ['진짜 감사해요 ㅠㅠ 다들 피곤했어요', '푹 자고 갈게요 ㅎㅎ'] },
-        next: { pro: ['네 영상 보고 준비하겠습니다', '분석 자료 보내 주세요'], amb: ['다음 경기는 제가 해결합니다', '다음엔 골 넣겠습니다'], loyal: ['다 같이 갚아 주자', '얘들아 다음 경기 이기자 💙'], hot: ['복수전이다 ㅋㅋ', '다음 경기 기다려라!!'], soft: ['네! 열심히 할게요', '다음엔 실수 안 할게요'] },
-        food: { pro: ['감사합니다 감독님 ㅎㅎ', '잘 먹겠습니다'], amb: ['반반 무 많이요 ㅋㅋ', '양념이요 양념!!'], loyal: ['감독님 사랑합니다 💙', '다 같이 먹는 거 좋아요 ㅎㅎ'], hot: ['치킨!!!!!!! 🍗🍗', '두 마리 먹을 수 있음 ㅋㅋ'], soft: ['와 진짜요? 너무 좋아요 ㅎㅎ', '감동이에요 ㅠㅠ'] },
-        warn: { pro: ['넵 바로 자겠습니다', '죄송합니다 이만 자겠습니다'], amb: ['1분만요 ㅋㅋ', '이것만 보고 잘게요'], loyal: ['얘들아 감독님 보신다 ㅋㅋ', '다들 자자 ㅋㅋ'], hot: ['헉 감독님 여기 계셨어요?? ㅋㅋㅋ', '감독님 단톡 있는 거 까먹었다 ㅋㅋ'], soft: ['죄송해요 ㅋㅋ 이제 잘게요', '안녕히 주무세요!'] }
-    }[o.k];
-    const usedT = new Set(); L.forEach(p => { const opts = T[per(p)].filter(x => !usedT.has(x)); const t = opts.length ? R1(opts) : '👍'; usedT.add(t); out.push({ n: p.name, t }); });
-    if (o.k === 'warn' && L[0]) out.push({ n: L[0].name, t: '(읽음 11)' });
-    return out;
-}
-window.hubChatSend = async function (idx, k) {
-    const C = GC(), c = C[idx], o = MGR_OPTS.find(x => x.k === k); if (!c || !o || c.sent) return;
-    if (o.cost && !await spendTokens(o.cost, 'team_event')) return;
-    c.sent = k; c.msgs.push({ me: 1, t: o.t.replace(/^\S+\s/, '').replace(/^"|"$/g, '').replace(/"\s*\(\d+T\)$/, '') });
-    mgrReplies(o).forEach(m => c.msgs.push(m));
-    const f = o.fx, note = [];
-    if (f.team) { players.forEach(p => bumpMorale(p, f.team)); note.push(`선수단 사기 +${f.team}`); }
-    if (f.cond) { players.forEach(p => p.cond = Math.min(100, (p.cond ?? 100) + f.cond)); note.push(`전원 체력 +${f.cond}`); }
-    if (f.chem) { exBump('chem', f.chem); note.push(`라커룸 분위기 +${f.chem}`); }
-    if (f.focus) { exAddNext({ focus: f.focus }, '단톡방 감독 메시지 — 집중력 +' + f.focus); note.push(`다음 경기 집중력 +${f.focus}`); }
-    c.msgs.push({ sys: note.join(' · ') });
-    saveData(); exSave(); if (typeof hubRender === 'function') hubRender();
-};
-window.hubChatView = function () {
-    const C = GC(); if (!C.length) return '<div class="hub-card text-sm text-gray-400">아직 단톡방에 대화가 없어요. 경기가 끝나면 학생 선수들이 경기 이야기를 나눕니다.</div>';
-    return `<div class="text-xs text-gray-400 mb-2">경기가 끝나면 선수들이 단톡방에서 이야기를 나눠요. 감독은 경기마다 한 번 메시지를 남길 수 있어요.</div><div class="flex flex-col gap-3">${C.slice().reverse().map((c, ri) => { const idx = C.length - 1 - ri; return `<div class="gc"><div class="gc-day">${esc(c.title)}</div>${c.msgs.map(m => m.sys ? `<div class="gc-sys">${esc(m.sys)}</div>` : m.me ? `<div class="gc-m me"><div class="bx"><div class="nm">감독</div><div class="tx">${esc(m.t)}</div></div></div>` : `<div class="gc-m"><div class="av" style="background:${col(m.n)}">${esc(String(m.n).slice(-2, -1) || m.n[0])}</div><div class="bx"><div class="nm">${esc(m.n)}</div><div class="tx">${esc(m.t)}</div></div></div>`).join('')}${!c.sent && idx === C.length - 1 ? `<div class="gc-opts">${MGR_OPTS.map(o => `<button onclick="hubChatSend(${idx},'${o.k}')">${esc(o.t)}</button>`).join('')}</div>` : ''}</div>`; }).join('')}</div>`;
-};
-// 경기 후 생성 (hubBanter가 경기 후 한 번 불린다)
-if (typeof hubBanter === 'function') {
-    const _hb2 = hubBanter;
-    hubBanter = function (st) {
-        const r = _hb2.apply(this, arguments);
-        try { if (st && !st.online && st.mode !== 'onlineFriendly' && !st.gcDone) { st.gcDone = true; const msgs = makeChat(st); if (msgs.length) { const C = GC(); C.push({ t: Date.now(), title: `${st.enemy.name}전 ${st.scoreHome}:${st.scoreAway} 이후 · ${teamName} 선수단 단톡방`, msgs }); while (C.length > 3) C.shift(); EX().gcNew = 1; } } } catch (e) { console.error(e); }
-        return r;
-    };
-}
-})();
-</script>
-
 <script id="account-startup-safety">
 (()=>{
  const reveal=message=>{
@@ -13878,7 +12625,7 @@ if (typeof hubBanter === 'function') {
  };
  if(document.documentElement.classList.contains('account-resuming'))reveal('진행도를 확인하는 중입니다. 서버가 느리면 잠시 후 다시 시도해 주세요.');
  window.addEventListener('error',e=>{if(!e.error)return;reveal('화면 초기화 오류가 발생했습니다. 새로고침 후에도 같으면 오류 화면을 관리자에게 알려 주세요.');});
- setTimeout(()=>{if(!window.yfmAccountReady&&document.getElementById('account-form')?.style.display==='none')reveal('서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.');},45000);   // 재시도가 끝나기 전에 폼을 띄우지 않게
+ setTimeout(()=>{if(!window.yfmAccountReady&&document.getElementById('account-form')?.style.display==='none')reveal('서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.');},18000);
 })();
 </script>
 
