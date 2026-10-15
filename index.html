@@ -5094,7 +5094,7 @@
         function saveActiveMatchCheckpoint(st,goal=false){
             if(!st||st.online||['onlineFriendly','tutorial'].includes(st.mode)||st.ended||st.resultProcessed)return false;
             try{
-                const skip=new Set(['online','engineInterval','last','lastUi','alpha','_raf','_timer','onlineGoalOverlayTimer','onlineRoster','onlineHomeRoster','onlinePauseBase']);
+                const skip=new Set(['online','_engineRaf','_engineGeneration','_engineErrors','_engineFaultPaused','_engineLoggedAt','engineInterval','last','lastUi','alpha','_raf','_timer','onlineGoalOverlayTimer','onlineRoster','onlineHomeRoster','onlinePauseBase']);
                 const packed=JSON.stringify(st,(key,value)=>{if(skip.has(key)||typeof value==='function')return undefined;if(value instanceof Set)return {$yfmType:'Set',values:[...value]};if(value instanceof Map)return {$yfmType:'Map',entries:[...value]};return value;});
                 if(!packed)return false;
                 localStorage.setItem(ACTIVE_MATCH_KEY,JSON.stringify({v:1,owner:matchOwnerKey(),mode:st.mode,time:Number(st.time)||0,scoreHome:st.scoreHome||0,scoreAway:st.scoreAway||0,goal:!!goal,savedAt:Math.max(Date.now(),completedMatchCutoff()+1),state:packed}));
@@ -5131,7 +5131,7 @@
                 if(!st||['onlineFriendly','tutorial'].includes(st.mode)||st.ended||st.resultProcessed||!st.homePlayers?.length||!st.awayPlayers?.length)throw new Error('저장된 경기 데이터가 올바르지 않아.');
                 if(st.mode==='league'&&!st.leaguePlayoff&&(!leagueState||st.leagueSeason!==leagueState.season||st.leagueRound!==leagueState.round||leagueState.status!=='playing'))throw new Error('이미 완료되었거나 진행 중인 리그와 다른 경기입니다.');
                 if(st.leaguePlayoff&&(!leagueState||leagueState.status!=='playoff'||st.leagueSeason!==leagueState.season||!(leagueState.po?.a==='user'||leagueState.po?.b==='user')||st.enemy?.id!==(leagueState.po.a==='user'?leagueState.po.b:leagueState.po.a)))throw new Error('더 이상 진행 대상이 아닌 승격 플레이오프입니다.');
-                currentMatchState=st;st.online=null;st.ended=false;st.resultProcessed=false;st.isPaused=false;st.userPaused=false;st.varOn=false;st.acc=0;st.last=performance.now();st.lastUi=0;st.engineInterval=null;st._checkpointAt=Math.floor((Number(st.time)||0)/5)*5;
+                currentMatchState=st;st.online=null;st._engineRaf=0;st._engineGeneration=0;st._engineErrors=0;st._engineFaultPaused=false;st.ended=false;st.resultProcessed=false;st.isPaused=false;st.userPaused=false;st.varOn=false;st.acc=0;st.last=performance.now();st.lastUi=0;st.engineInterval=null;st._checkpointAt=Math.floor((Number(st.time)||0)/5)*5;
                 document.getElementById('match-mode-text').innerText=st.mode==='league'?leagueMatchLabel(st.enemy):st.mode==='saudi'?'사우디 모드':st.mode==='rogue'?prematchLabel('rogue',st.enemy):st.mode==='europa'?`유로파 ${europaState.round===2?'결승':`${europaState.round}강 ${europaState.leg}차전`}`:st.mode==='worldcup'?`월드컵 ${worldCupState.round}`:st.mode==='tutorial'?'🎓 튜토리얼 친선전 · 선발 vs 비선발':!careerState?'친선 경기':careerState.round===2?'결승전':`${careerState.round}강 ${careerState.leg}차전`;
                 document.getElementById('match-enemy-name').innerText=st.enemy.name;const logo=st.enemy.logo||clubLogoUrl(st.enemy.id||st.enemy.name),logoEl=document.getElementById('match-enemy-logo');logoEl.src=logo||'';logoEl.classList.toggle('hidden',!logo);
                 document.getElementById('match-end-overlay').classList.replace('flex','hidden');document.getElementById('match-end-overlay').classList.add('hidden');document.getElementById('btn-tactics').style.display='block';document.getElementById('btn-forfeit').style.display='block';
@@ -7576,7 +7576,7 @@
             st.secondHalfStarted = true;
             document.getElementById('match-ht-overlay').classList.replace('flex', 'hidden');
             allOf(st).forEach(p => { p.x = p.baseX; p.y = p.baseY; p.stun = 0; p.dash = 0; p.stam = Math.min(100, (p.stam ?? 100) + 10); if (p.stam >= 35) p.tiredWarned = false; });
-            kickoff(st, false); snapAll(st); playMatchSound('start'); resumeMatchCrowd(); comm(st, '▶ 후반 시작', 'info'); if (!st.online && st.scoreHome < st.scoreAway && Math.random() < 0.7) { const cap = st.homePlayers.find(p => p.isCaptain && !p.isRedCarded); comm(st, pick([`⭕ ${cap ? '주장 ' + josa(cap.name, '이') + '' : '선수들이'} 센터서클에 동료들을 모아 원을 만듭니다 — "아직 45분 남았다!"`, `📣 ${teamName} 선수들이 서로의 어깨를 두드리며 흩어집니다. 추격 시작!`]), 'info'); } cpuHalftimeAdapt(st); updateShoutBtn(st);
+            kickoff(st, false); snapAll(st); playMatchSound('start'); resumeMatchCrowd(); comm(st, '▶ 후반 시작', 'info'); if (!st.online && st.scoreHome < st.scoreAway && Math.random() < 0.7) { const cap = st.homePlayers.find(p => p.isCaptain && !p.isRedCarded); comm(st, pick([`⭕ ${cap ? '주장 ' + josa(cap.name, '이') + '' : '선수들이'} 센터서클에 동료들을 모아 원을 만듭니다 — "아직 45분 남았다!"`, `📣 ${teamName} 선수들이 서로의 어깨를 두드리며 흩어집니다. 추격 시작!`]), 'info'); } matchUiSafely(st,()=>cpuHalftimeAdapt(st),'halftime-adaptation');matchUiSafely(st,()=>updateShoutBtn(st),'halftime-ui');
             st.isPaused = false; st.last = performance.now(); st.acc = 0;
             if (st.online) { try { window.yfmOnline.setHalf(2); } catch (_) {} }
         }
@@ -8272,19 +8272,51 @@
 
         function sendOnlineSnapshot(st) {}
 
+        function matchEngineNotice(st,error,area='engine') {
+            const now=performance.now();
+            if(now-(st._engineLoggedAt||-10000)>5000){
+                st._engineLoggedAt=now;console.error('Match '+area+' @ '+Number(st.time||0).toFixed(2),error);
+                try{const key='yfm_match_diagnostics_v1',rows=JSON.parse(localStorage.getItem(key)||'[]');rows.push({at:new Date().toISOString(),minute:Number(st.time)||0,mode:st.mode,area,message:String(error?.message||error).slice(0,240)});localStorage.setItem(key,JSON.stringify(rows.slice(-6)));}catch(_){}
+            }
+        }
+        function matchEngineRecovery(st) {
+            if(st.online||st.ended||currentMatchState!==st||document.getElementById('match-engine-recovery'))return;
+            st._engineFaultPaused=true;st.isPaused=true;
+            const panel=document.createElement('div');panel.id='match-engine-recovery';panel.style.cssText='position:fixed;inset:0;z-index:180000;background:#0c0819dd;display:grid;place-items:center;padding:20px;color:white';
+            const box=document.createElement('div');box.style.cssText='width:min(410px,100%);background:#21172f;border:1px solid #9e77c3;border-radius:16px;padding:24px;text-align:center';
+            const message=document.createElement('p');message.textContent='경기 진행 오류를 감지해 잠시 멈췄습니다. 현재 점수와 시간을 유지한 채 다시 시도할 수 있습니다.';
+            const retry=document.createElement('button');retry.textContent='현재 경기 계속하기';retry.style.cssText='margin-top:18px;padding:12px 20px;border-radius:10px;background:#7651a3;font-weight:800';
+            retry.onclick=()=>{
+                if(currentMatchState!==st||st.ended){panel.remove();return;}
+                // Only release the pause owned by this error handler. Never bypass
+                // tactical pauses, halftime, VAR or online session restrictions.
+                const visible=id=>{const e=document.getElementById(id);return !!e&&!e.classList.contains('hidden')&&e.style.display!=='none';};
+                if(st.userPaused||st.varOn||st.netHold||st.pens||gameSessionBlocked||visible('match-ht-overlay')||visible('tactics-panel')){panel.remove();st._engineFaultPaused=false;return;}
+                st._engineErrors=0;st._engineFaultPaused=false;st.acc=0;st.last=performance.now();st.isPaused=false;panel.remove();
+            };
+            box.append(message,retry);panel.append(box);document.body.append(panel);
+        }
+        function matchUiSafely(st,fn,area){try{fn();}catch(error){matchEngineNotice(st,error,area);}}
         function startMatchEngine() {
-            const st = currentMatchState; st.isPaused = false; st.acc = 0; st.last = performance.now(); st.lastUi = 0; st.alpha = 1;
+            const st = currentMatchState;if(!st||st.ended)return;
+            if(st._engineRaf)cancelAnimationFrame(st._engineRaf);
+            const generation=(st._engineGeneration||0)+1;st._engineGeneration=generation;st._engineErrors=0;
+            st.isPaused = false; st.acc = 0; st.last = performance.now(); st.lastUi = 0; st.alpha = 1;
             if (st.online && !st.online.isHost) {
-                const mirror = now => { if (currentMatchState !== st || st.ended) return; render(st, 80, 1); updateClock(st, 0); if (now - st.lastUi > 500) { st.lastUi = now; updateSide(st); } requestAnimationFrame(mirror); };
-                requestAnimationFrame(mirror); return;
+                const mirror = now => { if(currentMatchState!==st||st.ended||st._engineGeneration!==generation)return;try{render(st,80,1);updateClock(st,0);if(now-st.lastUi>500){st.lastUi=now;updateSide(st);}}catch(error){matchEngineNotice(st,error,'mirror');}finally{if(currentMatchState===st&&!st.ended&&st._engineGeneration===generation)st._engineRaf=requestAnimationFrame(mirror);} };
+                st._engineRaf=requestAnimationFrame(mirror); return;
             }
             const loop = now => {
-                if (currentMatchState !== st || st.ended) return;
+                if (currentMatchState !== st || st.ended || st._engineGeneration!==generation) return;
+                st._engineRaf=0;
+                try {
                 const dt = Math.min(100, now - st.last); st.last = now;
-                const step = SIM_MS / matchSpeed * (st.mode === 'saudi' ? SAUDI_STEP : 1) * (st.sp && st.sp.kind === 'corner' ? 1.7 : st.cornerHold ? 1.25 : 1); // 코너킥 정렬은 천천히, 공은 적당히
+                const safeSpeed=Number.isFinite(matchSpeed)&&matchSpeed>0?matchSpeed:1;
+                const step = SIM_MS / safeSpeed * (st.mode === 'saudi' ? SAUDI_STEP : 1) * (st.sp && st.sp.kind === 'corner' ? 1.7 : st.cornerHold ? 1.25 : 1); // 코너킥 정렬은 천천히, 공은 적당히
                 if (!st.isPaused && !st.userPaused && !st.varOn && (!st.online || window.yfmFriendly.canSimulate())) {   // VAR 판독 중에는 다른 타이머가 풀어도 경기 정지
                     st.acc += dt;
-                    while (st.acc >= step) {
+                    let tickBudget=0;
+                    while (st.acc >= step && tickBudget++<12) {
                         st.acc -= step; saveSnap(st); st.time += MIN_PER_TICK * (st.mode === 'saudi' ? SAUDI_TIME : 1) * (st.slowUntil && st.time < st.slowUntil ? 0.35 : 1);
                         if (!st.htDone && st.time >= 45 + (st.added1 || 0) && !holdWhistle(st, 45 + (st.added1 || 0))) { st.time = 45; st.htDone = true; st.acc = 0; resetExt(st); halfTime(); break; }
                         if (st.maxTime === 120 && !st.etHT && st.time >= 105 && !holdWhistle(st, 105)) { st.time = 105; st.etHT = true; st.acc = 0; resetExt(st); matchBreak(st, 'ethalf'); break; }
@@ -8301,12 +8333,18 @@
                     }
                     st.alpha = st.isPaused ? 1 : Math.min(1, st.acc / step);
                 }
-                render(st, dt, st.alpha); updateClock(st, st.isPaused || st.userPaused ? 0 : st.alpha);
-                if (now - st.lastUi > 400) { st.lastUi = now; updateSide(st); updateShoutBtn(st); updateVarBtn(st); renderBoostBadge(st); }
+                matchUiSafely(st,()=>render(st,dt,st.alpha),'render');matchUiSafely(st,()=>updateClock(st,st.isPaused||st.userPaused?0:st.alpha),'clock');
+                if (now - st.lastUi > 400) { st.lastUi = now; matchUiSafely(st,()=>updateSide(st),'side');matchUiSafely(st,()=>updateShoutBtn(st),'shout');matchUiSafely(st,()=>updateVarBtn(st),'var-button');matchUiSafely(st,()=>renderBoostBadge(st),'boost'); }
                 if (st.online?.isHost && now - (st.online.lastSnapshot || 0) >= 67) { st.online.lastSnapshot = now; sendOnlineSnapshot(st); }
-                requestAnimationFrame(loop);
+                st._engineErrors=0;
+                } catch(error) {
+                    st.acc=0;st.last=now;st._engineErrors=(st._engineErrors||0)+1;
+                    matchEngineNotice(st,error);if(st._engineErrors>=3)matchEngineRecovery(st);
+                } finally {
+                    if(currentMatchState===st&&!st.ended&&st._engineGeneration===generation)st._engineRaf=requestAnimationFrame(loop);
+                }
             };
-            requestAnimationFrame(loop);
+            st._engineRaf=requestAnimationFrame(loop);
         }
 
         function getDistance(a, b) { return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2)); }
