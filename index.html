@@ -10488,7 +10488,7 @@
             idle:  'https://github.com/user-attachments/assets/af0870d0-215d-45df-865a-8895a399c0be',
             ready: 'https://github.com/user-attachments/assets/41172a2b-2823-4a13-ada6-23ea65671eda'
         };
-        function dailyToday() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+        function dailyToday() { return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
         function newDaily() { return { date: dailyToday(), play: 0, big: 0, sign: 0, cur: 0, best: 0, claimed: {} }; }
         let daily = null;
         try { daily = JSON.parse(localStorage.getItem('fm_daily') || 'null'); } catch (e) { daily = null; }
@@ -10521,7 +10521,7 @@
             if (el.getAttribute('src') !== src) el.setAttribute('src', src);
         }
         function missionRemainText() {
-            const n = new Date(), end = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1), ms = end - n;
+            const n=Date.now(), next=Date.parse(dailyToday()+'T00:00:00+09:00')+86400000, ms=Math.max(0,next-n);
             const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
             return `${h}시간 ${m}분`;
         }
@@ -10634,10 +10634,57 @@
             }catch(error){console.warn('쿠폰 처리 실패:',error);setMissionCouponStatus(missionCouponErrorMessage(error),true);}
             finally{missionCouponBusy=false;if(button?.isConnected){button.disabled=false;button.classList.remove('opacity-50');}}
         }
-        function claimMission(id){ensureDaily();const m=DAILY_MISSIONS.find(x=>x.id===id);if(!m||!missionClaimable(m))return renderMissions();daily.claimed[id]=true;const rw={tokens:m.reward};grantRewards(rw);saveDaily();renderMissions();showRewardNotice(m.name,rw)}
-        function claimAchievement(id){const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a||!achievementClaimable(a))return renderMissions();ach.claimed[id]=true;const rw={tokens:a.tokens,evo:a.evo};grantRewards(rw);saveAch();renderMissions();showRewardNotice(a.name,rw)}
-        function claimAllMissions(){ensureDaily();const rw={tokens:0,evo:0},names=[];if(missionTab==='daily'){DAILY_MISSIONS.forEach(m=>{if(!missionClaimable(m))return;daily.claimed[m.id]=true;rw.tokens+=m.reward;names.push(m.name)});saveDaily()}else{ACHIEVEMENTS.forEach(a=>{if(!achievementClaimable(a))return;ach.claimed[a.id]=true;rw.tokens+=a.tokens;rw.evo+=a.evo;names.push(a.name)});saveAch()}if(!names.length)return;grantRewards(rw);renderMissions();showRewardNotice(`${names.length}개 미션 모두 받기`,rw)}
-        function openMissions(){missionTab='daily';renderMissions();document.getElementById('mission-modal').classList.replace('hidden','flex')}
+        let serverMissionBusy=false,serverMissionStatusBusy=false,serverMissionEpoch=0;
+        function applyMissionReceipts(data){
+            ensureDaily();
+            if(daily.date===data.day)daily.claimed={...(data.daily||{})};
+            ach.claimed={...(data.achievement||{})};saveDaily();saveAch();updateMissionIcon();
+        }
+        async function refreshMissionReceipts(){
+            if(serverMissionStatusBusy||serverMissionBusy||!accountUser?.id||!window.yfmAccountReady)return;
+            serverMissionStatusBusy=true;const owner=accountUser.id,epoch=serverMissionEpoch;
+            try{const {data}=await walletRpcWithRetry('yfm_mission_receipts',{}, {maxAttempts:2});if(accountUser?.id!==owner||serverMissionBusy||epoch!==serverMissionEpoch)return;applyMissionReceipts(data);if(!document.getElementById('mission-modal').classList.contains('hidden'))renderMissions();}
+            catch(e){console.warn('미션 수령 기록 조회 실패:',e);}
+            finally{serverMissionStatusBusy=false;}
+        }
+        async function claimServerMissions(kind,ids,title){
+            if(serverMissionBusy||!ids.length)return;
+            if(!accountUser?.id||!window.yfmAccountReady){alert('로그인한 계정에서 보상을 수령해 주세요.');return;}
+            serverMissionBusy=true;serverMissionEpoch++;const owner=accountUser.id;let savingLock=false;
+            try{
+                ensureDaily();saveDaily();saveAch();saveData();preservePendingSave(owner);
+                const until=Date.now()+15000;
+                while((accountSaving||tokenWalletPending>0)&&Date.now()<until)await new Promise(r=>setTimeout(r,100));
+                if(accountSaving||tokenWalletPending>0)throw new Error('저장·결제 처리 중입니다. 잠시 후 다시 눌러 주세요.');
+                await uploadAccountSnapshot(true);
+                if(accountUser?.id!==owner||!window.yfmAccountReady||window.__wiping)return;
+                if(accountDirty||accountSaveConflict)throw new Error('진행도의 서버 저장을 먼저 완료해 주세요. 미저장 기록은 기기에 보관됩니다.');
+                clearTimeout(accountSaveTimer);accountSaving=true;savingLock=true;
+                const beforeEvo=evoTokens;
+                const result=await queueWalletOperation(async()=>{
+                    const {data}=await walletRpcWithRetry('yfm_claim_missions',{p_kind:kind,p_ids:ids.map(String),p_day:kind==='daily'?daily.date:null},{maxAttempts:3,timeoutMs:10000});if(accountUser?.id===owner&&data?.ok)applyServerWallet(data.balance);return data;
+                });
+                if(accountUser?.id!==owner||!window.yfmAccountReady)return;
+                if(!result?.ok||!result.save_data?.data||!Number.isSafeInteger(result.save_data.sync_revision))throw new Error('보상 저장 결과를 확인하지 못했습니다. 같은 미션을 다시 확인해 주세요.');
+                const accepted=result.save_data;
+                applyMissionReceipts(result);
+                // Retain evolution changes made locally while the response was in flight.
+                evoTokens=Math.max(0,Number(accepted.data.fm_evo_tokens)||0)+(evoTokens-beforeEvo);
+                let remoteAch;try{remoteAch=JSON.parse(accepted.data.fm_achievements||'{}');}catch(_){remoteAch={};}
+                if(remoteAch.p?.evoEarned!==undefined)ach.p.evoEarned=Math.max(achievementCount(ach.p.evoEarned),achievementCount(remoteAch.p.evoEarned));
+                localStorage.setItem('fm_evo_tokens',String(evoTokens));saveAch();
+                accountSyncBase=accepted;accountLastSnapshot=canonData(accepted.data);accountLastWrite=Date.now();
+                localStorage.setItem('yfm_sync_at',accepted.at||'');localStorage.setItem('yfm_sync_revision',String(accepted.sync_revision));
+                accountDirty=confirmDurableSave(owner,accepted);saveData();updateTokensUI();renderMissions();
+                if(result.paid)showRewardNotice(title,{tokens:Number(result.tokens)||0,evo:Number(result.evo)||0});
+                else alert('이미 이 계정에서 수령한 보상입니다. 다른 기기의 수령 기록을 반영했습니다.');
+            }catch(e){console.warn('서버 미션 수령 실패:',e);alert(e?.message||'보상 수령을 확인하지 못했습니다. 같은 미션을 다시 확인해 주세요.');}
+            finally{if(savingLock)accountSaving=false;serverMissionBusy=false;if(accountDirty)planDurableSave();}
+        }
+        function claimMission(id){ensureDaily();const m=DAILY_MISSIONS.find(x=>x.id===id);if(!m||!missionClaimable(m))return renderMissions();return claimServerMissions('daily',[id],m.name);}
+        function claimAchievement(id){const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a||!achievementClaimable(a))return renderMissions();return claimServerMissions('achievement',[id],a.name);}
+        function claimAllMissions(){ensureDaily();const items=missionTab==='daily'?DAILY_MISSIONS.filter(missionClaimable):ACHIEVEMENTS.filter(achievementClaimable);return claimServerMissions(missionTab==='daily'?'daily':'achievement',items.map(x=>x.id),`${items.length}개 미션 모두 받기`);}
+        function openMissions(){missionTab='daily';renderMissions();document.getElementById('mission-modal').classList.replace('hidden','flex');refreshMissionReceipts();}
         function closeMissions(){document.getElementById('mission-modal').classList.replace('flex','hidden')}
         function dailyTick() {
             recoverLeagueSave(); updateNewsBadge(); renderCareerChallengeStatus(); if (document.getElementById('screen-lobby')?.classList.contains('active')) { try { renderLobby(); } catch (e) { console.error(e); } }
