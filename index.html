@@ -3314,6 +3314,26 @@ root.YFMDurableStore=YFMDurableStore;
         // The season catalogue is deliberately separate from every recruitment pool.
         const SCIENCE_SEASON = 'science2026';
         const SCIENCE_ASSETS = JSON.parse(document.getElementById('yfm-science-assets').textContent);
+        // Keep embedded assets in the HTML, but reuse compact URLs in every card.
+        // Repeating megabyte data URLs in innerHTML made candidate lists expensive to parse.
+        const scienceAssetUrls = new Map();
+        function scienceAssetUrl(key) {
+            if (scienceAssetUrls.has(key)) return scienceAssetUrls.get(key);
+            const source = SCIENCE_ASSETS[key];
+            if (!source) return '';
+            let url = source;
+            if (source.startsWith('data:')) {
+                try {
+                    const comma = source.indexOf(','), header = source.slice(5, comma);
+                    const binary = atob(source.slice(comma + 1));
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    url = URL.createObjectURL(new Blob([bytes], {type:header.split(';')[0]}));
+                } catch (_) { /* The original embedded image remains a usable fallback. */ }
+            }
+            scienceAssetUrls.set(key, url);
+            return url;
+        }
         const SCIENCE_PLAYERS = Object.freeze([
             {name:'김진성',ovr:105,pos:'CB',photo:'kimjinseong'},
             {name:'박성찬',ovr:103,photo:'parkseongchan'},
@@ -3358,9 +3378,9 @@ root.YFMDurableStore=YFMDurableStore;
         }
         function scienceCardMarkup(p,options,escape) {
             const d=scienceDefinition(p),name=String(options.name??p.name),pos=p.pos2||d?.pos||originalPlayerPosition(p);
-            const ovr=options.ovrLabel??options.ovr??getCalculatedOvr(p),photo=d?.photo&&SCIENCE_ASSETS[d.photo];
+            const ovr=options.ovrLabel??options.ovr??getCalculatedOvr(p),photo=d?.photo&&scienceAssetUrl(d.photo);
             const portrait=photo?`<div class="science-photo-mask"><img class="science-photo" src="${photo}" alt="" loading="lazy" decoding="async" draggable="false"></div>`:'<div class="science-photo-pending" aria-label="선수 이미지 준비 중"><svg viewBox="0 0 100 130" aria-hidden="true"><circle cx="50" cy="32" r="22"/><path d="M10 130V95Q10 65 50 65T90 95V130Z"/></svg></div>';
-            return `<div class="player-card science-card${options.className?' '+escape(options.className):''}" data-season-id="${SCIENCE_SEASON}" data-player-name="${escape(name)}" aria-label="${escape(name)} 신규 시즌 ${escape(pos)} OVR ${escape(ovr)}"><div class="science-card-canvas"><img class="card-background" src="${SCIENCE_ASSETS.background}" alt="" decoding="async" draggable="false"><div class="science-photo-clip">${portrait}</div><span class="card-ovr">${escape(ovr)}</span><span class="card-position">${escape(pos)}</span><span class="card-name">${escape(name)}</span></div></div>`;
+            return `<div class="player-card science-card${options.className?' '+escape(options.className):''}" data-season-id="${SCIENCE_SEASON}" data-player-name="${escape(name)}" aria-label="${escape(name)} 신규 시즌 ${escape(pos)} OVR ${escape(ovr)}"><div class="science-card-canvas"><img class="card-background" src="${scienceAssetUrl('background')}" alt="" decoding="async" draggable="false"><div class="science-photo-clip">${portrait}</div><span class="card-ovr">${escape(ovr)}</span><span class="card-position">${escape(pos)}</span><span class="card-name">${escape(name)}</span></div></div>`;
         }
         function registeredPersonConflict(p,excluded=[]) {
             const ids=new Set(excluded.filter(x=>x!=null).map(String));
@@ -3508,6 +3528,7 @@ root.YFMDurableStore=YFMDurableStore;
                 }
             });
         }
+        const observedPlayerCards = new WeakSet();
         const playerCardResizeObserver = new ResizeObserver(entries => {
             for (const entry of entries) fitPlayerCardNames(entry.target);
         });
@@ -3515,16 +3536,33 @@ root.YFMDurableStore=YFMDurableStore;
             const cards = root.matches?.('.player-card') ? [root] : [...root.querySelectorAll('.player-card')];
             cards.forEach(el => {
                 if(el.matches('.halloween-card'))window.bindHalloweenCard(el);
-                if (!el.dataset.cardObserved) {
-                    el.dataset.cardObserved = '1';
+                if (!observedPlayerCards.has(el)) {
+                    observedPlayerCards.add(el);
                     playerCardResizeObserver.observe(el);
                     fitPlayerCardNames(el);
                 }
             });
         }
         new MutationObserver(records => {
-            for (const record of records) for (const node of record.addedNodes) {
-                if (node.nodeType === 1) watchPlayerCardNames(node);
+            const added = new Set();
+            for (const record of records) {
+                for (const node of record.removedNodes) {
+                    if (node.nodeType !== 1 || node.isConnected) continue;
+                    const cards = node.matches('.player-card') ? [node] : node.querySelectorAll('.player-card');
+                    cards.forEach(card => {
+                        playerCardResizeObserver.unobserve(card);
+                        observedPlayerCards.delete(card);
+                    });
+                }
+                for (const node of record.addedNodes) {
+                    if (node.nodeType === 1 && node.isConnected) added.add(node);
+                }
+            }
+            for (const node of added) {
+                // A parent scan already covers its descendants in this mutation batch.
+                let parent = node.parentElement;
+                while (parent && !added.has(parent)) parent = parent.parentElement;
+                if (!parent) watchPlayerCardNames(node);
             }
         }).observe(document.body, {childList:true,subtree:true});
         document.fonts.ready.then(() => { watchPlayerCardNames(); fitPlayerCardNames(); });
@@ -10516,12 +10554,13 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
         }
 
         function openSwapModal(idx, pos, cId) { 
-            document.getElementById('modal-pos-target').innerText = pos; const bench = document.getElementById('bench-list'); bench.innerHTML = cId ? `<div onclick="showPlayerInfo('${cId}')" class="bg-blue-900/60 hover:bg-blue-800 border border-blue-400 rounded p-4 cursor-pointer text-center font-bold flex flex-col justify-center">ℹ 현재 선수<br><span class="text-sm">${(players.find(x => x.id === cId) || {}).name}</span></div>` : ''; 
+            document.getElementById('modal-pos-target').innerText = pos; const bench = document.getElementById('bench-list'); const rows = [ cId ? `<div onclick="showPlayerInfo('${cId}')" class="bg-blue-900/60 hover:bg-blue-800 border border-blue-400 rounded p-4 cursor-pointer text-center font-bold flex flex-col justify-center">ℹ 현재 선수<br><span class="text-sm">${(players.find(x => x.id === cId) || {}).name}</span></div>` : '']; 
             let list = players.filter(p => !p.isStarting && (pos === 'GK' ? p.position === 'GK' : p.position !== 'GK')).sort((a,b) => getCalculatedOvr(b) * aptitude(b, pos) - getCalculatedOvr(a) * aptitude(a, pos)); 
             list.forEach(p => { 
                 const cOvr = getCalculatedOvr(p); 
-                bench.innerHTML += `<div class="bg-gray-700 rounded p-3 cursor-pointer hover:bg-gray-600 border relative text-center flex flex-col items-center" onclick="swapPlayer('${cId}','${p.id}', ${idx})"><div class="absolute top-1 left-1 text-xs text-purple-400 font-bold px-1">+${p.level}</div>${playerCardMarkup(p,{position:p.position,ovr:cOvr,condition:p.cond,className:'orb-row'})}<div class="mt-2 text-sm text-gray-300 font-bold">${moodEmoji(p)} ${p.name}${positionPenaltyMarkup(p, pos)}</div><div class="text-[10px] text-pink-300 font-bold">적성 ${Math.round(aptitude(p,pos)*100)}%</div><div class="text-xs mt-1 font-bold" style="color:${p.inj > 0 ? '#f87171' : stamColor(p.cond ?? 100)}">${p.inj > 0 ? '🚑 ' + p.inj + '경기 결장' : '🔋 ' + Math.round(p.cond ?? 100) + '%'}</div><span onclick="event.stopPropagation();showPlayerInfo('${p.id}')" class="absolute top-1 right-1 text-xs bg-gray-600 hover:bg-sky-600 rounded px-1.5">ℹ</span></div>`; 
-            }); 
+                rows.push(`<div class="bg-gray-700 rounded p-3 cursor-pointer hover:bg-gray-600 border relative text-center flex flex-col items-center" onclick="swapPlayer('${cId}','${p.id}', ${idx})"><div class="absolute top-1 left-1 text-xs text-purple-400 font-bold px-1">+${p.level}</div>${playerCardMarkup(p,{position:p.position,ovr:cOvr,condition:p.cond,className:'orb-row'})}<div class="mt-2 text-sm text-gray-300 font-bold">${moodEmoji(p)} ${p.name}${positionPenaltyMarkup(p, pos)}</div><div class="text-[10px] text-pink-300 font-bold">적성 ${Math.round(aptitude(p,pos)*100)}%</div><div class="text-xs mt-1 font-bold" style="color:${p.inj > 0 ? '#f87171' : stamColor(p.cond ?? 100)}">${p.inj > 0 ? '🚑 ' + p.inj + '경기 결장' : '🔋 ' + Math.round(p.cond ?? 100) + '%'}</div><span onclick="event.stopPropagation();showPlayerInfo('${p.id}')" class="absolute top-1 right-1 text-xs bg-gray-600 hover:bg-sky-600 rounded px-1.5">ℹ</span></div>`); 
+            });
+            bench.innerHTML = rows.join(''); 
             document.getElementById('swap-modal').classList.replace('hidden', 'flex'); 
         }
         function closeModal() { document.getElementById('swap-modal').classList.replace('flex', 'hidden'); }
