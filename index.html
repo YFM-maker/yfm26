@@ -21,8 +21,8 @@ class YFMDurableStore {
  status(s,bad=false){this.options.status?.(s,bad);}
  async account(owner){if(!owner)throw Error('ACCOUNT_REQUIRED');const a=await this.tx(['accounts'],'readonly',s=>req(s.accounts.get(owner)));if(a)this.cache.set(owner,a);return a||null;}
  async mutate(owner,fn){const a=await this.tx(['accounts','backups'],'readwrite',async s=>{const old=await req(s.accounts.get(owner))||{owner,schema:3,generation:0,base:null,pending:null,event:null};const next=fn(copy(old));next.owner=owner;next.schema=3;next.generation=old.generation+1;s.accounts.put(next);return next;});this.cache.set(owner,a);return a;}
- async checkpoint(owner,snapshot,base){const a=await this.mutate(owner,a=>{if(base!==undefined)a.base=copy(base);a.pending=copy(snapshot);return a;});this.status('기기 저장 완료 · 서버 동기화 대기');return a;}
- async acknowledge(owner,snapshot,sent){const a=await this.tx(['accounts','backups'],'readwrite',async s=>{const a=await req(s.accounts.get(owner))||{owner,generation:0};const same=canonical(a.pending?.data)===canonical(sent?.data);a.base=copy(snapshot);if(same)a.pending=null;a.schema=3;a.generation++;if(!a.backupAt||Date.now()-a.backupAt>=600000){s.backups.put({owner,generation:a.generation,snapshot:copy(snapshot)});a.backupAt=Date.now();const all=await req(s.backups.getAll());const mine=all.filter(x=>x.owner===owner).sort((a,b)=>b.generation-a.generation);mine.slice(5).forEach(x=>s.backups.delete([owner,x.generation]));}s.accounts.put(a);return a;});this.cache.set(owner,a);return !!a.pending;}
+ async checkpoint(owner,snapshot,base){const a=await this.mutate(owner,a=>{if(base!==undefined&&(!a.base||base&&(Number(base.sync_revision)||0)>=(Number(a.base.sync_revision)||0)))a.base=copy(base);a.pending=copy(snapshot);return a;});this.status('기기 저장 완료 · 서버 동기화 대기');return a;}
+ async acknowledge(owner,snapshot,sent){const a=await this.tx(['accounts','backups'],'readwrite',async s=>{const a=await req(s.accounts.get(owner))||{owner,generation:0};if(a.base&&(Number(snapshot?.sync_revision)||0)<(Number(a.base.sync_revision)||0))return a;const same=canonical(a.pending?.data)===canonical(sent?.data);a.base=copy(snapshot);if(same)a.pending=null;a.schema=3;a.generation++;if(!a.backupAt||Date.now()-a.backupAt>=600000){s.backups.put({owner,generation:a.generation,snapshot:copy(snapshot)});a.backupAt=Date.now();const all=await req(s.backups.getAll());const mine=all.filter(x=>x.owner===owner).sort((a,b)=>b.generation-a.generation);mine.slice(5).forEach(x=>s.backups.delete([owner,x.generation]));}s.accounts.put(a);return a;});this.cache.set(owner,a);return !!a.pending;}
  async event(owner,value){if(value===undefined)return (await this.account(owner))?.event||null;return this.mutate(owner,a=>{a.event=copy(value);return a;});}
  async operations(owner){return (await this.tx(['operations'],'readonly',s=>req(s.operations.getAll()))).filter(x=>x.owner===owner).sort((a,b)=>a.sequence-b.sequence);}
  async enqueue(owner,kind,payload,id,session=this.session){if(!owner||!session)throw Error('LOAD_BARRIER');const op=await this.tx(['accounts','operations'],'readwrite',async s=>{const old=await req(s.operations.get([owner,id]));if(old){if(old.kind!==kind||canonical(old.payload)!==canonical(payload))throw Error('OPERATION_ID_REUSED');return old;}const a=await req(s.accounts.get(owner))||{owner,schema:3,generation:0};a.sequence=(a.sequence||0)+1;const o={owner,id,kind,payload:copy(payload),session,sequence:a.sequence,attempts:0,status:'pending',nextAttempt:0};s.accounts.put(a);s.operations.put(o);return o;});return op;}
@@ -31,9 +31,9 @@ class YFMDurableStore {
  activate(owner,session){this.owner=owner;this.session=session;this.ready=true;}
  deactivate(){this.ready=false;this.owner=null;this.session=null;for(const t of this.timers.values())clearTimeout(t);this.timers.clear();}
  async drain(owner=this.owner,target=null){if(this.running.has(owner)){await this.running.get(owner);if(target)return this.drain(owner,target);return;}const run=async()=>{const lock=async()=>{for(const op of await this.operations(owner)){if(op.status==='reviewed'||op.status==='rejected')continue;if(!this.ready||this.owner!==owner)return;if(op.status==='quarantined')throw Object.assign(Error('이전 접속의 미전송 작업이 보관되어 있습니다. 충돌 확인이 필요합니다.'),{code:'SESSION_CONFLICT'});if(op.nextAttempt>Date.now()){this.schedule(owner,op.nextAttempt-Date.now());throw Object.assign(Error('동기화 실패 · 재시도 대기 중'),{code:'RETRY_WAIT'});}try{
-  // Query receipt FIRST. An old device may recover an ACK but may not execute a new write.
-  const known=await this.options.lookup(op);let result=known?.found?known.result:null;
-  if(!result){if(op.session!==this.session){op.status='quarantined';await this.updateOperation(op);throw Object.assign(Error('새 접속으로 저장 권한이 이전되었습니다. 이전 작업을 자동 업로드하지 않습니다.'),{code:'SESSION_CONFLICT'});}op.attempts++;op.status='sending';await this.updateOperation(op);result=await this.options.send(op);}
+  // Recover uncertain/old-session requests first; a fresh operation has never reached the server.
+  const needsReceipt=op.attempts>0||op.status==='sending'||op.session!==this.session;op.attempts++;if(needsReceipt)await this.updateOperation(op);const known=needsReceipt?await this.options.lookup(op):null;let result=known?.found?known.result:null;
+  if(!result){if(op.session!==this.session){op.status='quarantined';await this.updateOperation(op);throw Object.assign(Error('새 접속으로 저장 권한이 이전되었습니다. 이전 작업을 자동 업로드하지 않습니다.'),{code:'SESSION_CONFLICT'});}op.status='sending';await this.updateOperation(op);result=await this.options.send(op);}
   if(!result||typeof result.ok!=='boolean')throw Error('INVALID_SERVER_ACK');
   if(result.conflict){op.status='quarantined';await this.updateOperation(op);await this.options.conflict?.(op,result);throw Object.assign(Error('서버 저장 버전 충돌 · 기기 기록 보관 중'),{code:'REVISION_CONFLICT'});}
   if(!result.ok){op.status='rejected';op.result=result;await this.updateOperation(op);if(target===op.id)return result;continue;}
@@ -4328,7 +4328,7 @@ root.YFMDurableStore=YFMDurableStore;
                 ?Object.fromEntries(Object.keys(value).sort().map(k=>[k,sorted(value[k])])):value;
             const data={};
             for(const key of Object.keys(snapshot?.data||{}).sort()) {
-                if(key==='fm_tokens'||key==='fm_completed_match_at')continue;
+                if(key==='fm_tokens'||key==='fm_completed_match_at'||key==='fm_active_match_v1')continue;
                 let value=snapshot.data[key];
                 if(typeof value==='string'&&/^[\[{]/.test(value.trim())){try{value=JSON.parse(value);}catch(_){}}
                 data[key]=sorted(value);
@@ -4383,7 +4383,7 @@ root.YFMDurableStore=YFMDurableStore;
             if(accountSaveConflict)return;
             if(accountSyncBase&&cloudSnapshotFingerprint(accountSnapshot())!==cloudSnapshotFingerprint(accountSyncBase))accountDirty=true;
             if(accountPendingRemote){preservePendingSave();if(accountDirty)return;restoreSyncedAccount(owner,accountPendingRemote.snapshot);return;}
-            if(accountDirty){await uploadAccountSnapshot(true);return;}
+            if(accountDirty){planDurableSave();return;}
             if(!force&&(Date.now()<nextCloudPollAt||Date.now()<serverLoadState.until))return;
             nextCloudPollAt=Date.now()+60000+Math.random()*5000;cloudProgressReading=true;
             try{
@@ -4501,7 +4501,7 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
             if(!owner||window.__wiping||localStorage.getItem(accountDeviceKey)!==owner)return durableLocalTail;
             const snapshot=accountSnapshot(),base=accountSyncBase||readSaveRecord(owner)?.base||null;
             if(base&&cloudSnapshotFingerprint(snapshot)===cloudSnapshotFingerprint(base)&&!readSaveRecord(owner)?.pending)return durableLocalTail;
-            return enqueueLocalSave(()=>durableStore.checkpoint(owner,snapshot,base));
+            return enqueueLocalSave(()=>{const pending=readSaveRecord(owner)?.pending;if(pending&&canonData(pending.data)===canonData(snapshot.data))return;return durableStore.checkpoint(owner,snapshot,base);});
         }
         function confirmDurableSave(owner,snapshot){
             accountSyncBase=JSON.parse(JSON.stringify(snapshot));
@@ -4510,10 +4510,24 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
             if(dirty)enqueueLocalSave(()=>durableStore.checkpoint(owner,current,snapshot));
             return dirty;
         }
+        // One scheduler owns background snapshots. Financial operations keep their own durable IDs.
+        const CLOUD_SAVE_DEBOUNCE_MS=4000,CLOUD_SAVE_MIN_INTERVAL_MS=15000;
+        let accountSavePlannedAt=0;
         function planDurableSave(){
             if(!accountUser?.id||!window.yfmAccountReady||window.__wiping)return;
-            preservePendingSave().catch(()=>{});clearTimeout(accountSaveTimer);
-            accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.max(300,1500-(Date.now()-accountLastWrite)));
+            preservePendingSave().catch(()=>{});
+            // Live match checkpoints and mission counters are durable on the device.
+            // The complete result is uploaded by flushFinishedMatchSave at full time.
+            if(cloudMatchInProgress())return;
+            const owner=accountUser.id,now=Date.now();
+            const retryDelay=accountSaveFailures?Math.min(60000,3000*2**accountSaveFailures):0;
+            const due=Math.max(now+Math.max(CLOUD_SAVE_DEBOUNCE_MS,retryDelay),accountLastWrite+CLOUD_SAVE_MIN_INTERVAL_MS,serverLoadState.until||0);
+            if(accountSaveTimer&&accountSavePlannedAt&&accountSavePlannedAt<=due)return;
+            clearTimeout(accountSaveTimer);accountSavePlannedAt=due;
+            accountSaveTimer=setTimeout(()=>{
+                accountSaveTimer=null;accountSavePlannedAt=0;
+                if(accountUser?.id===owner)uploadAccountSnapshot(false);
+            },due-now);
         }
         function mergeSaveChanges(local,remote,base){
             if(!base?.data)return {snapshot:local,conflicts:['기준 저장 기록 없음']};
@@ -4544,13 +4558,15 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
         async function uploadAccountSnapshot(force=false,initialSave=false){
             if(!accountUser||window.__wiping||(!window.yfmAccountReady&&!initialSave))return;
             const owner=accountUser.id;
+            if(!force&&!initialSave&&cloudMatchInProgress()){preservePendingSave(owner).catch(()=>{});return;}
             try{await preservePendingSave(owner);}catch(e){saveStatus('기기 저장 실패 · 서버 전송을 중단했습니다',true);return;}
             if(!initialSave&&Date.now()<serverLoadState.until){
                 saveStatus('서버 응답 지연 · 기기 보관 · 잠시 후 재시도',true);
                 clearTimeout(accountSaveTimer);accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.max(1500,serverLoadState.until-Date.now()+Math.random()*2000));return;
             }
             if(accountSaving||tokenWalletPending>0||accountSaveConflict)return;
-            if(!force&&(!accountDirty||Date.now()-accountLastWrite<55000))return;
+            if(!force&&(!accountDirty||Date.now()-accountLastWrite<CLOUD_SAVE_MIN_INTERVAL_MS)){if(accountDirty)planDurableSave();return;}
+            clearTimeout(accountSaveTimer);accountSaveTimer=null;accountSavePlannedAt=0;
             accountSaving=true;
             try{
                 if(window.yfmAccountReady)await optimizeAccountLogo(owner);
@@ -4560,7 +4576,7 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
                 const unhandled=(await durableStore.account(owner))?.receipt;
                 if(unhandled&&!unhandled.handled){saveStatus('서버 거래 확인 완료 · 새로고침해 확정 기록을 불러와 주세요',true);return;}
                 let snapshot=accountSnapshot(),base=accountSyncBase||readSaveRecord(owner)?.base;
-                if(canonData(snapshot.data)===accountLastSnapshot){accountDirty=false;confirmDurableSave(owner,base||snapshot);return;}
+                if(base&&cloudSnapshotFingerprint(snapshot)===cloudSnapshotFingerprint(base)){accountDirty=false;confirmDurableSave(owner,base);return;}
                 // Capture local data BEFORE the request; a close/timeout cannot erase it.
                 await preservePendingSave(owner);saveStatus('서버 동기화 중');
                 const walletVersion=tokenWalletRevision;
@@ -4591,7 +4607,7 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
                     if(accountDirty)planDurableSave();return;
                 }
             }catch(e){accountDirty=true;preservePendingSave(owner).catch(()=>{});saveStatus('서버 저장 실패 · 기기 보관 · 자동 재시도 중',true);console.warn('클라우드 저장 실패:',e);accountSaveFailures=Math.min(5,accountSaveFailures+1);clearTimeout(accountSaveTimer);if(!window.__wiping&&accountUser?.id===owner)accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.min(60000,3000*2**accountSaveFailures));}
-            finally{accountSaving=false;}
+            finally{accountSaving=false;if(accountDirty&&!accountSaveConflict&&!accountSaveFailures&&accountUser?.id===owner&&!window.__wiping)planDurableSave();}
         }
 
         async function refreshAdminEditedSave() {
@@ -4737,11 +4753,11 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
             if(localStorage.getItem('fm_need_star')!=='1'&&restoreSavedMatch())return;
             maybeStartTutorial();
         }
-        setInterval(()=>{if(accountDirty)uploadAccountSnapshot(true);else pollCloudProgress();},15000);
-        window.addEventListener('online',()=>{durableStore.schedule(accountUser?.id,0);if(accountDirty)uploadAccountSnapshot(true);else pollCloudProgress(true);refreshMissionReceipts(true);});
+        setInterval(()=>{if(accountDirty)planDurableSave();else pollCloudProgress();},60000);
+        window.addEventListener('online',()=>{durableStore.schedule(accountUser?.id,0);if(accountDirty)planDurableSave();else pollCloudProgress(true);refreshMissionReceipts(true);});
         document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollCloudProgress(true);});
-        document.addEventListener('visibilitychange',()=>{if(document.hidden){preservePendingSave();uploadAccountSnapshot(true);}});
-        window.addEventListener('pagehide',()=>{preservePendingSave();if(accountDirty)uploadAccountSnapshot(true);});
+        document.addEventListener('visibilitychange',()=>{if(document.hidden){preservePendingSave().catch(()=>{});if(!cloudMatchInProgress())uploadAccountSnapshot(true);}});
+        window.addEventListener('pagehide',()=>{preservePendingSave().catch(()=>{});if(accountDirty&&!cloudMatchInProgress())uploadAccountSnapshot(true);});
         async function signOutGameAccount() {
             if(typeof window.yfmResetAdmin==='function')window.yfmResetAdmin();
             socialFriendId=null;supportPeers.clear();supportUnread.clear();socialUnread.clear();
