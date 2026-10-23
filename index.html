@@ -1036,7 +1036,9 @@ root.YFMDurableStore=YFMDurableStore;
 </style>
 <style id="yfm-science-season-style">
 /* One square template, shared unchanged by every portrait. Coordinates are fractions of 1080. */
-.player-card.science-card{aspect-ratio:1/1;height:auto!important;min-height:0;container-type:inline-size;background:transparent;border:0;border-radius:0;overflow:hidden;scale:1;isolation:isolate}
+/* Compensate for the square artwork's transparent side margins while keeping the shared template coordinates. */
+.player-card.science-card{aspect-ratio:800/1080;height:auto!important;min-height:0;container-type:inline-size;background:transparent;border:0;border-radius:0;overflow:hidden;scale:1;isolation:isolate}
+.science-card-canvas{position:absolute;left:-15%;top:1.851852%;width:130%;aspect-ratio:1/1;container-type:inline-size;pointer-events:none}
 .player-card.science-card .card-background{inset:0;width:100%;height:100%;object-fit:contain;z-index:0;clip-path:none;border-radius:0}
 .science-card .science-photo-clip{position:absolute;inset:0;overflow:hidden;clip-path:inset(0 20.555556% 33.703704% 20.555556%);z-index:1;pointer-events:none}
 .science-card .science-photo-mask{position:absolute;left:25.555556%;top:12.407407%;width:55.555556%;aspect-ratio:1;overflow:hidden;-webkit-mask-image:linear-gradient(to right,transparent 0%,#000 2.5%,#000 97.5%,transparent 100%),linear-gradient(to bottom,transparent 0%,#000 3.5%,#000 100%);mask-image:linear-gradient(to right,transparent 0%,#000 2.5%,#000 97.5%,transparent 100%),linear-gradient(to bottom,transparent 0%,#000 3.5%,#000 100%);-webkit-mask-composite:source-in;mask-composite:intersect}
@@ -3357,7 +3359,7 @@ root.YFMDurableStore=YFMDurableStore;
             const d=scienceDefinition(p),name=String(options.name??p.name),pos=p.pos2||d?.pos||originalPlayerPosition(p);
             const ovr=options.ovrLabel??options.ovr??getCalculatedOvr(p),photo=d?.photo&&SCIENCE_ASSETS[d.photo];
             const portrait=photo?`<div class="science-photo-mask"><img class="science-photo" src="${photo}" alt="" loading="lazy" decoding="async" draggable="false"></div>`:'<div class="science-photo-pending" aria-label="선수 이미지 준비 중"><svg viewBox="0 0 100 130" aria-hidden="true"><circle cx="50" cy="32" r="22"/><path d="M10 130V95Q10 65 50 65T90 95V130Z"/></svg></div>';
-            return `<div class="player-card science-card${options.className?' '+escape(options.className):''}" data-season-id="${SCIENCE_SEASON}" data-player-name="${escape(name)}" aria-label="${escape(name)} 신규 시즌 ${escape(pos)} OVR ${escape(ovr)}"><img class="card-background" src="${SCIENCE_ASSETS.background}" alt="" decoding="async" draggable="false"><div class="science-photo-clip">${portrait}</div><span class="card-ovr">${escape(ovr)}</span><span class="card-position">${escape(pos)}</span><span class="card-name">${escape(name)}</span></div>`;
+            return `<div class="player-card science-card${options.className?' '+escape(options.className):''}" data-season-id="${SCIENCE_SEASON}" data-player-name="${escape(name)}" aria-label="${escape(name)} 신규 시즌 ${escape(pos)} OVR ${escape(ovr)}"><div class="science-card-canvas"><img class="card-background" src="${SCIENCE_ASSETS.background}" alt="" decoding="async" draggable="false"><div class="science-photo-clip">${portrait}</div><span class="card-ovr">${escape(ovr)}</span><span class="card-position">${escape(pos)}</span><span class="card-name">${escape(name)}</span></div></div>`;
         }
         function registeredPersonConflict(p,excluded=[]) {
             const ids=new Set(excluded.filter(x=>x!=null).map(String));
@@ -3498,7 +3500,7 @@ root.YFMDurableStore=YFMDurableStore;
         function fitPlayerCardNames(root = document) {
             (root.matches?.('.player-card') ? root.querySelectorAll('.card-name') : root.querySelectorAll('.player-card .card-name')).forEach(el => {
                 el.style.fontSize = '';
-                const max = el.parentElement.clientWidth * (el.parentElement.matches('.science-card') ? .58 : .77);
+                const max = el.parentElement.clientWidth * (el.parentElement.matches('.science-card,.science-card-canvas') ? .58 : .77);
                 if (el.scrollWidth > max && max > 0) {
                     const size = parseFloat(getComputedStyle(el).fontSize);
                     el.style.fontSize = `${(size * max / el.scrollWidth / el.parentElement.clientWidth * 100).toFixed(3)}cqw`;
