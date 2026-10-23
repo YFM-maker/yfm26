@@ -7,7 +7,49 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
     <title>Yongsan Football Manager</title>
-    <script>
+    <script id="yfm-durable-v3-core">
+/* YFM durable persistence v3. No credentials are stored here. */
+(function(root){
+'use strict';
+const copy=v=>v==null?v:JSON.parse(JSON.stringify(v));
+const req=r=>new Promise((ok,no)=>{r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});
+const canonical=v=>JSON.stringify(v,(_,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):x);
+class YFMDurableStore {
+ constructor(options={}){this.options=options;this.dbPromise=null;this.running=new Map();this.timers=new Map();this.cache=new Map();this.session=null;this.owner=null;this.ready=false;this.localTail=Promise.resolve();}
+ open(){if(this.dbPromise)return this.dbPromise;this.dbPromise=new Promise((ok,no)=>{if(!root.indexedDB)return no(Error('INDEXEDDB_UNAVAILABLE'));const r=root.indexedDB.open('yfm-durable-account-save',3);r.onupgradeneeded=()=>{const d=r.result;for(const [name,key] of [['accounts','owner'],['operations',['owner','id']],['backups',['owner','generation']],['diagnostics',['owner','id']]])if(!d.objectStoreNames.contains(name))d.createObjectStore(name,{keyPath:key});};r.onsuccess=()=>{r.result.onversionchange=()=>{r.result.close();this.dbPromise=null;};ok(r.result);};r.onerror=()=>no(r.error);r.onblocked=()=>no(Error('INDEXEDDB_UPGRADE_BLOCKED'));}).catch(e=>{this.dbPromise=null;this.status('기기 저장 실패 · '+e.message,true);throw e;});return this.dbPromise;}
+ async tx(names,mode,fn){const d=await this.open();return new Promise((ok,no)=>{let t;try{t=d.transaction(names,mode,mode==='readwrite'?{durability:'strict'}:{});}catch(e){if(e.name!=='TypeError'&&e.name!=='NotSupportedError')throw e;t=d.transaction(names,mode);}const stores=Object.fromEntries(names.map(n=>[n,t.objectStore(n)]));let value;let failure; t.oncomplete=()=>ok(value);t.onabort=()=>no(failure||t.error||Error('INDEXEDDB_ABORTED'));t.onerror=()=>{};Promise.resolve().then(()=>fn(stores,t)).then(v=>{value=v;},e=>{failure=e;try{t.abort();}catch(_){no(e);}});});}
+ status(s,bad=false){this.options.status?.(s,bad);}
+ async account(owner){if(!owner)throw Error('ACCOUNT_REQUIRED');const a=await this.tx(['accounts'],'readonly',s=>req(s.accounts.get(owner)));if(a)this.cache.set(owner,a);return a||null;}
+ async mutate(owner,fn){const a=await this.tx(['accounts','backups'],'readwrite',async s=>{const old=await req(s.accounts.get(owner))||{owner,schema:3,generation:0,base:null,pending:null,event:null};const next=fn(copy(old));next.owner=owner;next.schema=3;next.generation=old.generation+1;s.accounts.put(next);return next;});this.cache.set(owner,a);return a;}
+ async checkpoint(owner,snapshot,base){const a=await this.mutate(owner,a=>{if(base!==undefined)a.base=copy(base);a.pending=copy(snapshot);return a;});this.status('기기 저장 완료 · 서버 동기화 대기');return a;}
+ async acknowledge(owner,snapshot,sent){const a=await this.tx(['accounts','backups'],'readwrite',async s=>{const a=await req(s.accounts.get(owner))||{owner,generation:0};const same=canonical(a.pending?.data)===canonical(sent?.data);a.base=copy(snapshot);if(same)a.pending=null;a.schema=3;a.generation++;if(!a.backupAt||Date.now()-a.backupAt>=600000){s.backups.put({owner,generation:a.generation,snapshot:copy(snapshot)});a.backupAt=Date.now();const all=await req(s.backups.getAll());const mine=all.filter(x=>x.owner===owner).sort((a,b)=>b.generation-a.generation);mine.slice(5).forEach(x=>s.backups.delete([owner,x.generation]));}s.accounts.put(a);return a;});this.cache.set(owner,a);return !!a.pending;}
+ async event(owner,value){if(value===undefined)return (await this.account(owner))?.event||null;return this.mutate(owner,a=>{a.event=copy(value);return a;});}
+ async operations(owner){return (await this.tx(['operations'],'readonly',s=>req(s.operations.getAll()))).filter(x=>x.owner===owner).sort((a,b)=>a.sequence-b.sequence);}
+ async enqueue(owner,kind,payload,id,session=this.session){if(!owner||!session)throw Error('LOAD_BARRIER');const op=await this.tx(['accounts','operations'],'readwrite',async s=>{const old=await req(s.operations.get([owner,id]));if(old){if(old.kind!==kind||canonical(old.payload)!==canonical(payload))throw Error('OPERATION_ID_REUSED');return old;}const a=await req(s.accounts.get(owner))||{owner,schema:3,generation:0};a.sequence=(a.sequence||0)+1;const o={owner,id,kind,payload:copy(payload),session,sequence:a.sequence,attempts:0,status:'pending',nextAttempt:0};s.accounts.put(a);s.operations.put(o);return o;});return op;}
+ async log(owner,op,stage,error){try{await this.tx(['diagnostics'],'readwrite',async s=>{const id=root.crypto.randomUUID();s.diagnostics.put({owner,id,operationId:op?.id||null,revision:op?.payload?.p_base_revision||null,stage,code:String(error?.code||error?.name||'ERROR').slice(0,70),message:String(error?.message||error||'').replace(/eyJ[A-Za-z0-9_.-]+/g,'[redacted]').slice(0,260)});const all=(await req(s.diagnostics.getAll())).filter(x=>x.owner===owner);all.slice(0,Math.max(0,all.length-100)).forEach(x=>s.diagnostics.delete([owner,x.id]));});}catch(_){} }
+ async updateOperation(op){await this.tx(['operations'],'readwrite',s=>{s.operations.put(op);});}
+ activate(owner,session){this.owner=owner;this.session=session;this.ready=true;}
+ deactivate(){this.ready=false;this.owner=null;this.session=null;for(const t of this.timers.values())clearTimeout(t);this.timers.clear();}
+ async drain(owner=this.owner,target=null){if(this.running.has(owner)){await this.running.get(owner);if(target)return this.drain(owner,target);return;}const run=async()=>{const lock=async()=>{for(const op of await this.operations(owner)){if(op.status==='reviewed'||op.status==='rejected')continue;if(!this.ready||this.owner!==owner)return;if(op.status==='quarantined')throw Object.assign(Error('이전 접속의 미전송 작업이 보관되어 있습니다. 충돌 확인이 필요합니다.'),{code:'SESSION_CONFLICT'});if(op.nextAttempt>Date.now()){this.schedule(owner,op.nextAttempt-Date.now());throw Object.assign(Error('동기화 실패 · 재시도 대기 중'),{code:'RETRY_WAIT'});}try{
+  // Query receipt FIRST. An old device may recover an ACK but may not execute a new write.
+  const known=await this.options.lookup(op);let result=known?.found?known.result:null;
+  if(!result){if(op.session!==this.session){op.status='quarantined';await this.updateOperation(op);throw Object.assign(Error('새 접속으로 저장 권한이 이전되었습니다. 이전 작업을 자동 업로드하지 않습니다.'),{code:'SESSION_CONFLICT'});}op.attempts++;op.status='sending';await this.updateOperation(op);result=await this.options.send(op);}
+  if(!result||typeof result.ok!=='boolean')throw Error('INVALID_SERVER_ACK');
+  if(result.conflict){op.status='quarantined';await this.updateOperation(op);await this.options.conflict?.(op,result);throw Object.assign(Error('서버 저장 버전 충돌 · 기기 기록 보관 중'),{code:'REVISION_CONFLICT'});}
+  if(!result.ok){op.status='rejected';op.result=result;await this.updateOperation(op);if(target===op.id)return result;continue;}
+  // Business rejection is an acknowledged receipt, not an unknown network outcome.
+  await this.options.applied?.(op,result);await this.tx(['operations'],'readwrite',s=>{s.operations.delete([owner,op.id]);});
+  if(target===op.id)return result;
+ }catch(e){await this.log(owner,op,'sync',e);if(['SESSION_CONFLICT','REVISION_CONFLICT','42501','22023'].includes(String(e.code))||op.status==='quarantined'){op.status='quarantined';await this.updateOperation(op);this.status(e.message,true);throw e;}op.status='pending';op.nextAttempt=Date.now()+Math.min(120000,2000*2**Math.min(op.attempts,6))+Math.floor(Math.random()*1000);await this.updateOperation(op);this.status('동기화 실패 · 재시도 중',true);this.schedule(owner,op.nextAttempt-Date.now());throw e;}}};return root.navigator?.locks?root.navigator.locks.request('yfm-sync:'+owner,lock):lock();};const promise=run();this.running.set(owner,promise);try{return await promise;}finally{if(this.running.get(owner)===promise)this.running.delete(owner);}}
+ schedule(owner,delay=0){clearTimeout(this.timers.get(owner));this.timers.set(owner,setTimeout(()=>{this.timers.delete(owner);if(this.ready&&this.owner===owner)this.drain(owner).catch(()=>{});},Math.max(0,delay)));}
+ async call(kind,payload,id){const owner=this.owner;if(!this.ready||!owner)throw Error('LOAD_BARRIER');await this.enqueue(owner,kind,payload,id);this.status('기기 저장 완료 · 서버 동기화 중');const result=await this.drain(owner,id);if(!result){const receipt=await this.options.lookup({owner,id});if(receipt?.found)return receipt.result;throw Error('SERVER_ACK_PENDING');}return result;}
+}
+try{const owner=root.localStorage?.getItem('yfm_cloud_owner');if(owner){const data={};for(let i=0;i<root.localStorage.length;i++){const k=root.localStorage.key(i);if(k?.startsWith('fm_')&&k!=='fm_items')data[k]=root.localStorage.getItem(k);}root.YFMLegacyBoot={owner,revision:root.localStorage.getItem('yfm_sync_revision'),snapshot:{app:'YFM',v:22,data}};}}catch(_){}
+root.YFMDurableStore=YFMDurableStore;
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
+<script>
         window.yfmResumingAccount = sessionStorage.getItem('yfm_account_resume') === '1';
         sessionStorage.removeItem('yfm_account_resume');
         if (window.yfmResumingAccount) document.documentElement.classList.add('account-resuming');
@@ -4025,12 +4067,7 @@
                     await enterGameAccount(data.user);
                     return;
                 }
-                if (accountLegacyUser && accountMode === 'signup' && !accountMigrationSave) {
-                    accountLoginStage='기존 계정 저장 기록 조회';
-                    const old=await client.from('game_progress').select('save_data').eq('user_id',accountLegacyUser.id).maybeSingle();
-                    if (old.error) throw old.error;
-                    accountMigrationSave=old.data?.save_data || accountSnapshot();
-                }
+                if(accountLegacyUser&&accountMode==='signup')throw Error('다른 계정 ID로의 자동 기록 이전을 중단했습니다. 기존 ID로 로그인해 주세요. 원본 기록은 유지됩니다.');
                 accountLoginStage=accountMode==='signup'?'회원가입 인증 요청':'아이디·비밀번호 인증 요청';
                 const result = accountMode === 'signup'
                     ? await client.auth.signUp({email,password,options:{data:{username:id,owner_name:ownerName}}})
@@ -4038,17 +4075,6 @@
                 if (result.error) throw result.error;
                 accountLoginStage='인증 세션 응답 확인';
                 if (!result.data.session) throw new Error('Supabase Auth의 이메일 확인을 꺼야 아이디 가입 후 바로 로그인할 수 있어.');
-                if (accountLegacyUser && accountMode === 'signup') {
-                    const migration=accountMigrationSave;
-                    accountLoginStage='기존 계정 저장 기록 이전';
-                    const copied=await client.from('game_progress').upsert({user_id:result.data.user.id,save_data:migration},{onConflict:'user_id'});
-                    if (copied.error) throw copied.error;
-                    restoreAccountSnapshot(migration);
-                    localStorage.setItem(accountDeviceKey,result.data.user.id);
-                    sessionStorage.setItem('yfm_restored_account',result.data.user.id);
-                    accountLegacyUser=null;accountMigrationSave=null;
-                    reloadForAccountRestore(); return;
-                }
                 accountLegacyUser=null;
                 await enterGameAccount(result.data.user);
             } catch(error) {
@@ -4082,8 +4108,14 @@
         function awardTokens(amount,source='game_reward',requestId=null){
             const n=Math.floor(Number(amount)||0);if(n<=0)return Promise.resolve(true);
             if(!accountUser?.id){tokens+=n;localStorage.setItem('fm_tokens',String(tokens));updateTokensUI();return Promise.resolve(true);}
-            return queueWalletOperation(async()=>{const {data,error}=await walletRpcWithRetry('yfm_wallet_credit',{p_amount:n,p_source:String(source||'game_reward'),p_request_id:requestId||(crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)}))});if(error)throw error;if(!data?.ok){applyServerWallet(data?.balance);if(source!=='league_reward'&&typeof managerToast==='function')managerToast('서버 토큰 한도에 걸려 보상이 지급되지 않았어.');return false;}applyServerWallet(data.balance);accountDirty=true;saveData();return true;}).catch(async e=>{console.warn('서버 토큰 지급 실패:',e);try{await loadServerWallet();}catch(_){}if(source!=='league_reward'&&typeof managerToast==='function')managerToast(walletErrorMessage(e,'토큰 보상 지급'));return false;});
+            const owner=accountUser.id;let id=requestId;
+            if(!id&&source==='attendance')id=stableRewardId(owner+':attendance:'+dailyToday());
+            if(!id&&source==='tutorial_reward')id=stableRewardId(owner+':tutorial:v1');
+            if(!id&&currentMatchState?.resultProcessed&&['match_reward','competition_reward','rogue_reward'].includes(source)){const st=currentMatchState;st.saveOperationId=st.saveOperationId||walletRequestId();st.rewardSequence=st.rewardSequence||{};const index=st.rewardSequence[source]||0;st.rewardSequence[source]=index+1;id=stableRewardId(owner+':'+st.saveOperationId+':'+source+':'+index);}
+            id=id||walletRequestId();tokenWalletPending++;
+            return (async()=>{if(accountUser?.id!==owner)throw Error('ACCOUNT_CHANGED');const {data}=await walletRpcWithRetry('yfm_wallet_credit',{p_amount:n,p_source:String(source||'game_reward'),p_request_id:id});if(accountUser?.id!==owner)throw Error('ACCOUNT_CHANGED');if(!data?.ok){applyServerWallet(data.balance);return false;}applyServerWallet(data.balance);accountDirty=true;saveData();await durableLocalTail;return true;})().catch(e=>{console.warn('보상 승인 확인 대기:',e);saveStatus('보상 승인 대기 · 기기 기록 보관 · 자동 재시도 중',true);return false;}).finally(()=>{tokenWalletPending=Math.max(0,tokenWalletPending-1);if(accountUser?.id===owner&&accountDirty)planDurableSave();});
         }
+        function stableRewardId(text){const a=[2166136261,2246822519,3266489917,668265263];for(let j=0;j<text.length;j++)for(let i=0;i<4;i++)a[i]=Math.imul(a[i]^text.charCodeAt(j),16777619+i*2)>>>0;const x=a.map(v=>v.toString(16).padStart(8,'0')).join('');return x.slice(0,8)+'-'+x.slice(8,12)+'-4'+x.slice(13,16)+'-a'+x.slice(17,20)+'-'+x.slice(20);}
         function walletRequestId(){return crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)});}
         function walletErrorMessage(error,action='토큰 결제'){
             const code=String(error?.code||'UNKNOWN'),message=String(error?.message||error||'알 수 없는 오류');
@@ -4156,6 +4188,7 @@
                 alert(walletErrorMessage(error));return false;
             });
         }
+
         let assetMigrationRetryAt=0,assetMigrationOwner=null,lightSaveAvailable=null;
         async function optimizeAccountLogo(owner){
             if(assetMigrationOwner!==owner){assetMigrationOwner=owner;assetMigrationRetryAt=0;}
@@ -4290,11 +4323,10 @@
             return true;
         }
         function cloudMatchInProgress() { return !!(currentMatchState&&!currentMatchState.ended&&!currentMatchState.resultProcessed); }
-        function restoreSyncedAccount(owner,snapshot) {
+        async function restoreSyncedAccount(owner,snapshot) {
             if(accountUser?.id!==owner)return false;
-            rememberLeagueProgress(owner);
-            snapshot=mergeAdvancedLeague(snapshot,readLeagueCheckpoint(owner));
-            accountSyncBase=snapshot;storeSaveRecord(owner,{...readSaveRecord(owner),base:snapshot,pending:null});
+            validateAccountSave(snapshot);
+            accountSyncBase=snapshot;await storeSaveRecord(owner,{...readSaveRecord(owner),base:snapshot,pending:null});
             rememberCloudRestore(owner,snapshot);
             window.__wiping=true;
             restoreAccountSnapshot(snapshot,owner);
@@ -4329,10 +4361,10 @@
             const data = {};
             for (let i=0;i<localStorage.length;i++) {
                 const key=localStorage.key(i);
-                if (key?.startsWith('fm_') && key !== 'fm_items') data[key]=localStorage.getItem(key);
+                if (key?.startsWith('fm_') && key !== 'fm_items') {let value=localStorage.getItem(key);if(key==='fm_halloween_progress'){try{const event=JSON.parse(value);delete event.updatedAt;value=JSON.stringify(event);}catch(_){}}data[key]=value;}
             }
             if(accountUser?.id&&Number.isSafeInteger(tokenWalletBalance)&&tokenWalletBalance>=0)data.fm_tokens=String(tokenWalletBalance);
-            return {app:'YFM',v:22,at:new Date().toISOString(),data:compactTournamentLogos(data)};
+            return {app:'YFM',v:22,schemaVersion:3,at:new Date().toISOString(),data:compactTournamentLogos(data)};
         }
         // 서버 기록으로 복원한 뒤 새로고침되기 전까지, 이 화면에 남아 있던 옛 메모리 값이 fm_ 저장소를 다시 덮어쓰지 못하게 잠근다.
         // (새로고침하는 순간 visibilitychange → dailyTick → 업적 정리가 옛 기록실·업적 데이터를 저장해, 복원한 기록이 초기화되던 문제)
@@ -4363,42 +4395,84 @@
             const keepStats=owner&&localStorage.getItem(accountDeviceKey)===owner?localStorage.getItem('fm_stats'):null;   // 같은 계정의 기기 기록만 합친다
             Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
             Object.entries(expandTournamentLogos(snapshot.data)).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && typeof v==='string') localStorage.setItem(k,v);});
-            if(keepStats){try{const merged=mergeRecordStats(keepStats,localStorage.getItem('fm_stats'));if(merged)localStorage.setItem('fm_stats',merged);}catch(e){console.warn('기록실 기록 합치기 실패:',e);}}
+            // No counter/inventory merge during authoritative restore; old data remains in IndexedDB quarantine.
             window.__restoreLock=true;window.__wiping=true;   // 복원 뒤에는 항상 새로고침한다
         }
         // One acknowledged baseline and one unacknowledged snapshot per account.
         let accountSyncBase=null,accountSaveTimer=null,accountSaveConflict=null,accountJournalWarned=false,accountSaveFailures=0;
+// Account-owned IndexedDB state is authoritative for unacknowledged work.
+let durableLocalTail=Promise.resolve(),durableLocalError=null,durableCapturing=false;
+const durableRawRpc=walletRpcWithRetry;
+const durableStore=new YFMDurableStore({
+ status:(s,e)=>saveStatus(s,e),
+ lookup:async op=>{if(accountUser?.id!==op.owner)throw Error('ACCOUNT_CHANGED');const {data}=await durableRawRpc('yfm_sync_status',{p_operation:op.id},{maxAttempts:1});return data;},
+ send:async op=>{if(accountUser?.id!==op.owner||!window.yfmAccountReady&&op.kind!=='snapshot')throw Error('LOAD_BARRIER');const {data}=await durableRawRpc('yfm_sync_commit',{p_operation:op.id,p_kind:op.kind,p_payload:op.payload,p_origin_session:op.session},{maxAttempts:1,timeoutMs:18000});return data;},
+ conflict:async(op,result)=>{await durableStore.mutate(op.owner,a=>{a.conflict={operationId:op.id,remote:result.save_data};return a;});showSaveConflict(op.owner,result.save_data,['서버 버전 변경']);},
+ applied:async(op,result)=>{
+  if(op.kind==='snapshot'&&result.ok){await durableStore.acknowledge(op.owner,result.save_data,op.payload.p_snapshot);
+   if(accountUser?.id===op.owner&&(!accountSyncBase||result.save_data.sync_revision>=accountSyncBase.sync_revision)){accountSyncBase=result.save_data;accountLastSnapshot=canonData(result.save_data.data);accountDirty=cloudSnapshotFingerprint(accountSnapshot())!==cloudSnapshotFingerprint(result.save_data);}
+  }
+  // Persist the ACK before removing the operation. A reload recovers the receipt.
+  else if(result.save_data&&result.ok){await durableStore.mutate(op.owner,a=>{a.receipt={operationId:op.id,kind:op.kind,result};return a;});}
+ }
+});
+window.YFMSave={store:durableStore,flushLocal:()=>durableLocalTail};
+function enqueueLocalSave(task){const run=durableLocalTail.then(task,task).then(v=>{durableLocalError=null;return v;});durableLocalTail=run.catch(e=>{durableLocalError=e;saveStatus('기기 저장 실패 · '+(e?.name||e?.message||'저장소 오류'),true);throw e;});durableLocalTail.catch(()=>{});return run;}
+function validateAccountSave(snapshot){if(snapshot?.app!=='YFM'||!snapshot.data||Array.isArray(snapshot.data))throw Error('SAVE_CORRUPT');let list;try{list=JSON.parse(snapshot.data.fm_players);}catch(_){throw Error('SAVE_CORRUPT_PLAYERS');}if(!Array.isArray(list))throw Error('SAVE_CORRUPT_PLAYERS');if(snapshot.sync_revision!=null&&!Number.isSafeInteger(snapshot.sync_revision))throw Error('SAVE_CORRUPT_REVISION');return snapshot;}
+async function durableRequest(kind,args,id){await durableLocalTail;return durableStore.call(kind,args,id||walletRequestId());}
+async function durableSessionId(owner){const {data,error}=await getOwnerRankClient().auth.getSession();if(error)throw error;if(data?.session?.user?.id!==owner)throw Error('ACCOUNT_CHANGED');const part=data.session.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');const sid=JSON.parse(atob(part)).session_id;if(!sid)throw Error('SESSION_REQUIRED');return sid;}
+function applyGameplayReceipt(data){if(!data?.ok||!data.save_data)throw Error('서버에서 거래를 승인하지 않았습니다. '+(data?.reason||''));const accepted=validateAccountSave(data.save_data);players=JSON.parse(accepted.data.fm_players).map(p=>ensure(p));evoTokens=Number(accepted.data.fm_evo_tokens)||0;localStorage.setItem('fm_halloween_tickets',accepted.data.fm_halloween_tickets||'0');applyServerWallet(data.balance);accountSyncBase=accepted;accountLastSnapshot=canonData(accepted.data);localStorage.setItem('yfm_sync_revision',String(accepted.sync_revision));accountDirty=true;saveData();return data;}
+function archiveLocalSave(a,entry){a.quarantines=a.quarantines||[];for(const v of [a.quarantine,entry])if(v&&!a.quarantines.some(x=>JSON.stringify(x)===JSON.stringify(v)))a.quarantines.push(v);a.quarantine=entry;return a;}
+async function consumeDurableReceipt(owner=accountUser?.id){await durableLocalTail;await durableStore.mutate(owner,a=>{if(a.receipt)a.receipt.handled=true;return a;});}
+async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAccountReady)throw Error('로그인 후 이용해 주세요.');if(navigator.onLine===false)throw Error('서버 연결 후 거래할 수 있습니다. 진행 기록은 기기에 보관됩니다.');saveData();await durableLocalTail;await uploadAccountSnapshot(true);if(accountDirty||accountSaveConflict)throw Error('진행도 동기화가 완료된 뒤 다시 시도해 주세요.');const result=await durableRequest(kind,{...payload,revision:String(accountSyncBase.sync_revision)});applyGameplayReceipt(result);await consumeDurableReceipt();return result;}
+
+        walletRpcWithRetry=async function(name,args,options={}){
+            const financial=['yfm_wallet_credit','yfm_wallet_debit','yfm_claim_rewards_v2','yfm_redeem_coupon'].includes(name)||name==='yfm_halloween_rpc'&&['start','finish_local','purchase'].includes(args?.p_action);
+            if(!financial)return durableRawRpc(name,args,options);
+            if(!window.yfmAccountReady||!durableStore.ready)throw Error('LOAD_BARRIER');
+            const owner=accountUser?.id,payload=JSON.parse(JSON.stringify(args||{}));
+            if(name==='yfm_wallet_credit'){
+                // End-of-action microtask: capture all synchronous reward/progression changes together.
+                await Promise.resolve();saveData();await durableLocalTail;
+                payload._snapshot=accountSnapshot();payload._revision=accountSyncBase?.sync_revision!=null?String(accountSyncBase.sync_revision):null;
+            }
+            if(accountUser?.id!==owner||durableStore.owner!==owner)throw Error('ACCOUNT_CHANGED');
+            const explicit=payload.p_request_id||payload.p_payload?.request_id;
+            const waiting=await durableStore.operations(owner);
+            const same=waiting.find(x=>x.kind===name&&JSON.stringify(x.payload)===JSON.stringify(payload));
+            const data=await durableRequest(name,payload,explicit||same?.id||walletRequestId());
+            if(accountUser?.id!==owner)throw Error('ACCOUNT_CHANGED');
+            if(name==='yfm_wallet_credit'&&data.save_data){accountSyncBase=data.save_data;accountLastSnapshot=canonData(data.save_data.data);await durableStore.acknowledge(owner,data.save_data,payload._snapshot);await consumeDurableReceipt(owner);}
+            return {data,error:null};
+        };
+
         function saveRecordKey(owner){return 'yfm_durable_save_v1_'+owner;}
-        function readSaveRecord(owner){try{const r=JSON.parse(localStorage.getItem(saveRecordKey(owner))||'null');return r?.owner===owner?r:null;}catch(_){return null;}}
+        function readSaveRecord(owner){return durableStore.cache.get(owner)||null;}
         function saveStatus(text,failed=false){
             let el=document.getElementById('yfm-durable-save-status');
             if(!el){el=document.createElement('div');el.id='yfm-durable-save-status';el.style.cssText='position:fixed;bottom:8px;right:8px;z-index:100001;max-width:90vw;padding:7px 10px;border-radius:8px;background:#181126;color:white;font:12px sans-serif';document.body.append(el);}
             el.textContent=text;el.style.color=failed?'#fca5a5':'#c4f9ce';
         }
         function storeSaveRecord(owner,record){
-            try{localStorage.setItem(saveRecordKey(owner),JSON.stringify({owner,...record}));return true;}
-            catch(e){if(!accountJournalWarned){accountJournalWarned=true;saveStatus('기기 저장 공간이 부족합니다. 서버 저장 완료를 확인해 주세요.',true);}return false;}
+            return enqueueLocalSave(()=>durableStore.mutate(owner,a=>({...a,...record,owner})));
         }
         function preservePendingSave(owner=accountUser?.id){
-            if(!owner||window.__wiping||localStorage.getItem(accountDeviceKey)!==owner)return null;
-            const snapshot=accountSnapshot(),record=readSaveRecord(owner);
-            const base=accountSyncBase||record?.base||null;
-            if(base&&cloudSnapshotFingerprint(snapshot)===cloudSnapshotFingerprint(base)&&!record?.pending)return null;
-            storeSaveRecord(owner,{base,pending:snapshot});return snapshot;
+            if(!owner||window.__wiping||localStorage.getItem(accountDeviceKey)!==owner)return durableLocalTail;
+            const snapshot=accountSnapshot(),base=accountSyncBase||readSaveRecord(owner)?.base||null;
+            if(base&&cloudSnapshotFingerprint(snapshot)===cloudSnapshotFingerprint(base)&&!readSaveRecord(owner)?.pending)return durableLocalTail;
+            return enqueueLocalSave(()=>durableStore.checkpoint(owner,snapshot,base));
         }
         function confirmDurableSave(owner,snapshot){
             accountSyncBase=JSON.parse(JSON.stringify(snapshot));
-            const current=accountSnapshot();
-            const dirty=cloudSnapshotFingerprint(current)!==cloudSnapshotFingerprint(snapshot);
-            storeSaveRecord(owner,{base:accountSyncBase,pending:dirty?current:null});
+            const current=accountSnapshot(),dirty=cloudSnapshotFingerprint(current)!==cloudSnapshotFingerprint(snapshot);
+            enqueueLocalSave(()=>durableStore.acknowledge(owner,snapshot,current));
+            if(dirty)enqueueLocalSave(()=>durableStore.checkpoint(owner,current,snapshot));
             return dirty;
         }
         function planDurableSave(){
             if(!accountUser?.id||!window.yfmAccountReady||window.__wiping)return;
-            preservePendingSave();clearTimeout(accountSaveTimer);
-            // Coalesce actions; the match renderer and Broadcast timing are unchanged.
-            accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.max(1000,5000-(Date.now()-accountLastWrite)));
-            saveStatus('기기에 보관됨 · 서버 저장 대기');
+            preservePendingSave().catch(()=>{});clearTimeout(accountSaveTimer);
+            accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.max(300,1500-(Date.now()-accountLastWrite)));
         }
         function mergeSaveChanges(local,remote,base){
             if(!base?.data)return {snapshot:local,conflicts:['기준 저장 기록 없음']};
@@ -4408,6 +4482,7 @@
                 if(key==='fm_tokens')continue;
                 const before=base.data[key],mine=local.data[key],theirs=remote.data[key];
                 if(same(mine,before)||same(mine,theirs))continue;
+                if(/players|tokens|tickets|inventory|claimed|daily|achievements|halloween_progress/.test(key)){conflicts.push(key);continue;}
                 if(!same(theirs,before)){conflicts.push(key);continue;}
                 if(mine===undefined)delete result.data[key];else result.data[key]=mine;
             }
@@ -4415,23 +4490,20 @@
         }
         function showSaveConflict(owner,remote,conflicts){
             if(accountUser?.id!==owner)return;
-            accountSaveConflict={owner,remote,conflicts};saveStatus('저장 충돌 · 기기 진행도는 보관 중입니다',true);
+            accountSaveConflict={owner,remote,conflicts};saveStatus('저장 충돌 · 미전송 기록은 기기에 보관됩니다',true);
             if(document.getElementById('yfm-save-conflict'))return;
-            const box=document.createElement('div');box.id='yfm-save-conflict';box.style.cssText='position:fixed;bottom:50px;right:10px;z-index:100002;width:min(400px,94vw);padding:16px;background:#21142e;border:2px solid #fd9f28;border-radius:12px;color:white;font:14px sans-serif';
-            const text=document.createElement('p');text.textContent='저장 기록이 충돌했습니다. 현재 진행도는 기기에 보관됩니다. 현재 기기의 진행도를 서버에 저장하려면 아래 버튼을 눌러 주세요.';box.append(text);
-            const button=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.style.cssText='display:block;width:100%;padding:9px;margin-top:8px;background:#65408a;border-radius:7px';b.onclick=fn;box.append(b);};
-            button('현재 기기 기록으로 저장',async()=>{
-                const conflict=accountSaveConflict;if(!conflict||accountUser?.id!==owner)return;
-                if(conflict.remote.data.fm_admin_revision!==accountSnapshot().data.fm_admin_revision){alert('관리자 변경 사항이 있어 현재 기록으로 덮어쓸 수 없습니다. 현재 진행도는 기기에 보관됩니다.');return;}
-                if(!confirm('다른 기기의 변경 사항 대신 현재 기기의 기록을 서버에 저장할까요?'))return;
-                accountSyncBase=conflict.remote;accountSaveConflict=null;box.remove();accountDirty=true;preservePendingSave();await uploadAccountSnapshot(true);
-            });
-            document.body.append(box);
+            const box=document.createElement('div');box.id='yfm-save-conflict';box.style.cssText='position:fixed;bottom:50px;right:10px;z-index:100002;padding:16px;max-width:94vw;background:#21142e;color:white;border:2px solid #fd9f28;border-radius:12px';
+            const text=document.createElement('p');text.textContent='다른 저장 버전과 충돌했습니다. 미전송 기록은 보존하며 선수·재화를 자동 합산하지 않습니다.';
+            const button=document.createElement('button');button.textContent='서버 기록으로 다시 열기 · 기기 기록은 복구용으로 보관';button.onclick=async()=>{
+                button.disabled=true;try{await durableLocalTail;for(const op of await durableStore.operations(owner)){if(op.status==='quarantined'){op.status='reviewed';await durableStore.updateOperation(op);}}await durableStore.mutate(owner,a=>{archiveLocalSave(a,{pending:a.pending,base:a.base,conflict:a.conflict,event:a.event});if(a.event)a.event={...a.event,queue:[]};a.pending=null;a.conflict=null;return a;});
+                // Quarantined operations are intentionally retained for receipt lookup / review.
+                rememberCloudRestore(owner,remote);restoreAccountSnapshot(remote,owner);reloadForAccountRestore();}catch(e){button.disabled=false;saveStatus('복구 준비 실패: '+e.message,true);}
+            };box.append(text,button);document.body.append(box);
         }
         async function uploadAccountSnapshot(force=false,initialSave=false){
             if(!accountUser||window.__wiping||(!window.yfmAccountReady&&!initialSave))return;
             const owner=accountUser.id;
-            preservePendingSave(owner);
+            try{await preservePendingSave(owner);}catch(e){saveStatus('기기 저장 실패 · 서버 전송을 중단했습니다',true);return;}
             if(!initialSave&&Date.now()<serverLoadState.until){
                 saveStatus('서버 응답 지연 · 기기 보관 · 잠시 후 재시도',true);
                 clearTimeout(accountSaveTimer);accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.max(1500,serverLoadState.until-Date.now()+Math.random()*2000));return;
@@ -4442,13 +4514,17 @@
             try{
                 if(window.yfmAccountReady)await optimizeAccountLogo(owner);
                 if(accountUser?.id!==owner||window.__wiping||tokenWalletPending>0)return;
+                await durableLocalTail;
+                if((await durableStore.operations(owner)).length)await durableStore.drain(owner);
+                const unhandled=(await durableStore.account(owner))?.receipt;
+                if(unhandled&&!unhandled.handled){saveStatus('서버 거래 확인 완료 · 새로고침해 확정 기록을 불러와 주세요',true);return;}
                 let snapshot=accountSnapshot(),base=accountSyncBase||readSaveRecord(owner)?.base;
                 if(canonData(snapshot.data)===accountLastSnapshot){accountDirty=false;confirmDurableSave(owner,base||snapshot);return;}
                 // Capture local data BEFORE the request; a close/timeout cannot erase it.
-                preservePendingSave(owner);saveStatus('서버에 저장 중…');
+                await preservePendingSave(owner);saveStatus('서버 동기화 중');
                 const walletVersion=tokenWalletRevision;
                 for(let attempt=0;attempt<2;attempt++){
-                    const reply=await walletRpcWithRetry('yfm_save_progress_v2',{p_snapshot:snapshot,p_base_at:base?.at||null,p_base_revision:base?.sync_revision!=null?String(base.sync_revision):null},{maxAttempts:2});
+                    const reply={data:await durableRequest('snapshot',{p_snapshot:{...snapshot,schemaVersion:3},p_base_revision:base?.sync_revision!=null?String(base.sync_revision):null})};
                     if(accountUser?.id!==owner||window.__wiping)return;
                     const data=reply.data,accepted=data?.save_data;
                     if(!accepted?.data||!Number.isSafeInteger(accepted.sync_revision)||!Number.isSafeInteger(Number(data.balance)))throw new Error('서버 저장 결과를 확인하지 못했습니다.');
@@ -4457,7 +4533,7 @@
                         if(merged.conflicts.length||cloudMatchInProgress()||attempt===1){showSaveConflict(owner,accepted,merged.conflicts);return;}
                         // Restore only a completed, non-overlapping rebase. The merged
                         // unsent record survives the reload and is sent on next login.
-                        storeSaveRecord(owner,{base:accepted,pending:merged.snapshot});
+                        await storeSaveRecord(owner,{base:accepted,pending:merged.snapshot});
                         restoreAccountSnapshot(merged.snapshot);rememberCloudRestore(owner,merged.snapshot);
                         localStorage.setItem(accountDeviceKey,owner);reloadForAccountRestore();return;
                     }
@@ -4469,13 +4545,11 @@
                     accountDirty=confirmDurableSave(owner,accepted);rememberLeagueProgress(owner,accepted);
                     // Server normalization must never overwrite actions made while
                     // this request was in flight. Keep them pending for the next save.
-                    if(cloudSnapshotFingerprint(accepted)!==cloudSnapshotFingerprint(snapshot)&&cloudSnapshotFingerprint(localNow)===cloudSnapshotFingerprint(snapshot)){
-                        storeSaveRecord(owner,{base:accepted,pending:null});restoreSyncedAccount(owner,accepted);return;
-                    }
-                    saveStatus(accountDirty?'새 변경 사항 저장 대기':'서버 저장 완료');
+                    // An ACK advances only the baseline; newer local actions remain pending.
+                    await durableLocalTail;saveStatus(accountDirty?'기기 저장 완료 · 서버 동기화 대기':'서버 동기화 완료');
                     if(accountDirty)planDurableSave();return;
                 }
-            }catch(e){accountDirty=true;preservePendingSave(owner);saveStatus('서버 저장 실패 · 기기 보관 · 자동 재시도 중',true);console.warn('클라우드 저장 실패:',e);accountSaveFailures=Math.min(5,accountSaveFailures+1);clearTimeout(accountSaveTimer);if(!window.__wiping&&accountUser?.id===owner)accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.min(60000,3000*2**accountSaveFailures));}
+            }catch(e){accountDirty=true;preservePendingSave(owner).catch(()=>{});saveStatus('서버 저장 실패 · 기기 보관 · 자동 재시도 중',true);console.warn('클라우드 저장 실패:',e);accountSaveFailures=Math.min(5,accountSaveFailures+1);clearTimeout(accountSaveTimer);if(!window.__wiping&&accountUser?.id===owner)accountSaveTimer=setTimeout(()=>uploadAccountSnapshot(true),Math.min(60000,3000*2**accountSaveFailures));}
             finally{accountSaving=false;}
         }
 
@@ -4552,114 +4626,64 @@
         window.addEventListener('online',heartbeatGameSession);
 
         async function enterGameAccount(user) {
-            await claimGameSession(user);
-            accountLoginStage='게임 진입 준비';accountMessage('계정 이용 상태와 저장 기록을 확인하는 중...');
-            let data,balance,bundleFallback=false;
-            if(startupBundleAvailable!==false){
-                try{
-                    accountLoginStage='계정 상태·저장 기록 통합 조회 (yfm_startup_bundle)';
-                    const reply=await walletRpcWithRetry('yfm_startup_bundle',{}, {maxAttempts:1,timeoutMs:18000});
-                    if(!reply.data?.status)throw new Error('로그인 서버 응답이 올바르지 않습니다.');
-                    startupBundleAvailable=true;
-                    accountLoginStage='계정 이용 가능 여부 확인';
-                    if(!(await checkGameAccess(user.id,true,reply.data.status)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
-                    accountLoginStage='통합 응답 토큰 잔액 검증';
-                    if(!Number.isSafeInteger(Number(reply.data.balance))||Number(reply.data.balance)<0)throw new Error('토큰 잔액을 확인하지 못했습니다.');
-                    data={save_data:reply.data.save_data};balance=Number(reply.data.balance);
-                }catch(e){
-                    if(['PGRST202','42883'].includes(String(e.code)))startupBundleAvailable=false;
-                    // 한 번에 받는 묶음 응답이 느리면(시간 초과·네트워크) 상태 확인과 저장 기록을 나눠서 다시 받는다
-                    else if(e?.code==='CLIENT_TIMEOUT'||/Failed to fetch|NetworkError|Load failed|abort|timeout/i.test(String(e?.message||e))){bundleFallback=true;accountMessage('서버 응답이 느려 나눠서 불러오는 중...');}
-                    else throw e;
-                }
-            }
-            if(startupBundleAvailable===false||bundleFallback){
-                accountLoginStage='계정 이용 상태 조회';
-                if(!(await checkGameAccess(user.id,true)))throw new Error('계정이 정지되어 게임을 이용할 수 없습니다.');
-                accountMessage('저장 기록을 불러오는 중...');
-                accountLoginStage='게임 저장 기록 조회 (game_progress)';
-                data=(await boundedProgressRead(user.id)).data;
-                // 나눠 받은 경로에서 저장 기록이 비어 오면 '새 계정'으로 단정하지 않는다. 처음 시작한 데이터로 서버 기록을 덮어쓰지 않도록 다시 로그인하게 한다.
-                if(bundleFallback&&!data?.save_data)throw {code:'CLIENT_TIMEOUT',message:'저장 기록을 확인하지 못했습니다.'};
-            }
-            accountLoginStage='게임 저장 기록 복원·기기 저장소 처리';
+            window.yfmAccountReady=false;durableStore.deactivate();
+            accountLoginStage='기기 저장소 확인';await durableStore.open();
             const previousOwner=localStorage.getItem(accountDeviceKey);
-            let journal=readSaveRecord(user.id);
-            // First upgrade: preserve an existing unconfirmed device save BEFORE
-            // the older login code gets a chance to replace it with server data.
-            if(!journal&&previousOwner===user.id&&window.yfmHadLocalProgress&&data?.save_data&&
-               cloudSnapshotFingerprint(accountSnapshot())!==cloudSnapshotFingerprint(data.save_data)){
-                const lastRevision=localStorage.getItem('yfm_sync_revision');
-                const oldBase={app:'YFM',at:localStorage.getItem('yfm_sync_at')||null,data:null};
-                if(lastRevision!==null&&Number.isSafeInteger(Number(lastRevision)))oldBase.sync_revision=Number(lastRevision);
-                storeSaveRecord(user.id,{base:oldBase,pending:accountSnapshot()});journal=readSaveRecord(user.id);
+            let journal=await durableStore.account(user.id);
+            if(!journal){
+                let legacy=null;try{legacy=JSON.parse(localStorage.getItem(saveRecordKey(user.id))||'null');}catch(e){await durableStore.log(user.id,null,'legacy-corrupt',e);}
+                let event=null;try{event=JSON.parse(localStorage.getItem('yfm_halloween_checkpoint_'+user.id)||localStorage.getItem('fm_halloween_progress')||'null');}catch(e){await durableStore.log(user.id,null,'event-legacy-corrupt',e);}
+                if(event?.owner!==user.id)event=null;
+                if(legacy?.owner===user.id){if(legacy.pending)validateAccountSave(legacy.pending);journal=await durableStore.mutate(user.id,a=>({...a,...legacy,event}));}
+                else journal=await durableStore.mutate(user.id,a=>({...a,event,legacySource:window.YFMLegacyBoot?.owner===user.id?window.YFMLegacyBoot:null}));
             }
-            const pending=journal?.pending;
-            accountSyncBase=journal?.base||data?.save_data||null;
-            if(pending&&!window.yfmResumingAccount){
-                restoreAccountSnapshot(pending,user.id);rememberCloudRestore(user.id,pending);
-                localStorage.setItem(accountDeviceKey,user.id);reloadForAccountRestore();return;
+            await claimGameSession(user);const sid=await durableSessionId(user.id);
+            accountLoginStage='계정 상태와 서버 기록 확인';if(!(await checkGameAccess(user.id,true)))throw Error('계정 이용 권한이 없습니다.');
+            // maybeSingle null is an explicit absent row; transport and parse errors always abort login.
+            const response=await boundedProgressRead(user.id);let remote=response.data?.save_data||null;
+            if(remote)validateAccountSave(remote);
+            accountUser=user;accountSyncBase=remote;accountSaveConflict=null;durableStore.activate(user.id,sid);
+            // Recover immutable transaction receipts before evaluating the pending snapshot.
+            for(const op of await durableStore.operations(user.id)){
+                if(op.status==='reviewed'||op.status==='rejected')continue;
+                const found=await durableStore.options.lookup(op);
+                if(found?.found){if(found.result?.ok!==true){op.status='rejected';op.result=found.result;await durableStore.updateOperation(op);continue;}await durableStore.options.applied(op,found.result);await durableStore.tx(['operations'],'readwrite',s=>{s.operations.delete([user.id,op.id]);});}
+                else if(op.session!==sid){op.status='quarantined';await durableStore.updateOperation(op);}
             }
-
-            const serverBeforeMerge=data?.save_data?canonData(data.save_data.data):'';
-            if(data?.save_data&&!pending){
-                localStorage.setItem('yfm_sync_revision',String(Number.isSafeInteger(data.save_data.sync_revision)?data.save_data.sync_revision:0));
-                if(previousOwner===user.id&&window.yfmHadLocalProgress){
-                    rememberLeagueProgress(user.id,accountSnapshot());
-                    data.save_data=mergeAdvancedLeague(data.save_data,accountSnapshot());
+            journal=await durableStore.account(user.id);
+            if(journal.receipt&&!journal.receipt.handled&&remote){
+                // Keep the unsent predecessor for inspection. Assets always come from the server receipt.
+                await durableStore.mutate(user.id,a=>{if(a.pending)archiveLocalSave(a,{pending:a.pending,base:a.base,reason:'receipt-recovery'});const recovered={...remote,data:{...remote.data}};
+                for(const [key,value] of Object.entries(a.pending?.data||{}))if(!/players|tokens|tickets|inventory|daily|achievements|halloween_progress/.test(key)&&a.base?.data?.[key]===remote.data[key])recovered.data[key]=value;
+                a.pending=cloudSnapshotFingerprint(recovered)!==cloudSnapshotFingerprint(remote)?recovered:null;a.receipt=null;a.base=remote;return a;});journal=await durableStore.account(user.id);
+            }
+            if(remote&&(await durableStore.operations(user.id)).some(op=>op.status==='quarantined'))showSaveConflict(user.id,remote,['이전 접속의 미전송 작업']);
+            if(!journal.base&&!journal.pending&&journal.legacySource?.snapshot?.data?.fm_players&&remote){const old=journal.legacySource;validateAccountSave(old.snapshot);if(cloudSnapshotFingerprint(old.snapshot)!==cloudSnapshotFingerprint(remote)){if(old.revision!==String(remote.sync_revision)){await durableStore.mutate(user.id,a=>{archiveLocalSave(a,{pending:old.snapshot,reason:'legacy-revision-unknown'});return a;});showSaveConflict(user.id,remote,['기존 기기 기록의 버전 불일치']);throw Error('기존 기기 기록을 보관하고 자동 업로드를 중단했습니다.');}journal=await durableStore.mutate(user.id,a=>({...a,base:remote,pending:old.snapshot}));}}
+            let pending=journal.pending;
+            if(pending&&remote&&journal.base?.sync_revision!==remote.sync_revision){
+                const merged=mergeSaveChanges(pending,remote,journal.base);
+                if(merged.conflicts.length){await durableStore.mutate(user.id,a=>{a.conflict={remote,keys:merged.conflicts};return a;});showSaveConflict(user.id,remote,merged.conflicts);throw Error('저장 버전 충돌: 기기 기록은 보관되었습니다. 충돌 안내에서 서버 기록으로 다시 열 수 있습니다.');}
+                pending=merged.snapshot;await storeSaveRecord(user.id,{base:remote,pending});
+            }
+            if(!remote){
+                if(journal.base||journal.receipt)throw Error('서버 기록이 사라진 상태입니다. 신규 계정으로 초기화하지 않습니다.');
+                if(previousOwner&&previousOwner!==user.id){Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));localStorage.setItem(accountDeviceKey,user.id);reloadForAccountRestore();return;}
+                if(previousOwner===user.id&&window.yfmHadLocalProgress&&!pending){await durableStore.mutate(user.id,a=>{archiveLocalSave(a,{pending:accountSnapshot(),reason:'unverified-legacy'});return a;});throw Error('서버 기록이 없는 기존 기기 기록입니다. 자동 초기화·업로드를 중단했습니다.');}
+                localStorage.setItem(accountDeviceKey,user.id);accountDirty=true;
+                await uploadAccountSnapshot(true,true);if(accountDirty)throw Error('첫 저장을 확인하지 못했습니다.');remote=accountSyncBase;
+            }else{
+                const chosen=pending||remote;validateAccountSave(chosen);
+                const diff=previousOwner!==user.id||cloudSnapshotFingerprint(chosen)!==cloudSnapshotFingerprint(accountSnapshot());
+                if(shouldRestoreCloudAtLogin(user.id,chosen,diff)){
+                    await storeSaveRecord(user.id,{base:remote,pending:pending||null});rememberCloudRestore(user.id,chosen);restoreAccountSnapshot(chosen,user.id);
+                    localStorage.setItem(accountDeviceKey,user.id);localStorage.setItem('yfm_sync_revision',String(remote.sync_revision));reloadForAccountRestore();return;
                 }
-                data.save_data=mergeAdvancedLeague(data.save_data,readLeagueCheckpoint(user.id));
+                accountSyncBase=remote;accountLastSnapshot=canonData(remote.data);accountDirty=!!pending||cloudSnapshotFingerprint(accountSnapshot())!==cloudSnapshotFingerprint(remote);
+                await storeSaveRecord(user.id,{base:remote,pending:accountDirty?accountSnapshot():null});
             }
-            if(pending){
-                accountLastSnapshot=accountSyncBase?.data?canonData(accountSyncBase.data):'';
-                accountDirty=true;
-                setTimeout(()=>uploadAccountSnapshot(true),1500);
-            } else if (data?.save_data) {
-                const remote=canonData(compactTournamentLogos({...data.save_data.data})), remoteAt=data.save_data.at||'', syncAt=localStorage.getItem('yfm_sync_at')||'';
-                // 계정의 서버 기록을 우선한다. 다른 계정의 로컬 데이터는 업로드하지 않는다.
-                // 실제 서버 버전을 기준으로 복원한다. 같은 저장 시각의 초기 정리 작업은 업로드로 반영한다.
-                // 같은 계정의 로컬 진행도가 있으면, 서버 쪽이 마지막 동기화 이후 더 새로울 때(다른 기기에서 플레이)만 서버 기록으로 덮어씀
-                const sameOwnerLocal = previousOwner === user.id && window.yfmHadLocalProgress, localDiff = canonData(accountSnapshot().data) !== remote;
-                const leagueNeedsRestore=compareLeagueSnapshots(data.save_data,accountSnapshot())>0;
-                const needRestore = !sameOwnerLocal || leagueNeedsRestore || (localDiff && (!Number.isFinite(Date.parse(syncAt)) || Date.parse(remoteAt) > Date.parse(syncAt)));
-                if (shouldRestoreCloudAtLogin(user.id,data.save_data,needRestore)) {
-                    rememberCloudRestore(user.id,data.save_data);
-                    restoreAccountSnapshot(data.save_data,user.id);
-                    if (remoteAt) localStorage.setItem('yfm_sync_at', remoteAt);
-                    sessionStorage.setItem('yfm_restored_account',user.id);
-                    localStorage.setItem(accountDeviceKey,user.id);
-                    reloadForAccountRestore(); return;
-                }
-                // A resumed login must enter the game, rather than repeatedly restore boot-normalised data.
-                if(leagueNeedsRestore)adoptHigherLeagueAtLogin(data.save_data);
-                const receipt=readCloudRestoreReceipt(user.id);
-                const restoredSame=receipt?.fingerprint===cloudSnapshotFingerprint(data.save_data);
-                if(window.yfmResumingAccount&&receipt&&!restoredSame){
-                    // Keep the version actually loaded; the save RPC will rebase a genuine concurrent change.
-                    localStorage.setItem('yfm_sync_at',receipt.at||'');
-                    localStorage.setItem('yfm_sync_revision',String(receipt.revision));
-                }else if(remoteAt)localStorage.setItem('yfm_sync_at',remoteAt);
-                accountLastSnapshot=serverBeforeMerge;
-                accountDirty=canonData(accountSnapshot().data)!==serverBeforeMerge;
-                if (accountDirty) { accountUser=user; setTimeout(()=>uploadAccountSnapshot(true),1500); }
-            } else {
-                if (previousOwner && previousOwner!==user.id) {
-                    // 이전 계정 진행도를 새 계정에 복사하지 않는다.
-                    Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
-                    localStorage.setItem(accountDeviceKey,user.id); reloadForAccountRestore(); return;
-                }
-                accountUser=user;accountDirty=true;localStorage.setItem(accountDeviceKey,user.id);
-                accountLoginStage='첫 클라우드 저장';
-                await uploadAccountSnapshot(true,true);
-                if (accountDirty) throw new Error('첫 클라우드 저장에 실패했어.');
-            }
-            localStorage.setItem(accountDeviceKey,user.id);
-            if(!pending&&data?.save_data){accountSyncBase=data.save_data;storeSaveRecord(user.id,{base:accountSyncBase,pending:null});}
-            accountUser=user;
-            accountLoginStage=balance!==undefined?'서버 토큰 잔액 적용':'서버 토큰 잔액 조회 (yfm_wallet_get)';
-            if(balance!==undefined)applyServerWallet(balance);else await loadServerWallet({maxAttempts:2,timeoutMs:15000,force:true});
+            localStorage.setItem(accountDeviceKey,user.id);await loadServerWallet({force:true,maxAttempts:2});
             accountLoginStage='게임 화면 초기화';
-            window.yfmAccountReady=true;startGameSessionHeartbeat();
+            window.yfmAccountReady=true;startGameSessionHeartbeat();durableStore.schedule(user.id,0);if(accountDirty)planDurableSave();
             setTimeout(()=>{if(accountUser?.id!==user.id||!window.yfmAccountReady)return;if(typeof window.yfmCheckAdmin==='function')window.yfmCheckAdmin();settleLeagueRewards();},2000);
             finishAccountResume();
             document.getElementById('account-gate').style.display='none';
@@ -4673,7 +4697,7 @@
             maybeStartTutorial();
         }
         setInterval(()=>{if(accountDirty)uploadAccountSnapshot(true);else pollCloudProgress();},15000);
-        window.addEventListener('online',()=>{pollCloudProgress(true);refreshMissionReceipts(true);});
+        window.addEventListener('online',()=>{durableStore.schedule(accountUser?.id,0);if(accountDirty)uploadAccountSnapshot(true);else pollCloudProgress(true);refreshMissionReceipts(true);});
         document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollCloudProgress(true);});
         document.addEventListener('visibilitychange',()=>{if(document.hidden){preservePendingSave();uploadAccountSnapshot(true);}});
         window.addEventListener('pagehide',()=>{preservePendingSave();if(accountDirty)uploadAccountSnapshot(true);});
@@ -4681,8 +4705,8 @@
             if(typeof window.yfmResetAdmin==='function')window.yfmResetAdmin();
             socialFriendId=null;supportPeers.clear();supportUnread.clear();socialUnread.clear();
             await uploadAccountSnapshot(true);
-            if(accountDirty&&!confirm('서버에 저장하지 못한 기록이 있습니다. 기기에 보관한 뒤 로그아웃할까요?'))return;
-            preservePendingSave();
+            if((accountDirty||(await durableStore.operations(accountUser.id)).some(o=>!['reviewed','rejected'].includes(o.status)))&&!confirm('미전송 기록 또는 승인 확인 중인 거래가 있습니다. 기기에 보관한 뒤 로그아웃할까요?'))return;
+            await preservePendingSave();await durableLocalTail;durableStore.deactivate();
             await releaseGameSession();
             await getOwnerRankClient().auth.signOut({scope:'local'});
             sessionStorage.removeItem('yfm_restored_account');
@@ -4759,7 +4783,7 @@
                 }
                 saveRogue();
                 saveData();
-                saveStatus('현재 진행 기록을 기기에 저장했습니다.');
+                await preservePendingSave();await durableLocalTail;saveStatus('기기 저장 완료');
                 const owner = accountUser?.id;
                 if (owner && window.yfmAccountReady) {
                     await uploadAccountSnapshot(true);
@@ -8512,7 +8536,7 @@
             const hShift = gapShift(homePlayers, awayPlayers);
             const venue = matchVenue(mode, enemyData), forms = preForms || matchForms(userStarters.reduce((sum, p) => sum + getCalculatedOvr(p), 0) / 11, Math.round(roster.list.reduce((a, x) => a + x.ovr, 0) / roster.list.length));
             scaleSide(homePlayers, sideFactor(forms, venue, true)); scaleSide(awayPlayers, sideFactor(forms, venue, false));
-            currentMatchState = { 
+            currentMatchState = { saveOperationId:walletRequestId(),rewardSequence:{}, 
                 mode: mode, enemy: enemyData, online: onlineContext, homePlayers, awayPlayers, awayStyle: enemyData.style || cpuStyle(enemyData), tactic: 'bal', instr: (fixInstr(), { ...instr, ...(matchSetup?.instr || {}) }), bench: uniqueMatchBench(matchSetup ? [...benchIds, ...players.filter(p => p.isStarting && !matchSetup.slots.includes(p.id)).map(p => p.id)].filter((id, i, list) => !matchSetup.slots.includes(id) && list.indexOf(id) === i) : [...benchIds], userStarters), subsLeft: 5, homeOut: [], userPaused: false, 
                 scoreHome: 0, scoreAway: 0, time: 0,
                 engineInterval: null, isPaused: false,
@@ -10572,7 +10596,7 @@
             document.getElementById('sell-count').innerText = sellSelection.length;
         }
 
-        function executeSell() {
+        async function executeSell() {
             if (sellSelection.length === 0) return alert('판매할 선수를 선택해주세요.');
             let counts = { FW: 0, MF: 0, DF: 0, GK: 0 };
             players.forEach(p => counts[p.position]++);
@@ -10592,8 +10616,7 @@
             }
 
             if (confirm(`선택한 ${sellSelection.length}명의 선수를 판매하고 총 ${sellTokens} 토큰을 얻으시겠습니까?\n(선발 명단 선수가 포함되어 있다면 라인업이 재조정됩니다.)`)) {
-                players = players.filter(p => !sellSelection.includes(p.id));
-                awardTokens(sellTokens,'sale'); sellSelection = [];
+                try{await serverGameplay('sale',{player_ids:[...sellSelection]});}catch(e){alert(e.message);return;}sellSelection = [];
                 autoAssignStarters(); saveData(); renderSellList();
                 alert(`판매 완료! (+${sellTokens} T)`);
             }
@@ -10653,13 +10676,13 @@
             else if (tier===2) { cost=300; minOvr=70; maxOvr=79; weight=2.5; animClass='anim-shake-medium'; animDuration=2500; boxIcon='🔮'; glowColor='#3B82F6'; } 
             else if (tier===3) { cost=3000; minOvr=80; maxOvr=99; weight=3.5; animClass='anim-shake-extreme'; animDuration=5500; boxIcon='👑'; glowColor='#EAB308'; }
             
-            if (!await spendTokens(cost,'recruitment')) return;
+            let approved;try{approved=await serverGameplay('gacha',{tier});}catch(e){alert(e.message);return;}
             if (tier === 3) dailyOnRecruit3(); achAdd('recruits'); achAdd('recruitSpend', cost); if (tier === 3) achSet('topRecruit',1);
             
 
-            const drawn = drawGachaPlayer(tier), fPos = drawn.pos, fName = drawn.name, fOvr = drawn.ovr; 
+            const drawn = approved.card, fPos = drawn.position, fName = drawn.name, fOvr = drawn.ovr; 
 
-            players.push({ id: newPlayerCardId('p'), name: fName, ovr: fOvr, position: fPos, isStarting: false, level: 0, slotIndex: -1 }); saveData();
+            saveData(); // The server transaction already appended exactly one card.
             
             const ovl = document.getElementById('gacha-overlay'); const box = document.getElementById('gacha-animation-box'); const card = document.getElementById('gacha-result-card'); const flash = document.getElementById('gacha-flash-effect');
             
@@ -10681,8 +10704,7 @@
             const tickets=halloweenTickets();if(tickets<1)return alert('이벤트 뽑기권이 없습니다. 관리자에게 지급받아 주세요.');
             halloweenDrawBusy=true;
             try{
-                const drawn=drawHalloweenPlayer(),p={id:newPlayerCardId('halloween'),name:drawn.name,ovr:70,position:'FW',pos2:'ST',eventSeason:HALLOWEEN_SEASON,isStarting:false,level:drawn.level,evo:0,cond:100,inj:0,slotIndex:-1};
-                localStorage.setItem('fm_halloween_tickets',String(tickets-1));players.push(p);achAdd('recruits');saveData();updateHalloweenTickets();
+                const approved=await serverGameplay('halloween_gacha',{}),p=players.find(x=>x.id===approved.card.id);achAdd('recruits');saveData();updateHalloweenTickets();
                 const ovl=document.getElementById('gacha-overlay'),box=document.getElementById('gacha-animation-box'),card=document.getElementById('gacha-result-card');
                 await GachaEnergy.run(p.level>=4?3:p.level>=2?2:1);
                 document.getElementById('gacha-result-circle').innerHTML=playerCardMarkup(p,{ovr:getCalculatedOvr(p)});
@@ -10751,15 +10773,12 @@
         }, true);
         async function executeEnhance() {
             if (enhancementBusy || !selectedEnhancePlayerId) return;
-            const p = players.find(x => x.id === selectedEnhancePlayerId);
+            let p = players.find(x => x.id === selectedEnhancePlayerId);
             if (!p || p.level >= 10) return;
             const rule = enhanceRule(p);
             enhancementBusy = true; enhancementReady = false;
-            if(!await spendTokens(rule.cost,'enhancement',`${p.id}:${p.level}`)){enhancementBusy=false;enhancementReady=true;return;}
-            const startLevel = p.level, success = Math.random() * 100 < rule.rate;
-            const critical = success && startLevel <= 8 && Math.random() < 0.04;
-            const penalty = !success && Math.random() * 100 < enhanceDrop(startLevel);
-            const finalLevel = success ? Math.min(10,startLevel + (critical ? 2 : 1)) : startLevel - (penalty ? 1 : 0);
+            let approved;try{approved=await serverGameplay('enhance',{player_id:p.id});p=players.find(x=>x.id===p.id);}catch(e){enhancementBusy=false;enhancementReady=true;alert(e.message);return;}
+            const {startLevel,success,critical,penalty,finalLevel}=approved;
             const ovl = document.getElementById('enhance-effect-overlay'), flash = document.getElementById('enhance-flash');
             const proc = document.getElementById('enhance-processing-text'), res = document.getElementById('enhance-result-box');
             const orb = document.getElementById('enhance-result-orb'), status = document.getElementById('enhance-result-status');
@@ -10822,10 +10841,10 @@
         let ascensionBusy=false;
         async function executeFusion() {
             if(ascensionBusy)return;
-            const t = players.find(p => p.id === fusionTarget); if (!t || (t.evo || 0) >= EVO_MAX) return;
+            let t = players.find(p => p.id === fusionTarget); if (!t || (t.evo || 0) >= EVO_MAX) return;
             const cost = (t.evo || 0) + 1; if (evoTokens < cost) return alert(`★${cost} 진화에는 진화 토큰 ${cost}개가 필요합니다 (보유 ${evoTokens}개).`);
             ascensionBusy=true; const beforePlayer={...t};
-            const beforeOvr = getCalculatedOvr(t); evoTokens -= cost; t.evo = (t.evo || 0) + 1; achSet('evolved',1); if(t.evo>=EVO_MAX)achSet('maxEvolution',1); saveData();
+            const beforeOvr = getCalculatedOvr(t);try{await serverGameplay('evolve',{player_id:t.id});t=players.find(x=>x.id===t.id);}catch(e){ascensionBusy=false;alert(e.message);return;} achSet('evolved',1); if(t.evo>=EVO_MAX)achSet('maxEvolution',1); saveData();
             try {
                 await AscensionFX.play(beforePlayer,{...t},beforeOvr,evoTokens);
             } catch(error) {
@@ -10994,14 +11013,14 @@ function scheduleMissionProgressSave(){
                 if(accountDirty)throw {code:'SAVE_REQUIRED',message:'진행 상황을 서버에 저장하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'};
                 await queueWalletOperation(async()=>{
                     await waitForCouponSave(owner,false);
-                    const {data,error}=await getOwnerRankClient().rpc('yfm_redeem_coupon',{p_code:code});
+                    const {data,error}=await walletRpcWithRetry('yfm_redeem_coupon',{p_code:code});
                     if(error)throw error;
                     if(!data?.ok)throw new Error(data?.reason||'coupon_failed');
                     if(accountUser?.id!==owner)throw new Error('계정이 변경되었습니다. 다시 로그인해 주세요.');
                     if(data.player&&!players.some(p=>p.id===data.player.id))players.push(data.player);
                     if(data.balance!==undefined&&data.balance!==null)applyServerWallet(data.balance);
                     const serverEvo=Number(data.evo_tokens);if(Number.isSafeInteger(serverEvo)&&serverEvo>=0)evoTokens=serverEvo;
-                    localStorage.setItem('fm_evo_tokens',String(evoTokens));accountDirty=true;saveData();updateTokensUI();
+                    localStorage.setItem('fm_evo_tokens',String(evoTokens));if(data.save_data){accountSyncBase=data.save_data;accountLastSnapshot=canonData(data.save_data.data);}accountDirty=true;saveData();await consumeDurableReceipt(owner);updateTokensUI();
                     const rewards=[];if(data.token_reward)rewards.push(`토큰 ${Number(data.token_reward).toLocaleString()}개`);if(data.player)rewards.push(`${data.player.name} 1장`);if(data.evo_reward)rewards.push(`진화 토큰 ${data.evo_reward}개`);
                     input.value='';setMissionCouponStatus(`쿠폰 적용 완료! ${josa(rewards.join(' · '), '를')} 받았습니다.`);
                 });
@@ -11057,7 +11076,7 @@ function scheduleMissionProgressSave(){
                     const {data}=await walletRpcWithRetry('yfm_claim_rewards_v2',args,{maxAttempts:3,timeoutMs:12000});
                     if(accountUser?.id!==owner)return;
                     if(!data?.ok){if(data?.conflict)throw new Error('다른 기기의 최신 기록이 있습니다. 서버 기록을 불러온 뒤 다시 시도해 주세요.');throw new Error('미션 보상을 확인하지 못했습니다.');}
-                    mergeRewardReceipt(data,requestEvo);result=data;
+                    mergeRewardReceipt(data,requestEvo);await consumeDurableReceipt(owner);result=data;
                 });
                 if(result){missionStatusLoadedAt=Date.now();renderMissions();if(result.duplicate)alert('이미 수령한 보상입니다. 서버 수령 기록을 반영했습니다.');else showRewardNotice(title,{tokens:Number(result.token_reward),evo:Number(result.evo_reward)});}
             }catch(error){
@@ -13217,7 +13236,7 @@ function awkApplyTo(h, src) {
 }
 let awkBusy = false;
 window.awakenPlayer = async function (id) {
-    const p = players.find(x => x.id === id); if (!p || awkBusy) return;
+    let p = players.find(x => x.id === id); if (!p || awkBusy) return;
     if (!awkOk(p)) return alert('이벤트 카드는 각성할 수 없습니다.');
     const lv = awkLv(p); if (lv >= 5) return alert('이미 최대 각성(★5)입니다.');
     const need = AWK_NEED[lv], mats = awkMats(p).slice(0, need);
@@ -13228,9 +13247,9 @@ window.awakenPlayer = async function (id) {
     if (!confirm(`✨ ${p.name} ★${lv} → ★${lv + 1} 각성\n\n재료: ${mats.map(m => `${m.name}(OVR ${getCalculatedOvr(m)}${m.level ? ` · +${m.level}` : ''})`).join(', ')}\n비용: ${cost.toLocaleString()}T\n효과: OVR +1${stp.tr ? `\n${stp.label} 해금: ${stp.tr.ic} ${stp.tr.n} — ${stp.desc}` : ''}${lost.length ? '\n\n⚠️ 재료 카드의 강화·진화·각성 단계는 사라집니다.' : ''}`)) return;
     awkBusy = true;
     try {
-        if (!await spendTokens(cost, 'enhancement', `awaken:${p.id}:${lv + 1}`)) return;
+        try{await serverGameplay('awaken',{player_id:p.id,material_ids:mats.map(m=>m.id)});p=players.find(x=>x.id===p.id);}catch(e){alert(e.message);return;}
         const ids = new Set(mats.map(m => m.id));
-        if (![...ids].every(i => players.some(q => q.id === i)) || !players.includes(p)) return alert('재료 카드가 바뀌었습니다. 다시 시도해 주세요.');
+        // Server already consumed the validated material cards atomically.
         players = players.filter(q => !ids.has(q.id));
         if (typeof benchIds !== 'undefined') benchIds = benchIds.filter(i => !ids.has(i));
         if (typeof teamRoles === 'object' && teamRoles) { Object.keys(teamRoles).forEach(k => { if (ids.has(teamRoles[k])) teamRoles[k] = ''; }); if (Array.isArray(teamRoles.cornerStay)) teamRoles.cornerStay = teamRoles.cornerStay.filter(i => !ids.has(i)); }
@@ -70551,31 +70570,36 @@ function lobby(){return `<section class="he-scene"><div class="he-moon"></div><d
 function gs(){const run=H.state?.run,active=run?.status==='active',stage=active?run.stage:run?.status==='complete'?5:1,earned=Number(run?.earned||0),level=STAGES[stage-1].level,team=roster(level);return `<section class="he-panel he-challenge" style="--he-stage:${stage}"><div class="he-challenge-head"><div><div class="he-kicker">GWAJOONG SPECIAL · 4-2-1-3</div><h2 style="margin-top:10px">2026 용산고 스포츠 클럽</h2><p>${active?'진행 중인 도전':run?.status==='complete'?'다섯 개의 봉인을 모두 해제했습니다.':run?.status==='lost'?'도전 종료 · 획득한 토큰은 유지됩니다.':'다섯 단계의 연속 도전'}<br>입장료 1,000T · 도전당 한 번만 결제</p></div><div class="he-stage-large">${stage}<small> / 5</small></div></div><div class="he-steps">${STAGES.map((s,i)=>`<div class="he-step ${(active&&i+1===stage)?'current':(run?.status==='complete'||active&&i+1<stage)?'done':''}"><strong>${i+1}단계</strong><span>+${s.level}</span><small>승리 보상 ${s.reward}개</small></div>`).join('')}</div><div class="he-earn"><span>이번 도전 누적 보상</span><b>${earned.toLocaleString()} / 1,350개</b></div><div class="he-inline" style="margin-top:16px">${active?`<button class="he-btn primary" type="button" onclick="YFMHalloween.playStage()" ${H.busy||!H.loaded?'disabled':''}>${H.state?.match?'진행 중인 경기 이어하기':stage===1?'1단계 경기 시작':stage+'단계 경기 시작'}</button>`:`<button class="he-btn primary" type="button" onclick="YFMHalloween.startRun()" ${H.busy||!H.loaded||!H.state?.ready?'disabled':''}>${run?'재도전':'도전 시작'} · 1,000T</button>`}<button class="he-btn" type="button" onclick="YFMHalloween.refresh()">상태 새로고침</button></div><p style="margin-top:15px">패배하면 도전이 종료됩니다. 무승부는 연장전과 승부차기로 결정됩니다.</p></section><details class="he-panel"><summary style="cursor:pointer;font-size:13px;color:#bedbd5">상대 선발 11명 · 전원 종건급 +${level}강</summary><div class="he-team-list">${team.map(p=>`<div class="he-team-member">${playerCardMarkup({name:p.name,position:p.pos,ovr:fixedOvr(p.name),level:0,evo:0},{ovr:p.ovr,position:p.det,tier:3})}<p>${positionLabel(p.det)} · +${level}</p></div>`).join('')}</div></details>`;}
 function shop(){return `<div class="he-panel"><h2>봉인된 선수팩</h2><p>낮은 OVR 선수일수록 등장 확률이 높습니다.<br>70 이상 팩의 OVR 105 선수는 각 0.1%, 3,000T GS 단독 선수팩은 각 2.5% 확률로 등장합니다. 매 구매는 독립 추첨이며 횟수 조건이나 확률 보정은 없습니다.</p></div><div class="he-packs">${PACKS.map(p=>`<article class="he-pack"><div class="he-kicker">${p.id==='gs'?'FORBIDDEN SUMMON':p.id==='90'?'AWAKENING OF THE DEAD':'PUMPKIN SEAL'}</div><img src="${ASSETS[p.image]}" alt="${p.name}" decoding="async"><h3>${p.name}</h3><div class="he-price">${p.price.toLocaleString()}<small>할로윈 토큰</small></div><button type="button" class="he-btn ${p.id==='gs'?'primary':'orange'}" onclick="YFMHalloween.buy('${p.id}')" ${H.busy||!H.loaded?'disabled':''}>${H.busy?'구매 확인 중…':'선수팩 구매'}</button><button type="button" class="he-odds-btn" onclick="YFMHalloween.odds('${p.id}')">선수 목록 및 실제 확률</button></article>`).join('')}</div><div id="he-odds"></div>`;}
 function render(){installUI();tabs();const queued=savedResults().length;$('he-main').innerHTML=(queued?'<section class="he-panel"><h3>기기 저장으로 진행 중</h3><p>서버 반영을 기다리는 결과 '+queued+'건이 있습니다. 기기에 저장된 결과로 다음 단계에 참여할 수 있습니다. 서버 동기화는 자동으로 재시도합니다. 미반영 보상은 동기화 후 상점에서 사용할 수 있습니다.</p><button class="he-btn" type="button" onclick="YFMHalloween.retrySavedResults()">서버 저장 재시도</button></section>':'')+(H.tab==='gs'?gs():H.tab==='shop'?shop():lobby());balanceFlash(0);say(H.status,H.error);watchPlayerCardNames($('he-main'));}
-async function refresh(){const owner=accountUser?.id,refreshSeq=H.refreshSeq=(H.refreshSeq||0)+1,epoch=H.eventMutationEpoch||0;H.owner=owner||null;const restored=restoreEventProgress(owner);H.loaded=restored;if(!owner||!window.yfmAccountReady){if(!owner)H.state=null;say(restored?'기기에 보관된 이벤트 기록을 불러왔습니다.':'로그인 후 이벤트를 이용할 수 있습니다.');render();return;}if(restored)render();try{const data=await rpc('state');if(H.owner!==owner||H.refreshSeq!==refreshSeq||(H.eventMutationEpoch||0)!==epoch)return;const old=Number(H.state?.balance||0),cp=eventCheckpoint(owner);cp.base=data;writeEventCheckpoint(cp,owner);restoreEventProgress(owner);say(savedResults(owner).length?'기기에 저장된 결과로 다음 단계에 참여할 수 있습니다. 서버에 자동 동기화합니다.':'이벤트 기록을 저장하고 불러왔습니다.');render();balanceFlash(Number(H.state.balance)-old);}catch(e){if(H.owner!==owner||H.refreshSeq!==refreshSeq)return;const local=restoreEventProgress(owner);H.loaded=local;say(local?'서버 연결을 기다리는 동안 기기에 저장된 기록으로 계속할 수 있습니다.':errorText(e),!local);render();}}
+async function refresh(){const owner=accountUser?.id,refreshSeq=H.refreshSeq=(H.refreshSeq||0)+1,epoch=H.eventMutationEpoch||0;H.owner=owner||null;const restored=restoreEventProgress(owner);H.loaded=restored;if(!owner||!window.yfmAccountReady){if(!owner)H.state=null;say(restored?'기기에 보관된 이벤트 기록을 불러왔습니다.':'로그인 후 이벤트를 이용할 수 있습니다.');render();return;}if(restored)render();try{const data=await rpc('state');if(H.owner!==owner||H.refreshSeq!==refreshSeq||(H.eventMutationEpoch||0)!==epoch)return;const old=Number(H.state?.balance||0),cp=eventCheckpoint(owner);cp.base=data;await writeEventCheckpoint(cp,owner);restoreEventProgress(owner);say(savedResults(owner).length?'기기에 저장된 결과로 다음 단계에 참여할 수 있습니다. 서버에 자동 동기화합니다.':'이벤트 기록을 저장하고 불러왔습니다.');render();balanceFlash(Number(H.state.balance)-old);}catch(e){if(H.owner!==owner||H.refreshSeq!==refreshSeq)return;const local=restoreEventProgress(owner);H.loaded=local;say(local?'서버 연결을 기다리는 동안 기기에 저장된 기록으로 계속할 수 있습니다.':errorText(e),!local);render();}}
 async function open(tab='lobby'){installUI();H.tab=['lobby','gs','shop'].includes(tab)?tab:'lobby';switchScreen('screen-halloween');if(H.owner!==accountUser?.id){H.state=null;H.loaded=false;}restoreEventProgress();render();await refresh();if(savedResults().length)flushSavedResults();if(H.tab==='shop'&&H.loaded)recoverPurchase();clearTimeout(H.timer);const poll=async()=>{if(!$('screen-halloween').classList.contains('active')||document.hidden)return;await refresh();H.timer=setTimeout(poll,15000);};H.timer=setTimeout(poll,15000);}
 async function sync(){if(!accountUser?.id||!window.yfmAccountReady)throw Error('LOGIN_REQUIRED');saveData();await uploadAccountSnapshot(true);if(accountDirty||accountSaveConflict||!accountSyncBase?.sync_revision)throw Error('SERVER_SAVE_REQUIRED');return String(accountSyncBase.sync_revision);}
 function pending(kind,pack){const key=cacheKey(kind),old=read(key);if(old&&(!pack||old.pack===pack))return old;if(old)throw Error('이전 구매 결과를 먼저 확인해 주세요. 같은 선수팩을 다시 눌러 확인할 수 있습니다.');const x={request_id:walletRequestId(),...(pack?{pack}:{})};localStorage.setItem(key,JSON.stringify(x));return x;}
 async function startRun(){if(savedResults().length){flushSavedResults();say('기기에 보관된 경기 결과를 서버에 반영한 뒤 도전할 수 있습니다.',true);return;}if(H.busy)return;H.busy=true;render();try{await sync();const p=pending('entry');const data=await rpc('start',p);if(data.ordinary_balance!=null)applyServerWallet(Number(data.ordinary_balance));localStorage.removeItem(cacheKey('entry'));await refresh();}catch(e){say(errorText(e),true);}finally{H.busy=false;render();}}
 async function playStage(){if(H.busy||gameSessionBlocked)return;try{restoreEventProgress();if(!H.loaded)await refresh();if(!H.loaded||H.state?.run?.status!=='active')return;openPrematch('halloween',enemy());flushSavedResults();}catch(e){say(errorText(e),true);}}
 async function beginMatch(setup){if(H.busy||gameSessionBlocked)return;H.busy=true;try{saveData();restoreEventProgress();localStorage.removeItem(cacheKey('match'));const m=pendingMatch;if(!m||m.mode!=='halloween')throw Error('경기 설정을 확인해 주세요.');const selectedEnemy=m.e||enemy();if(!H.loaded)await refresh();if(!H.loaded||H.state?.run?.status!=='active')throw Error('도전 상태를 다시 확인해 주세요.');if(selectedEnemy.eventRunId!==H.state.run.id||Number(selectedEnemy.eventStage)!==Number(H.state.run.stage))throw Error('도전 단계가 갱신되었습니다. 경기 준비 창을 닫고 다시 시작해 주세요.');const eventEnemy={...selectedEnemy,eventRunId:H.state.run.id,eventStage:Number(H.state.run.stage)};closePrematch();prepareMatch('halloween',eventEnemy,JSON.parse(JSON.stringify(setup)));if(currentMatchState?.mode==='halloween'){currentMatchState.eventRunId=eventEnemy.eventRunId;currentMatchState.eventStage=eventEnemy.eventStage;currentMatchState.eventFinishRequestId=walletRequestId();}}catch(e){say(errorText(e),true);managerToast(errorText(e));}finally{H.busy=false;}}
-function eventCheckpoint(owner=accountUser?.id){const own=read(cacheKey('checkpoint',owner));if(own?.version===1&&own.owner===owner&&Array.isArray(own.queue))return own;const backup=read('fm_halloween_progress');if(backup?.version===1&&backup.owner===owner&&Array.isArray(backup.queue))return backup;const legacy=read(cacheKey('saved_results',owner),[]);return {version:1,owner,base:read(cacheKey('state',owner)),queue:Array.isArray(legacy)?legacy:[],updatedAt:0};}
-function writeEventCheckpoint(value,owner=accountUser?.id){if(!owner||value.owner!==owner)throw Error('LOGIN_REQUIRED');const next={...value,version:1,owner,updatedAt:Date.now()},key=cacheKey('checkpoint',owner),text=JSON.stringify(next);localStorage.setItem(key,text);if(localStorage.getItem(key)!==text)throw Error('기기 저장을 확인하지 못했습니다.');try{localStorage.setItem('fm_halloween_progress',text);if(typeof accountDirty!=='undefined')accountDirty=true;}catch(_){}try{localStorage.setItem(cacheKey('saved_results',owner),JSON.stringify(next.queue));if(next.base)localStorage.setItem(cacheKey('state',owner),JSON.stringify(next.base));}catch(_){}return next;}
+function eventCheckpoint(owner=accountUser?.id){const durable=durableStore.cache.get(owner)?.event;if(durable?.owner===owner&&Array.isArray(durable.queue))return JSON.parse(JSON.stringify(durable));const own=read(cacheKey('checkpoint',owner));if(own?.version===1&&own.owner===owner&&Array.isArray(own.queue))return own;const backup=read('fm_halloween_progress');if(backup?.version===1&&backup.owner===owner&&Array.isArray(backup.queue))return backup;const legacy=read(cacheKey('saved_results',owner),[]);return {version:1,owner,base:read(cacheKey('state',owner)),queue:Array.isArray(legacy)?legacy:[],updatedAt:0};}
+async function writeEventCheckpoint(value,owner=accountUser?.id){
+ if(!owner||value.owner!==owner)throw Error('LOGIN_REQUIRED');const incoming=JSON.parse(JSON.stringify(value));
+ const committed=await enqueueLocalSave(()=>durableStore.mutate(owner,account=>{
+  const previous=account.event?.owner===owner?account.event:null;const acknowledged=[...new Set([...(previous?.acknowledged||[]),...(incoming.acknowledged||[])])];const queue=new Map();for(const entry of [...(previous?.queue||[]),...(incoming.queue||[])])if(!acknowledged.includes(entry.payload?.request_id))queue.set(entry.payload?.request_id,entry);
+  let base=incoming.base||previous?.base||null;const old=previous?.base;if(old?.run&&base?.run&&old.run.id===base.run.id&&(Number(old.run.stage)>Number(base.run.stage)||old.run.status!=='active'&&base.run.status==='active'))base=old;
+  account.event={...incoming,version:1,owner,base,acknowledged,queue:[...queue.values()],updatedAt:Date.now()};return account;
+ }));const next=committed.event;try{localStorage.setItem(cacheKey('checkpoint',owner),JSON.stringify(next));localStorage.setItem('fm_halloween_progress',JSON.stringify(next));}catch(e){await durableStore.log(owner,null,'legacy-event-mirror',e);}accountDirty=true;return next;
+}
 function projectEventProgress(cp){if(!cp?.base)return null;const data=JSON.parse(JSON.stringify(cp.base));data.localPendingReward=0;const applied=new Set();for(const entry of cp.queue){const p=entry.payload,r=data.run;if(!p||!r||(p.run_id&&p.run_id!==r.id)||r.status!=='active'||Number(p.stage)!==Number(r.stage))continue;const key=r.id+':'+p.stage;if(applied.has(key))continue;applied.add(key);const won=!p.forfeit&&(Number(p.home)>Number(p.away)||Number(p.home)===Number(p.away)&&p.penWinner==='home'),reward=won?STAGES[Number(p.stage)-1]?.reward||0:0;r.earned=Number(r.earned||0)+reward;r.status=won?(Number(r.stage)===5?'complete':'active'):'lost';if(won&&Number(r.stage)<5)r.stage=Number(r.stage)+1;data.localPendingReward+=reward;}return data;}
 function restoreEventProgress(owner=accountUser?.id){if(!owner)return false;const data=projectEventProgress(eventCheckpoint(owner));if(!data)return false;H.owner=owner;H.state=data;H.loaded=true;return true;}
 function savedResults(owner=accountUser?.id){return eventCheckpoint(owner).queue;}
-function queueResult(st){const owner=accountUser?.id;if(!owner)throw Error('로그인한 계정을 확인해 주세요.');const request=st.eventFinishRequestId||pending('finish').request_id;const payload={request_id:request,run_id:st.eventRunId||st.enemy?.eventRunId||undefined,stage:Number(st.eventStage||st.enemy?.eventStage||H.state?.run?.stage||1),home:Number(st.scoreHome)||0,away:Number(st.scoreAway)||0,penWinner:st.penWinner||null,forfeit:!!st.forfeit,time:Number(st.time)||90};const cp=eventCheckpoint(owner);if(!cp.queue.some(x=>x.payload?.request_id===request))cp.queue.push({owner,payload,savedAt:Date.now()});writeEventCheckpoint(cp,owner);st.eventFinishRequestId=request;st.localResultSaved=true;restoreEventProgress(owner);return payload;}
-async function finishLocalMatch(st){try{queueResult(st);H.finishPending=st;H.finishError=null;showEventResult({reward:0,won:!st.forfeit&&(st.scoreHome>st.scoreAway||st.scoreHome===st.scoreAway&&st.penWinner==='home')},st,true);return true;}catch(e){H.finishPending=st;H.finishError=errorText(e);showEventResult({reward:0,won:false},st,true);return false;}}
-function continueSavedEventResult(){const st=H.finishPending||(currentMatchState?.mode==='halloween'?currentMatchState:null);try{if(st&&!st.localResultSaved)queueResult(st);}catch(e){H.finishError=errorText(e);$('match-end-growth').textContent=H.finishError;return;}H.finishPending=null;$('match-end-overlay').classList.replace('flex','hidden');if(currentMatchState?.mode==='halloween')currentMatchState=null;open('gs').catch(e=>say(errorText(e),true));setTimeout(flushSavedResults,0);}
+async function queueResult(st){const owner=accountUser?.id;if(!owner)throw Error('로그인한 계정을 확인해 주세요.');const request=st.eventFinishRequestId||pending('finish').request_id;const payload={request_id:request,run_id:st.eventRunId||st.enemy?.eventRunId||undefined,stage:Number(st.eventStage||st.enemy?.eventStage||H.state?.run?.stage||1),home:Number(st.scoreHome)||0,away:Number(st.scoreAway)||0,penWinner:st.penWinner||null,forfeit:!!st.forfeit,time:Number(st.time)||90};const cp=eventCheckpoint(owner);if(!cp.queue.some(x=>x.payload?.request_id===request))cp.queue.push({owner,payload,savedAt:Date.now()});await writeEventCheckpoint(cp,owner);st.eventFinishRequestId=request;st.localResultSaved=true;restoreEventProgress(owner);return payload;}
+async function finishLocalMatch(st){try{await queueResult(st);H.finishPending=st;H.finishError=null;showEventResult({reward:0,won:!st.forfeit&&(st.scoreHome>st.scoreAway||st.scoreHome===st.scoreAway&&st.penWinner==='home')},st,true);return true;}catch(e){H.finishPending=st;H.finishError=errorText(e);showEventResult({reward:0,won:false},st,true);return false;}}
+async function continueSavedEventResult(){const st=H.finishPending||(currentMatchState?.mode==='halloween'?currentMatchState:null);try{if(st&&!st.localResultSaved)await queueResult(st);}catch(e){H.finishError=errorText(e);$('match-end-growth').textContent=H.finishError;return;}H.finishPending=null;$('match-end-overlay').classList.replace('flex','hidden');if(currentMatchState?.mode==='halloween')currentMatchState=null;open('gs').catch(e=>say(errorText(e),true));setTimeout(flushSavedResults,0);}
 function retryFinish(){continueSavedEventResult();}
-async function flushSavedResults(){if(H.finishPending&&currentMatchState?.mode==='halloween')return;const owner=accountUser?.id;if(H.resultSyncing||!owner||!window.yfmAccountReady||!savedResults(owner).length)return;H.resultSyncing=true;try{for(const entry of savedResults(owner)){if(accountUser?.id!==owner)break;const verdict=await rpc('finish_local',entry.payload),cp=eventCheckpoint(owner);cp.base=cp.base||{ok:true,balance:0,run:null,ready:true};cp.base.balance=Number(verdict.balance??cp.base.balance);if(verdict.run&&(!cp.base.run||cp.base.run.id===verdict.run.id))cp.base.run=verdict.run;cp.queue=cp.queue.filter(x=>x.payload?.request_id!==entry.payload.request_id);writeEventCheckpoint(cp,owner);const request=read(cacheKey('finish',owner));if(request?.request_id===entry.payload.request_id)localStorage.removeItem(cacheKey('finish',owner));if(accountUser?.id!==owner)break;H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;H.finishError=null;restoreEventProgress(owner);}if(accountUser?.id===owner&&$('screen-halloween')?.classList.contains('active'))await refresh();}catch(e){H.finishError=errorText(e);if(accountUser?.id===owner){restoreEventProgress(owner);say('기기 저장 완료 · 다음 단계 진행 가능. 서버 동기화 대기: '+H.finishError,true);if($('screen-halloween')?.classList.contains('active'))render();}}finally{H.resultSyncing=false;}}
+async function flushSavedResults(){if(H.finishPending&&currentMatchState?.mode==='halloween')return;const owner=accountUser?.id;if(H.resultSyncing||!owner||!window.yfmAccountReady||!savedResults(owner).length)return;H.resultSyncing=true;try{for(const entry of savedResults(owner)){if(accountUser?.id!==owner)break;const verdict=await rpc('finish_local',entry.payload),cp=eventCheckpoint(owner);cp.base=cp.base||{ok:true,balance:0,run:null,ready:true};cp.base.balance=Number(verdict.balance??cp.base.balance);if(verdict.run&&(!cp.base.run||cp.base.run.id===verdict.run.id))cp.base.run=verdict.run;cp.acknowledged=[...(cp.acknowledged||[]),entry.payload.request_id];cp.queue=cp.queue.filter(x=>x.payload?.request_id!==entry.payload.request_id);await writeEventCheckpoint(cp,owner);await consumeDurableReceipt(owner);const request=read(cacheKey('finish',owner));if(request?.request_id===entry.payload.request_id)localStorage.removeItem(cacheKey('finish',owner));if(accountUser?.id!==owner)break;H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;H.finishError=null;restoreEventProgress(owner);}if(accountUser?.id===owner&&$('screen-halloween')?.classList.contains('active'))await refresh();}catch(e){H.finishError=errorText(e);if(accountUser?.id===owner){restoreEventProgress(owner);say('기기 저장 완료 · 다음 단계 진행 가능. 서버 동기화 대기: '+H.finishError,true);if($('screen-halloween')?.classList.contains('active'))render();}}finally{H.resultSyncing=false;}}
 
-function adoptPurchase(receipt,before,owner){if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');const accepted=receipt.save_data;if(!accepted?.data||!receipt.card?.id||!Number.isSafeInteger(accepted.sync_revision))throw Error('구매 기록을 확인하지 못했습니다.');
- const old=new Map(JSON.parse(before.data.fm_players||'[]').map(p=>[p.id,p])),now=new Map(players.map(p=>[p.id,p])),server=JSON.parse(accepted.data.fm_players||'[]'),serverIds=new Set(server.map(p=>p.id));
- players=server.filter(p=>!(old.has(p.id)&&!now.has(p.id))).map(p=>{const local=now.get(p.id);return local&&JSON.stringify(local)!==JSON.stringify(old.get(p.id))?local:ensure(p);});
- for(const p of now.values())if(!old.has(p.id)&&!serverIds.has(p.id))players.push(p);
- const checkpoint=eventCheckpoint(owner);if(checkpoint.base){checkpoint.base.balance=Number(receipt.balance);writeEventCheckpoint(checkpoint,owner);restoreEventProgress(owner);}else H.state={...(H.state||{}),balance:Number(receipt.balance)};H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;saveData();accountLastSnapshot=canonData(accepted.data);accountLastWrite=Date.now();localStorage.setItem('yfm_sync_at',accepted.at||'');localStorage.setItem('yfm_sync_revision',String(accepted.sync_revision));accountDirty=confirmDurableSave(owner,accepted);
+async function adoptPurchase(receipt,before,owner){if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');const accepted=receipt.save_data;if(!accepted?.data||!receipt.card?.id||!Number.isSafeInteger(accepted.sync_revision))throw Error('구매 기록을 확인하지 못했습니다.');
+ players=JSON.parse(accepted.data.fm_players).map(p=>ensure(p));
+ const checkpoint=eventCheckpoint(owner);if(checkpoint.base){checkpoint.base.balance=Number(receipt.balance);await writeEventCheckpoint(checkpoint,owner);restoreEventProgress(owner);}else H.state={...(H.state||{}),balance:Number(receipt.balance)};H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;saveData();accountLastSnapshot=canonData(accepted.data);accountLastWrite=Date.now();localStorage.setItem('yfm_sync_at',accepted.at||'');localStorage.setItem('yfm_sync_revision',String(accepted.sync_revision));accountDirty=confirmDurableSave(owner,accepted);
 }
-async function buy(id,recover=false){if(H.busy||HauntedPack.active)return;const pack=PACKS.find(p=>p.id===id);if(!pack)return;H.busy=true;HauntedPack.prime();render();const owner=accountUser?.id;try{const p=pending('purchase',id),revision=await sync(),before=accountSnapshot();const result=await rpc('purchase',{...p,revision});adoptPurchase(result,before,owner);localStorage.setItem(cacheKey('result',owner),JSON.stringify({pack:id,card:result.card,request_id:p.request_id}));localStorage.removeItem(cacheKey('purchase',owner));render();balanceFlash(-pack.price);HauntedPack.play(pack,ensure({...result.card}),ASSETS,()=>{localStorage.removeItem(cacheKey('result',owner));refresh();});}catch(e){HauntedPack.close();say(errorText(e),true);}finally{H.busy=false;if($('screen-halloween').classList.contains('active'))render();}}
+async function buy(id,recover=false){if(H.busy||HauntedPack.active)return;const pack=PACKS.find(p=>p.id===id);if(!pack)return;H.busy=true;HauntedPack.prime();render();const owner=accountUser?.id;try{const p=pending('purchase',id),revision=await sync(),before=accountSnapshot();const result=await rpc('purchase',{...p,revision});await adoptPurchase(result,before,owner);await consumeDurableReceipt(owner);localStorage.setItem(cacheKey('result',owner),JSON.stringify({pack:id,card:result.card,request_id:p.request_id}));localStorage.removeItem(cacheKey('purchase',owner));render();balanceFlash(-pack.price);HauntedPack.play(pack,ensure({...result.card}),ASSETS,()=>{localStorage.removeItem(cacheKey('result',owner));refresh();});}catch(e){HauntedPack.close();say(errorText(e),true);}finally{H.busy=false;if($('screen-halloween').classList.contains('active'))render();}}
 function recoverPurchase(){if(H.busy||HauntedPack.active)return;const result=read(cacheKey('result'));if(result){const p=PACKS.find(p=>p.id===result.pack);if(p)HauntedPack.play(p,ensure({...result.card}),ASSETS,()=>{localStorage.removeItem(cacheKey('result'));refresh();});return;}const p=read(cacheKey('purchase'));if(p)say('확인되지 않은 구매가 있습니다. '+(PACKS.find(x=>x.id===p.pack)?.name||'같은 팩')+' 구매 버튼으로 결과를 다시 확인할 수 있습니다.');}
 async function odds(id){const host=$('he-odds');if(!host)return;try{if(!H.packs&&accountUser?.id&&window.yfmAccountReady)H.packs=(await rpc('catalogue')).packs;}catch(_){}
  const pack=(H.packs||[]).find(p=>p.id===id)||(()=>{const p=PACKS.find(p=>p.id===id);return {...p,players:p.pool.map(o=>({...CONFIG.catalogue.find(c=>c.key===o.key),percent:o.percent}))};})();
@@ -70604,6 +70628,31 @@ window.addEventListener('online',flushSavedResults);setInterval(()=>{if(!documen
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('screen-halloween').classList.contains('active')&&!H.busy)refresh();});
 })();
 </script>
+
+<script id="yfm-durable-v3-lifecycle">
+(function(){
+ const oldSave=saveData;saveData=function(){try{return oldSave.apply(this,arguments);}catch(e){if(!/quota|storage|space/i.test(String(e?.name)+String(e?.message)))throw e;
+  if(accountUser?.id&&window.yfmAccountReady){const snap=accountSnapshot();snap.data.fm_players=JSON.stringify(players);snap.data.fm_evo_tokens=String(evoTokens);snap.data.fm_stats=JSON.stringify(S);snap.data.fm_daily=JSON.stringify(daily);snap.data.fm_achievements=JSON.stringify(ach);(()=>{const owner=accountUser.id,base=accountSyncBase;return enqueueLocalSave(()=>durableStore.checkpoint(owner,snap,base));})().catch(()=>{});}
+  saveStatus('브라우저 저장소 오류 · 기기 저장 확인 중',true);
+ }};
+ const oldBlock=blockGameSession;blockGameSession=function(e){preservePendingSave().catch(()=>{});durableStore.deactivate();return oldBlock.apply(this,arguments);};
+ window.addEventListener('online',()=>{if(durableStore.ready)durableStore.schedule(accountUser?.id,0);});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&window.yfmAccountReady)preservePendingSave().catch(()=>{});else if(durableStore.ready)durableStore.schedule(accountUser?.id,0);});
+ window.addEventListener('pageshow',()=>{if(durableStore.ready)durableStore.schedule(accountUser?.id,0);});
+})();
+</script>
+
+<script id="yfm-save-change-observer">
+(function(){
+ const P=Storage.prototype,put=P.setItem,remove=P.removeItem;let queued=false,serverDirty=false;
+ function changed(store,key){if(store!==window.localStorage||!String(key).startsWith('fm_')||key==='fm_tokens'||key==='fm_items'||!window.yfmAccountReady||window.__wiping||window.__restoreLock||!accountUser?.id)return;
+  serverDirty=serverDirty||key!=='fm_active_match_v1';if(queued)return;queued=true;const owner=accountUser.id;queueMicrotask(()=>{queued=false;const sync=serverDirty;serverDirty=false;if(window.yfmAccountReady&&!window.__wiping&&accountUser?.id===owner&&localStorage.getItem(accountDeviceKey)===owner){if(sync){accountDirty=true;planDurableSave();}else preservePendingSave(owner).catch(()=>{});}});
+ }
+ P.setItem=function(key,value){const before=this===window.localStorage?this.getItem(key):null;const result=put.call(this,key,value);if(before!==String(value))changed(this,String(key));return result;};
+ P.removeItem=function(key){const before=this===window.localStorage?this.getItem(key):null;const result=remove.call(this,key);if(before!==null)changed(this,String(key));return result;};
+})();
+</script>
+
 </body>
 </html>
 
