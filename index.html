@@ -8698,9 +8698,57 @@ async function durableFinancialRpc(name,args,options={}){
             return { own: Math.round(own * 1000) / 1000, opp: Math.round(opp * 1000) / 1000, sig: `${df}-${layout.length - 1 - df - fw}-${fw}` };
         }
         function formQ(st, home) { const F = st.formF; return F ? (home ? F.h.own * F.a.opp : F.a.own * F.h.opp) : 1; }
+        // Local pre-match interaction only: no text input, system keyboard or save writes.
+        const SaudiNumberGate=(()=>{
+            let active=null,permit=null,view=null;
+            const owner=()=>accountUser?.id||'guest';
+            function number(){const v=new Uint32Array(1);crypto.getRandomValues(v);return String(100+v[0]%900);}
+            function draw(){
+                const c=view.canvas,ratio=Math.min(window.devicePixelRatio||1,2);c.width=300*ratio;c.height=86*ratio;
+                const ctx=c.getContext('2d');ctx.setTransform(ratio,0,0,ratio,0,0);ctx.fillStyle='#101b32';ctx.fillRect(0,0,300,86);
+                ctx.font='bold 48px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f8fafc';
+                [...active.answer].forEach((digit,i)=>ctx.fillText(digit,100+i*50,44));
+            }
+            function paint(){view.entered.textContent=active.digits.padEnd(3,'·').split('').join('  ');view.submit.disabled=active.digits.length!==3;}
+            function cancel(){active=null;permit=null;if(view)view.root.remove();view=null;}
+            function digit(value){if(!active||active.digits.length>=3)return;active.digits+=String(value);view.message.textContent='';paint();}
+            function submit(){
+                if(!active||active.digits.length!==3)return;
+                if(active.owner!==owner()){cancel();return;}
+                if(Date.now()-active.started>120000){active.answer=number();active.digits='';active.started=Date.now();draw();paint();view.message.textContent='시간이 지나 새 숫자로 바뀌었습니다.';return;}
+                if(active.digits!==active.answer){active.answer=number();active.digits='';draw();paint();view.message.textContent='숫자가 일치하지 않습니다. 새 숫자를 입력해 주세요.';return;}
+                const next=active;cancel();permit={owner:next.owner,enemy:next.enemy,until:Date.now()+1000};
+                try{next.resume();}finally{permit=null;}
+            }
+            function show(enemy,resume){
+                const root=document.createElement('div');root.id='saudi-number-check';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-labelledby','saudi-number-title');
+                root.style.cssText='position:fixed;inset:0;z-index:250000;background:#060b16dc;display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain;touch-action:manipulation';
+                const panel=document.createElement('div');panel.style.cssText='width:min(360px,100%);max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #334155;border-radius:20px;background:#142039;padding:22px;color:#f8fafc;box-shadow:0 18px 70px #0008';
+                const title=document.createElement('h2');title.id='saudi-number-title';title.textContent='사우디 경기 시작';title.style.cssText='font-size:20px;font-weight:800;margin:0 0 8px';
+                const hint=document.createElement('p');hint.textContent='화면의 세 자리 숫자를 아래 숫자패드로 입력해 주세요.';hint.style.cssText='font-size:13px;color:#cbd5e1;margin:0 0 14px;line-height:1.6';
+                const canvas=document.createElement('canvas');canvas.setAttribute('role','img');canvas.setAttribute('aria-label','입력할 세 자리 숫자');canvas.style.cssText='width:100%;height:86px;display:block;border-radius:12px';
+                const entered=document.createElement('div');entered.setAttribute('role','status');entered.setAttribute('aria-live','polite');entered.style.cssText='font:700 30px monospace;letter-spacing:5px;text-align:center;padding:14px 0;color:#7dd3fc';
+                const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px';
+                function button(label,action){const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='min-height:52px;border:1px solid #3c4e69;background:#243450;color:#fff;border-radius:12px;font-size:22px;font-weight:700;touch-action:manipulation';b.addEventListener('click',action);return b;}
+                for(let i=1;i<=9;i++)grid.appendChild(button(String(i),()=>digit(i)));
+                const clear=button('지우기',()=>{if(active){active.digits='';paint();}});clear.style.fontSize='14px';grid.append(clear,button('0',()=>digit(0)),button('⌫',()=>{if(active){active.digits=active.digits.slice(0,-1);paint();}}));
+                const message=document.createElement('p');message.setAttribute('role','status');message.style.cssText='min-height:20px;margin:10px 0;font-size:12px;color:#fda4af;text-align:center';
+                const actions=document.createElement('div');actions.style.cssText='display:grid;grid-template-columns:1fr 2fr;gap:8px';
+                const close=button('취소',cancel),start=button('경기 시작',submit);close.style.fontSize='15px';start.style.cssText+=';font-size:16px;background:#0369a1';
+                actions.append(close,start);panel.append(title,hint,canvas,entered,grid,message,actions);root.appendChild(panel);document.body.appendChild(root);
+                view={root,canvas,entered,message,submit:start};active={owner:owner(),enemy,resume,answer:number(),digits:'',started:Date.now()};draw();paint();grid.firstChild.focus();
+            }
+            document.addEventListener('visibilitychange',()=>{if(document.hidden)cancel();});
+            document.addEventListener('keydown',e=>{if(active&&e.key==='Escape'){e.preventDefault();cancel();}});
+            return Object.freeze({allow(enemy,resume){
+                if(permit&&permit.owner===owner()&&permit.enemy===enemy&&permit.until>=Date.now()){permit=null;return true;}
+                if(!active)show(enemy,resume);return false;
+            }});
+        })();
         function prepareMatch(mode, enemyData, matchSetup = null, onlineContext = null) {
             sanitizeSquad(); sanitizeMatchSetup(matchSetup,mode);
             if (mode === 'saudi' && !checkSaudiUnlock(enemyData)) return;
+            if (mode === 'saudi' && !SaudiNumberGate.allow(enemyData,()=>prepareMatch(mode,enemyData,matchSetup,onlineContext))) return;
 
             let userStarters = players.filter(p => p.isStarting);
             if (userStarters.length < 11 || userStarters.some(p => p.slotIndex === -1)) { autoAssignStarters(sandboxMode(mode)); saveData(); userStarters = players.filter(p => p.isStarting); }
