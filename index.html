@@ -15,7 +15,7 @@ const copy=v=>v==null?v:JSON.parse(JSON.stringify(v));
 const req=r=>new Promise((ok,no)=>{r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});
 const canonical=v=>JSON.stringify(v,(_,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.keys(x).sort().map(k=>[k,x[k]])):x);
 class YFMDurableStore {
- constructor(options={}){this.options=options;this.dbPromise=null;this.running=new Map();this.timers=new Map();this.cache=new Map();this.session=null;this.owner=null;this.ready=false;this.localTail=Promise.resolve();}
+ constructor(options={}){this.options=options;this.dbPromise=null;this.running=new Map();this.timers=new Map();this.cache=new Map();this.session=null;this.owner=null;this.ready=false;this.localTail=Promise.resolve();this.waiters=new Set();}
  open(){if(this.dbPromise)return this.dbPromise;this.dbPromise=new Promise((ok,no)=>{if(!root.indexedDB)return no(Error('INDEXEDDB_UNAVAILABLE'));const r=root.indexedDB.open('yfm-durable-account-save',3);r.onupgradeneeded=()=>{const d=r.result;for(const [name,key] of [['accounts','owner'],['operations',['owner','id']],['backups',['owner','generation']],['diagnostics',['owner','id']]])if(!d.objectStoreNames.contains(name))d.createObjectStore(name,{keyPath:key});};r.onsuccess=()=>{r.result.onversionchange=()=>{r.result.close();this.dbPromise=null;};ok(r.result);};r.onerror=()=>no(r.error);r.onblocked=()=>no(Error('INDEXEDDB_UPGRADE_BLOCKED'));}).catch(e=>{this.dbPromise=null;this.status('기기 저장 실패 · '+e.message,true);throw e;});return this.dbPromise;}
  async tx(names,mode,fn){const d=await this.open();return new Promise((ok,no)=>{let t;try{t=d.transaction(names,mode,mode==='readwrite'?{durability:'strict'}:{});}catch(e){if(e.name!=='TypeError'&&e.name!=='NotSupportedError')throw e;t=d.transaction(names,mode);}const stores=Object.fromEntries(names.map(n=>[n,t.objectStore(n)]));let value;let failure; t.oncomplete=()=>ok(value);t.onabort=()=>no(failure||t.error||Error('INDEXEDDB_ABORTED'));t.onerror=()=>{};Promise.resolve().then(()=>fn(stores,t)).then(v=>{value=v;},e=>{failure=e;try{t.abort();}catch(_){no(e);}});});}
  status(s,bad=false){this.options.status?.(s,bad);}
@@ -25,24 +25,73 @@ class YFMDurableStore {
  async acknowledge(owner,snapshot,sent){const a=await this.tx(['accounts','backups'],'readwrite',async s=>{const a=await req(s.accounts.get(owner))||{owner,generation:0};if(a.base&&(Number(snapshot?.sync_revision)||0)<(Number(a.base.sync_revision)||0))return a;const same=canonical(a.pending?.data)===canonical(sent?.data);a.base=copy(snapshot);if(same)a.pending=null;a.schema=3;a.generation++;if(!a.backupAt||Date.now()-a.backupAt>=600000){s.backups.put({owner,generation:a.generation,snapshot:copy(snapshot)});a.backupAt=Date.now();const all=await req(s.backups.getAll());const mine=all.filter(x=>x.owner===owner).sort((a,b)=>b.generation-a.generation);mine.slice(5).forEach(x=>s.backups.delete([owner,x.generation]));}s.accounts.put(a);return a;});this.cache.set(owner,a);return !!a.pending;}
  async event(owner,value){if(value===undefined)return (await this.account(owner))?.event||null;return this.mutate(owner,a=>{a.event=copy(value);return a;});}
  async operations(owner){return (await this.tx(['operations'],'readonly',s=>req(s.operations.getAll()))).filter(x=>x.owner===owner).sort((a,b)=>a.sequence-b.sequence);}
- async enqueue(owner,kind,payload,id,session=this.session){if(!owner||!session)throw Error('LOAD_BARRIER');const op=await this.tx(['accounts','operations'],'readwrite',async s=>{const old=await req(s.operations.get([owner,id]));if(old){if(old.kind!==kind||canonical(old.payload)!==canonical(payload))throw Error('OPERATION_ID_REUSED');return old;}const a=await req(s.accounts.get(owner))||{owner,schema:3,generation:0};a.sequence=(a.sequence||0)+1;const o={owner,id,kind,payload:copy(payload),session,sequence:a.sequence,attempts:0,status:'pending',nextAttempt:0};s.accounts.put(a);s.operations.put(o);return o;});return op;}
+ async enqueue(owner,kind,payload,id,session=this.session){if(!owner||!session)throw Error('LOAD_BARRIER');const op=await this.tx(['accounts','operations'],'readwrite',async s=>{const old=await req(s.operations.get([owner,id]));if(old){if(old.kind!==kind||canonical(old.payload)!==canonical(payload))throw Error('OPERATION_ID_REUSED');return old;}const a=await req(s.accounts.get(owner))||{owner,schema:3,generation:0};a.sequence=(a.sequence||0)+1;const o={owner,id,kind,payload:copy(payload),before:copy(kind==='snapshot'?a.base:(a.pending||a.base)),session,sequence:a.sequence,attempts:0,status:'pending',nextAttempt:0};s.accounts.put(a);s.operations.put(o);return o;});return op;}
  async log(owner,op,stage,error){try{await this.tx(['diagnostics'],'readwrite',async s=>{const id=root.crypto.randomUUID();s.diagnostics.put({owner,id,operationId:op?.id||null,revision:op?.payload?.p_base_revision||null,stage,code:String(error?.code||error?.name||'ERROR').slice(0,70),message:String(error?.message||error||'').replace(/eyJ[A-Za-z0-9_.-]+/g,'[redacted]').slice(0,260)});const all=(await req(s.diagnostics.getAll())).filter(x=>x.owner===owner);all.slice(0,Math.max(0,all.length-100)).forEach(x=>s.diagnostics.delete([owner,x.id]));});}catch(_){} }
  async updateOperation(op){await this.tx(['operations'],'readwrite',s=>{s.operations.put(op);});}
  activate(owner,session){this.owner=owner;this.session=session;this.ready=true;}
  deactivate(){this.ready=false;this.owner=null;this.session=null;for(const t of this.timers.values())clearTimeout(t);this.timers.clear();}
- async drain(owner=this.owner,target=null){if(this.running.has(owner)){await this.running.get(owner);if(target)return this.drain(owner,target);return;}const run=async()=>{const lock=async()=>{for(const op of await this.operations(owner)){if(op.status==='reviewed'||op.status==='rejected')continue;if(!this.ready||this.owner!==owner)return;if(op.status==='quarantined')throw Object.assign(Error('이전 접속의 미전송 작업이 보관되어 있습니다. 충돌 확인이 필요합니다.'),{code:'SESSION_CONFLICT'});if(op.nextAttempt>Date.now()){this.schedule(owner,op.nextAttempt-Date.now());throw Object.assign(Error('동기화 실패 · 재시도 대기 중'),{code:'RETRY_WAIT'});}try{
-  // Recover uncertain/old-session requests first; a fresh operation has never reached the server.
-  const needsReceipt=op.attempts>0||op.status==='sending'||op.session!==this.session;op.attempts++;if(needsReceipt)await this.updateOperation(op);const known=needsReceipt?await this.options.lookup(op):null;let result=known?.found?known.result:null;
-  if(!result){if(op.session!==this.session){op.status='quarantined';await this.updateOperation(op);throw Object.assign(Error('새 접속으로 저장 권한이 이전되었습니다. 이전 작업을 자동 업로드하지 않습니다.'),{code:'SESSION_CONFLICT'});}op.status='sending';await this.updateOperation(op);result=await this.options.send(op);}
-  if(!result||typeof result.ok!=='boolean')throw Error('INVALID_SERVER_ACK');
-  if(result.conflict){op.status='quarantined';await this.updateOperation(op);await this.options.conflict?.(op,result);throw Object.assign(Error('서버 저장 버전 충돌 · 기기 기록 보관 중'),{code:'REVISION_CONFLICT'});}
-  if(!result.ok){op.status='rejected';op.result=result;await this.updateOperation(op);if(target===op.id)return result;continue;}
-  // Business rejection is an acknowledged receipt, not an unknown network outcome.
-  await this.options.applied?.(op,result);await this.tx(['operations'],'readwrite',s=>{s.operations.delete([owner,op.id]);});
-  if(target===op.id)return result;
- }catch(e){await this.log(owner,op,'sync',e);if(['SESSION_CONFLICT','REVISION_CONFLICT','42501','22023'].includes(String(e.code))||op.status==='quarantined'){op.status='quarantined';await this.updateOperation(op);this.status(e.message,true);throw e;}op.status='pending';op.nextAttempt=Date.now()+Math.min(120000,2000*2**Math.min(op.attempts,6))+Math.floor(Math.random()*1000);await this.updateOperation(op);this.status('동기화 실패 · 재시도 중',true);this.schedule(owner,op.nextAttempt-Date.now());throw e;}}};return root.navigator?.locks?root.navigator.locks.request('yfm-sync:'+owner,lock):lock();};const promise=run();this.running.set(owner,promise);try{return await promise;}finally{if(this.running.get(owner)===promise)this.running.delete(owner);}}
- schedule(owner,delay=0){clearTimeout(this.timers.get(owner));this.timers.set(owner,setTimeout(()=>{this.timers.delete(owner);if(this.ready&&this.owner===owner)this.drain(owner).catch(()=>{});},Math.max(0,delay)));}
- async call(kind,payload,id){const owner=this.owner;if(!this.ready||!owner)throw Error('LOAD_BARRIER');await this.enqueue(owner,kind,payload,id);this.status('기기 저장 완료 · 서버 동기화 중');const result=await this.drain(owner,id);if(!result){const receipt=await this.options.lookup({owner,id});if(receipt?.found)return receipt.result;throw Error('SERVER_ACK_PENDING');}return result;}
+ async drain(owner=this.owner,target=null){
+  if(this.running.has(owner)){try{await this.running.get(owner);}catch(e){if(!target)throw e;}if(target)return this.drain(owner,target);return;}
+  const run=async()=>{const lock=async()=>{
+   for(const op of await this.operations(owner)){
+    if(['reviewed','rejected','superseded'].includes(op.status)){if(target===op.id)return op.result;continue;}
+    if(!this.ready||this.owner!==owner)return;
+    // An isolated failed action is not a global queue lock. Never replay it silently.
+    if(op.status==='quarantined'){if(target===op.id){if(op.result)return op.result;throw Object.assign(Error('이 작업의 저장 충돌을 먼저 확인해 주세요.'),{code:'REVISION_CONFLICT'});}continue;}
+    if(op.nextAttempt>Date.now()){this.schedule(owner,op.nextAttempt-Date.now());throw Object.assign(Error('동기화 실패 · 재시도 대기 중'),{code:'RETRY_WAIT'});}
+    try{
+     const needsReceipt=op.attempts>0||op.status==='sending'||op.session!==this.session;
+     const known=needsReceipt?await this.options.lookup(op):null;
+     let result=known?.found?known.result:null;
+     if(!result){
+      // claimGameSession has already fenced the old session. The same account may
+      // resume an uncommitted action; the server still checks its original revision.
+      if(op.session!==this.session)op.session=this.session;
+      op.attempts++;op.status='sending';await this.updateOperation(op);
+      result=await this.options.send(op);
+     }
+     if(!this.ready||this.owner!==owner)return;
+     if(!result||typeof result.ok!=='boolean')throw Error('INVALID_SERVER_ACK');
+     if(result.conflict){
+      op.status=op.kind==='snapshot'?'superseded':'quarantined';op.result=result;await this.updateOperation(op);
+      if(op.kind!=='snapshot'||target!==op.id)await this.options.conflict?.(op,result);
+      if(target===op.id)return result;
+      // Do not send dependent actions against a conflicting baseline.
+      return;
+     }
+     if(!result.ok){op.status='rejected';op.result=result;await this.updateOperation(op);if(target===op.id)return result;continue;}
+     await this.options.applied?.(op,result);
+     await this.tx(['operations'],'readwrite',s=>{s.operations.delete([owner,op.id]);});
+     if(target===op.id)return result;
+     // Apply a recovered transaction before sending dependent work.
+     if(op.kind!=='snapshot'&&result.save_data&&!this.waiters.has(op.id))return;
+    }catch(e){
+     await this.log(owner,op,'sync',e);
+     if(String(e.code)==='22023'){
+      op.status='quarantined';op.quarantineReason=String(e.code);await this.updateOperation(op);this.status('거래 내용 확인 필요 · 기기 기록 보관 중',true);
+      if(target===op.id)throw e;continue;
+     }
+     // Lease expiry, permissions and network errors are recoverable failures,
+     // not proof that gameplay data conflicts with the server.
+     op.status='pending';op.nextAttempt=Date.now()+Math.min(120000,2000*2**Math.min(++op.attempts,6))+Math.floor(Math.random()*1000);
+     await this.updateOperation(op);this.status('동기화 실패 · 기기 보관 · 자동 재시도 중',true);this.schedule(owner,op.nextAttempt-Date.now());throw e;
+    }
+   }
+  };return root.navigator?.locks?root.navigator.locks.request('yfm-sync:'+owner,lock):lock();};
+  const promise=run();this.running.set(owner,promise);try{return await promise;}finally{if(this.running.get(owner)===promise)this.running.delete(owner);}
+ }
+
+ schedule(owner,delay=0){clearTimeout(this.timers.get(owner));this.timers.set(owner,setTimeout(()=>{this.timers.delete(owner);if(this.ready&&this.owner===owner)this.drain(owner).catch(()=>{}).finally(()=>{if(!this.waiters.size)return this.options.recovered?.(owner);});},Math.max(0,delay)));}
+ async call(kind,payload,id){
+  const owner=this.owner;if(!this.ready||!owner)throw Error('LOAD_BARRIER');
+  const op=await this.enqueue(owner,kind,payload,id);this.waiters.add(id);
+  try{this.status('기기 저장 완료 · 서버 동기화 중');const result=await this.drain(owner,id);
+   if(result)return result;
+   const receipt=await this.options.lookup({owner,id});if(receipt?.found)return receipt.result;
+   throw Error('SERVER_ACK_PENDING');
+  }finally{this.waiters.delete(id);}
+ }
+
 }
 try{const owner=root.localStorage?.getItem('yfm_cloud_owner');if(owner){const data={};for(let i=0;i<root.localStorage.length;i++){const k=root.localStorage.key(i);if(k?.startsWith('fm_')&&k!=='fm_items')data[k]=root.localStorage.getItem(k);}root.YFMLegacyBoot={owner,revision:root.localStorage.getItem('yfm_sync_revision'),snapshot:{app:'YFM',v:22,data}};}}catch(_){}
 root.YFMDurableStore=YFMDurableStore;
@@ -4443,47 +4492,108 @@ root.YFMDurableStore=YFMDurableStore;
         let accountSyncBase=null,accountSaveTimer=null,accountSaveConflict=null,accountJournalWarned=false,accountSaveFailures=0;
 // Account-owned IndexedDB state is authoritative for unacknowledged work.
 let durableLocalTail=Promise.resolve(),durableLocalError=null,durableCapturing=false;
+let saveActionTail=Promise.resolve();
+function serializeSaveAction(task){const run=saveActionTail.then(task,task);saveActionTail=run.catch(()=>{});return run;}
+
 const durableRawRpc=walletRpcWithRetry;
 const durableStore=new YFMDurableStore({
  status:(s,e)=>saveStatus(s,e),
  lookup:async op=>{if(accountUser?.id!==op.owner)throw Error('ACCOUNT_CHANGED');const {data}=await durableRawRpc('yfm_sync_status',{p_operation:op.id},{maxAttempts:1});return data;},
- send:async op=>{if(accountUser?.id!==op.owner||!window.yfmAccountReady&&op.kind!=='snapshot')throw Error('LOAD_BARRIER');const {data}=await durableRawRpc('yfm_sync_commit',{p_operation:op.id,p_kind:op.kind,p_payload:op.payload,p_origin_session:op.session},{maxAttempts:1,timeoutMs:18000});return data;},
- conflict:async(op,result)=>{await durableStore.mutate(op.owner,a=>{a.conflict={operationId:op.id,remote:result.save_data};return a;});showSaveConflict(op.owner,result.save_data,['서버 버전 변경']);},
+ send:async op=>{
+  if(accountUser?.id!==op.owner||!window.yfmAccountReady&&op.kind!=='snapshot')throw Error('LOAD_BARRIER');
+  const args={p_operation:op.id,p_kind:op.kind,p_payload:op.payload,p_origin_session:op.session};
+  try{const {data}=await durableRawRpc('yfm_sync_commit',args,{maxAttempts:1,timeoutMs:18000});return data;}
+  catch(e){if(!/SESSION_REQUIRED/.test(String(e.message))||isReplacedGameSession(e))throw e;
+   const beat=await durableRawRpc('yfm_session_heartbeat',{}, {maxAttempts:1,timeoutMs:8000});
+   if(isReplacedGameSession(beat.data)){blockGameSession(beat.data);throw e;}if(!beat.data?.ok)throw e;
+   const {data}=await durableRawRpc('yfm_sync_commit',args,{maxAttempts:1,timeoutMs:18000});return data;
+  }
+ },
+ conflict:async(op,result)=>{
+  if(op.kind==='snapshot'){await reconcileSnapshotConflict(op.owner,result.save_data,op.before,result.reason);return;}
+  await durableStore.mutate(op.owner,a=>{a.conflict={operationId:op.id,remote:result.save_data};return a;});showSaveConflict(op.owner,result.save_data,['거래의 기준 버전 변경']);
+ },
+ recovered:owner=>serializeSaveAction(()=>recoverDurableReceipt(owner)).catch(e=>saveStatus('거래 복구 대기 · '+e.message,true)),
  applied:async(op,result)=>{
   if(op.kind==='snapshot'&&result.ok){await durableStore.acknowledge(op.owner,result.save_data,op.payload.p_snapshot);
    if(accountUser?.id===op.owner&&(!accountSyncBase||result.save_data.sync_revision>=accountSyncBase.sync_revision)){accountSyncBase=result.save_data;accountLastSnapshot=canonData(result.save_data.data);accountDirty=cloudSnapshotFingerprint(accountSnapshot())!==cloudSnapshotFingerprint(result.save_data);}
   }
   // Persist the ACK before removing the operation. A reload recovers the receipt.
-  else if(result.save_data&&result.ok){await durableStore.mutate(op.owner,a=>{a.receipt={operationId:op.id,kind:op.kind,result};return a;});}
+  else if(result.save_data&&result.ok){await durableStore.mutate(op.owner,a=>{a.receipt={operationId:op.id,kind:op.kind,result,before:op.before,payload:op.payload};return a;});}
  }
 });
 window.YFMSave={store:durableStore,flushLocal:()=>durableLocalTail};
 function enqueueLocalSave(task){const run=durableLocalTail.then(task,task).then(v=>{durableLocalError=null;return v;});durableLocalTail=run.catch(e=>{durableLocalError=e;saveStatus('기기 저장 실패 · '+(e?.name||e?.message||'저장소 오류'),true);throw e;});durableLocalTail.catch(()=>{});return run;}
 function validateAccountSave(snapshot){if(snapshot?.app!=='YFM'||!snapshot.data||Array.isArray(snapshot.data))throw Error('SAVE_CORRUPT');let list;try{list=JSON.parse(snapshot.data.fm_players);}catch(_){throw Error('SAVE_CORRUPT_PLAYERS');}if(!Array.isArray(list))throw Error('SAVE_CORRUPT_PLAYERS');if(snapshot.sync_revision!=null&&!Number.isSafeInteger(snapshot.sync_revision))throw Error('SAVE_CORRUPT_REVISION');return snapshot;}
 async function durableRequest(kind,args,id){await durableLocalTail;return durableStore.call(kind,args,id||walletRequestId());}
+async function recoverDurableReceipt(owner=accountUser?.id){
+ if(!owner||owner!==accountUser?.id||window.__wiping)return false;
+ await durableLocalTail;
+ const receipt=(await durableStore.account(owner))?.receipt;
+ if(!receipt||receipt.handled)return false;
+ if(cloudMatchInProgress()){saveStatus('거래 승인 확인 · 경기 종료 후 자동 반영');return true;}
+ const remote=validateAccountSave(receipt.result.save_data),local=accountSnapshot();
+ const merged=mergeSaveChanges(local,remote,receipt.before||readSaveRecord(owner)?.base||accountSyncBase);
+ if(merged.conflicts.length){showSaveConflict(owner,remote,merged.conflicts);return true;}
+ await durableStore.mutate(owner,a=>{archiveLocalSave(a,{pending:a.pending,base:a.base,reason:'transaction-recovery'});a.receipt={...receipt,handled:true};a.base=remote;a.pending=cloudSnapshotFingerprint(merged.snapshot)!==cloudSnapshotFingerprint(remote)?merged.snapshot:null;return a;});
+ rememberCloudRestore(owner,merged.snapshot);restoreAccountSnapshot(merged.snapshot,owner);reloadForAccountRestore();return true;
+}
+async function reconcileSnapshotConflict(owner,remote,base,reason){
+ if(accountUser?.id!==owner||window.__wiping)return;
+ const merged=mergeSaveChanges(accountSnapshot(),remote,base||accountSyncBase);
+ if(merged.conflicts.length||cloudMatchInProgress()||reason==='PROGRESS_REGRESSION'){showSaveConflict(owner,remote,merged.conflicts.length?merged.conflicts:['진행도 버전 확인']);return;}
+ await storeSaveRecord(owner,{base:remote,pending:merged.snapshot,conflict:null});
+ rememberCloudRestore(owner,merged.snapshot);restoreAccountSnapshot(merged.snapshot,owner);reloadForAccountRestore();
+}
+
 async function durableSessionId(owner){const {data,error}=await getOwnerRankClient().auth.getSession();if(error)throw error;if(data?.session?.user?.id!==owner)throw Error('ACCOUNT_CHANGED');const part=data.session.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');const sid=JSON.parse(atob(part)).session_id;if(!sid)throw Error('SESSION_REQUIRED');return sid;}
 function applyGameplayReceipt(data){if(!data?.ok||!data.save_data)throw Error('서버에서 거래를 승인하지 않았습니다. '+(data?.reason||''));const accepted=validateAccountSave(data.save_data);players=JSON.parse(accepted.data.fm_players).map(p=>ensure(p));evoTokens=Number(accepted.data.fm_evo_tokens)||0;localStorage.setItem('fm_halloween_tickets',accepted.data.fm_halloween_tickets||'0');applyServerWallet(data.balance);accountSyncBase=accepted;accountLastSnapshot=canonData(accepted.data);localStorage.setItem('yfm_sync_revision',String(accepted.sync_revision));accountDirty=true;saveData();return data;}
 function archiveLocalSave(a,entry){a.quarantines=a.quarantines||[];for(const v of [a.quarantine,entry])if(v&&!a.quarantines.some(x=>JSON.stringify(x)===JSON.stringify(v)))a.quarantines.push(v);a.quarantine=entry;return a;}
 async function consumeDurableReceipt(owner=accountUser?.id){await durableLocalTail;await durableStore.mutate(owner,a=>{if(a.receipt)a.receipt.handled=true;return a;});}
-async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAccountReady)throw Error('로그인 후 이용해 주세요.');if(navigator.onLine===false)throw Error('서버 연결 후 거래할 수 있습니다. 진행 기록은 기기에 보관됩니다.');saveData();await durableLocalTail;await uploadAccountSnapshot(true);if(accountDirty||accountSaveConflict)throw Error('진행도 동기화가 완료된 뒤 다시 시도해 주세요.');const result=await durableRequest(kind,{...payload,revision:String(accountSyncBase.sync_revision)});applyGameplayReceipt(result);await consumeDurableReceipt();return result;}
+function serverGameplay(kind,payload){return serializeSaveAction(()=>serverGameplayUnlocked(kind,payload));}
+async function serverGameplayUnlocked(kind,payload){if(!accountUser?.id||!window.yfmAccountReady)throw Error('로그인 후 이용해 주세요.');if(navigator.onLine===false)throw Error('서버 연결 후 거래할 수 있습니다. 진행 기록은 기기에 보관됩니다.');saveData();await durableLocalTail;await uploadAccountSnapshotUnlocked(true);if(accountDirty||accountSaveConflict)throw Error('진행도 동기화가 완료된 뒤 다시 시도해 주세요.');const result=await durableRequest(kind,{...payload,revision:String(accountSyncBase.sync_revision)});applyGameplayReceipt(result);await consumeDurableReceipt();return result;}
 
-        walletRpcWithRetry=async function(name,args,options={}){
+        walletRpcWithRetry=function(name,args,options={}){
+ const financial=['yfm_wallet_credit','yfm_wallet_debit','yfm_claim_rewards_v2','yfm_redeem_coupon'].includes(name)||name==='yfm_halloween_rpc'&&['start','finish_local','purchase'].includes(args?.p_action);
+ return financial?serializeSaveAction(()=>durableFinancialRpc(name,args,options)):durableRawRpc(name,args,options);
+};
+async function durableFinancialRpc(name,args,options={}){
             const financial=['yfm_wallet_credit','yfm_wallet_debit','yfm_claim_rewards_v2','yfm_redeem_coupon'].includes(name)||name==='yfm_halloween_rpc'&&['start','finish_local','purchase'].includes(args?.p_action);
             if(!financial)return durableRawRpc(name,args,options);
             if(!window.yfmAccountReady||!durableStore.ready)throw Error('LOAD_BARRIER');
-            const owner=accountUser?.id,payload=JSON.parse(JSON.stringify(args||{}));
-            if(name==='yfm_wallet_credit'){
+            if(accountSaveConflict)throw Error('저장 충돌 안내를 먼저 확인해 주세요. 기기 기록은 보관됩니다.');
+            const owner=accountUser?.id;let payload=JSON.parse(JSON.stringify(args||{}));
+            const explicit=payload.p_request_id||payload.p_payload?.request_id;
+            let waiting=await durableStore.operations(owner);
+            const original=explicit&&waiting.find(x=>x.id===explicit);
+            if(explicit&&!original){
+                // A previous response may have been applied while its UI queue still survived.
+                // Look up the receipt before constructing a new snapshot for the same ID.
+                const known=await durableStore.options.lookup({owner,id:explicit});
+                if(known?.found)return {data:known.result,error:null};
+            }
+            if(!original){
+                if(name==='yfm_claim_rewards_v2')payload.p_revision=String(accountSyncBase?.sync_revision);
+                if(name==='yfm_halloween_rpc'&&payload.p_action==='purchase')payload.p_payload.revision=String(accountSyncBase?.sync_revision);
+            }
+
+            if(original){
+                // A request ID identifies the original immutable action, even after a timeout/reload.
+                const business=p=>{const x=JSON.parse(JSON.stringify(p));delete x._snapshot;delete x._revision;delete x.p_revision;if(x.p_payload)delete x.p_payload.revision;return canonData(x);};
+                if(original.kind!==name||business(original.payload)!==business(payload))throw Error('OPERATION_ID_REUSED');
+                payload=original.payload;
+            }
+            if(name==='yfm_wallet_credit'&&!original){
                 // End-of-action microtask: capture all synchronous reward/progression changes together.
                 await Promise.resolve();saveData();await durableLocalTail;
                 payload._snapshot=accountSnapshot();payload._revision=accountSyncBase?.sync_revision!=null?String(accountSyncBase.sync_revision):null;
             }
             if(accountUser?.id!==owner||durableStore.owner!==owner)throw Error('ACCOUNT_CHANGED');
-            const explicit=payload.p_request_id||payload.p_payload?.request_id;
-            const waiting=await durableStore.operations(owner);
+            waiting=await durableStore.operations(owner);
             const same=waiting.find(x=>x.kind===name&&JSON.stringify(x.payload)===JSON.stringify(payload));
             const data=await durableRequest(name,payload,explicit||same?.id||walletRequestId());
             if(accountUser?.id!==owner)throw Error('ACCOUNT_CHANGED');
-            if(name==='yfm_wallet_credit'&&data.save_data){accountSyncBase=data.save_data;accountLastSnapshot=canonData(data.save_data.data);await durableStore.acknowledge(owner,data.save_data,payload._snapshot);await consumeDurableReceipt(owner);}
+            if(name==='yfm_wallet_credit'&&data.ok&&data.save_data){accountSyncBase=data.save_data;accountLastSnapshot=canonData(data.save_data.data);await durableStore.acknowledge(owner,data.save_data,payload._snapshot);await consumeDurableReceipt(owner);}
             return {data,error:null};
         };
 
@@ -4537,7 +4647,6 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
                 if(key==='fm_tokens')continue;
                 const before=base.data[key],mine=local.data[key],theirs=remote.data[key];
                 if(same(mine,before)||same(mine,theirs))continue;
-                if(/players|tokens|tickets|inventory|claimed|daily|achievements|halloween_progress/.test(key)){conflicts.push(key);continue;}
                 if(!same(theirs,before)){conflicts.push(key);continue;}
                 if(mine===undefined)delete result.data[key];else result.data[key]=mine;
             }
@@ -4555,7 +4664,8 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
                 rememberCloudRestore(owner,remote);restoreAccountSnapshot(remote,owner);reloadForAccountRestore();}catch(e){button.disabled=false;saveStatus('복구 준비 실패: '+e.message,true);}
             };box.append(text,button);document.body.append(box);
         }
-        async function uploadAccountSnapshot(force=false,initialSave=false){
+        function uploadAccountSnapshot(force=false,initialSave=false){return serializeSaveAction(()=>uploadAccountSnapshotUnlocked(force,initialSave));}
+        async function uploadAccountSnapshotUnlocked(force=false,initialSave=false){
             if(!accountUser||window.__wiping||(!window.yfmAccountReady&&!initialSave))return;
             const owner=accountUser.id;
             if(!force&&!initialSave&&cloudMatchInProgress()){preservePendingSave(owner).catch(()=>{});return;}
@@ -4573,8 +4683,7 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
                 if(accountUser?.id!==owner||window.__wiping||tokenWalletPending>0)return;
                 await durableLocalTail;
                 if((await durableStore.operations(owner)).length)await durableStore.drain(owner);
-                const unhandled=(await durableStore.account(owner))?.receipt;
-                if(unhandled&&!unhandled.handled){saveStatus('서버 거래 확인 완료 · 새로고침해 확정 기록을 불러와 주세요',true);return;}
+                if(await recoverDurableReceipt(owner))return;
                 let snapshot=accountSnapshot(),base=accountSyncBase||readSaveRecord(owner)?.base;
                 if(base&&cloudSnapshotFingerprint(snapshot)===cloudSnapshotFingerprint(base)){accountDirty=false;confirmDurableSave(owner,base);return;}
                 // Capture local data BEFORE the request; a close/timeout cannot erase it.
@@ -4586,13 +4695,7 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
                     const data=reply.data,accepted=data?.save_data;
                     if(!accepted?.data||!Number.isSafeInteger(accepted.sync_revision)||!Number.isSafeInteger(Number(data.balance)))throw new Error('서버 저장 결과를 확인하지 못했습니다.');
                     if(data.conflict&&!data.ok){
-                        const current=accountSnapshot(),merged=mergeSaveChanges(current,accepted,base);
-                        if(merged.conflicts.length||cloudMatchInProgress()||attempt===1){showSaveConflict(owner,accepted,merged.conflicts);return;}
-                        // Restore only a completed, non-overlapping rebase. The merged
-                        // unsent record survives the reload and is sent on next login.
-                        await storeSaveRecord(owner,{base:accepted,pending:merged.snapshot});
-                        restoreAccountSnapshot(merged.snapshot);rememberCloudRestore(owner,merged.snapshot);
-                        localStorage.setItem(accountDeviceKey,owner);reloadForAccountRestore();return;
+                        await reconcileSnapshotConflict(owner,accepted,base,data.reason);return;
                     }
                     if(!data.ok)throw new Error('서버 저장에 실패했습니다.');accountSaveFailures=0;serverLoadState.failures=0;
                     const localNow=accountSnapshot();
@@ -4702,17 +4805,19 @@ async function serverGameplay(kind,payload){if(!accountUser?.id||!window.yfmAcco
             accountUser=user;accountSyncBase=remote;accountSaveConflict=null;durableStore.activate(user.id,sid);
             // Recover immutable transaction receipts before evaluating the pending snapshot.
             for(const op of await durableStore.operations(user.id)){
-                if(op.status==='reviewed'||op.status==='rejected')continue;
+                if(['reviewed','rejected','superseded'].includes(op.status))continue;
                 const found=await durableStore.options.lookup(op);
                 if(found?.found){if(found.result?.ok!==true){op.status='rejected';op.result=found.result;await durableStore.updateOperation(op);continue;}await durableStore.options.applied(op,found.result);await durableStore.tx(['operations'],'readwrite',s=>{s.operations.delete([user.id,op.id]);});}
-                else if(op.session!==sid){op.status='quarantined';await durableStore.updateOperation(op);}
+                else if(op.session!==sid||op.status==='quarantined'&&!op.result&&!op.quarantineReason){
+                    const oldSessionOnly=op.status==='quarantined'&&!op.result&&!op.quarantineReason;
+                    if(oldSessionOnly||!['quarantined','superseded'].includes(op.status)){op.session=sid;op.status='pending';op.nextAttempt=0;await durableStore.updateOperation(op);}
+                }
             }
             journal=await durableStore.account(user.id);
             if(journal.receipt&&!journal.receipt.handled&&remote){
-                // Keep the unsent predecessor for inspection. Assets always come from the server receipt.
-                await durableStore.mutate(user.id,a=>{if(a.pending)archiveLocalSave(a,{pending:a.pending,base:a.base,reason:'receipt-recovery'});const recovered={...remote,data:{...remote.data}};
-                for(const [key,value] of Object.entries(a.pending?.data||{}))if(!/players|tokens|tickets|inventory|daily|achievements|halloween_progress/.test(key)&&a.base?.data?.[key]===remote.data[key])recovered.data[key]=value;
-                a.pending=cloudSnapshotFingerprint(recovered)!==cloudSnapshotFingerprint(remote)?recovered:null;a.receipt=null;a.base=remote;return a;});journal=await durableStore.account(user.id);
+                const recovered=mergeSaveChanges(journal.pending||remote,remote,journal.receipt.before||journal.base);
+                if(recovered.conflicts.length){showSaveConflict(user.id,remote,recovered.conflicts);throw Error('거래 복구 기록을 확인해 주세요.');}
+                await durableStore.mutate(user.id,a=>{if(a.pending)archiveLocalSave(a,{pending:a.pending,base:a.base,reason:'receipt-recovery'});a.pending=cloudSnapshotFingerprint(recovered.snapshot)!==cloudSnapshotFingerprint(remote)?recovered.snapshot:null;a.receipt={...a.receipt,handled:true};a.base=remote;return a;});journal=await durableStore.account(user.id);
             }
             if(remote&&(await durableStore.operations(user.id)).some(op=>op.status==='quarantined'))showSaveConflict(user.id,remote,['이전 접속의 미전송 작업']);
             if(!journal.base&&!journal.pending&&journal.legacySource?.snapshot?.data?.fm_players&&remote){const old=journal.legacySource;validateAccountSave(old.snapshot);if(cloudSnapshotFingerprint(old.snapshot)!==cloudSnapshotFingerprint(remote)){if(old.revision!==String(remote.sync_revision)){await durableStore.mutate(user.id,a=>{archiveLocalSave(a,{pending:old.snapshot,reason:'legacy-revision-unknown'});return a;});showSaveConflict(user.id,remote,['기존 기기 기록의 버전 불일치']);throw Error('기존 기기 기록을 보관하고 자동 업로드를 중단했습니다.');}journal=await durableStore.mutate(user.id,a=>({...a,base:remote,pending:old.snapshot}));}}
