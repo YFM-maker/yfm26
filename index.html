@@ -1234,7 +1234,7 @@ root.YFMDurableStore=YFMDurableStore;
                     <button class="fm-nav-item" onclick="switchScreen('screen-recruit')"><span class="fm-ico">🔍</span><span>선수 영입</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-enhance')"><span class="fm-ico">⬆️</span><span>강화</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-fusion')"><span class="fm-ico">🧬</span><span>진화</span></button>
-                    <button id="fm-nav-awaken" class="fm-nav-item" onclick="switchScreen('screen-awaken')"><span class="fm-ico">🔄</span><span>선수 합성</span><span id="fm-awk-badge" class="fm-badge" style="display:none" aria-label="합성 가능한 학생 수"></span></button>
+                    <button id="fm-nav-awaken" class="fm-nav-item" onclick="switchScreen('screen-awaken')"><span class="fm-ico">🔄</span><span>선수 합성</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-stats')"><span class="fm-ico">📊</span><span>기록실</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-owner-rank')"><span class="fm-ico">🏆</span><span>구단주 TOP 50</span></button>
                     <button class="fm-nav-item" onclick="switchScreen('screen-social')"><span class="fm-ico">👥</span><span>소셜</span><span id="fm-social-badge" class="fm-badge" style="display:none" aria-label="새 소셜 알림"></span></button>
@@ -13543,7 +13543,7 @@ function awkFx(p, stp) {
     ov.classList.remove('show'); void ov.offsetWidth; ov.classList.add('show');
     clearTimeout(awkFx.t); awkFx.t = setTimeout(() => ov.classList.remove('show'), 3200);
 }
-function awkBadge() { const b = document.getElementById('fm-awk-badge'); if (!b) return; const n = awkGroups().filter(g => g.ready).length; b.style.display = n ? '' : 'none'; b.textContent = n > 9 ? '9+' : String(n); }
+function awkBadge() {}
 window.awkBadge = awkBadge;
 if (typeof switchScreen === 'function') { const _ss = switchScreen; switchScreen = function (id) { const r = _ss.apply(this, arguments); try { if (id === 'screen-awaken') { awkSel = awkSel || null; renderAwaken(); const t = document.getElementById('token-display-awaken'); if (t) t.textContent = Number(tokens).toLocaleString(); } awkBadge(); } catch (e) { console.error(e); } return r; }; }
 if (typeof updateTokensUI === 'function') { const _ut = updateTokensUI; updateTokensUI = function () { const r = _ut.apply(this, arguments); try { const t = document.getElementById('token-display-awaken'); if (t) t.textContent = Number(tokens).toLocaleString(); } catch (_) {} return r; }; }
@@ -70789,7 +70789,7 @@ function render(){installUI();tabs();const queued=savedResults().length;$('he-ma
 async function refresh(){const owner=accountUser?.id,refreshSeq=H.refreshSeq=(H.refreshSeq||0)+1,epoch=H.eventMutationEpoch||0;H.owner=owner||null;const restored=restoreEventProgress(owner);H.loaded=restored;if(!owner||!window.yfmAccountReady){if(!owner)H.state=null;say(restored?'기기에 보관된 이벤트 기록을 불러왔습니다.':'로그인 후 이벤트를 이용할 수 있습니다.');render();return;}if(restored)render();try{const data=await rpc('state');if(H.owner!==owner||H.refreshSeq!==refreshSeq||(H.eventMutationEpoch||0)!==epoch)return;const old=Number(H.state?.balance||0),cp=eventCheckpoint(owner);cp.base=data;await writeEventCheckpoint(cp,owner);restoreEventProgress(owner);say(savedResults(owner).length?'기기에 저장된 결과로 다음 단계에 참여할 수 있습니다. 서버에 자동 동기화합니다.':'이벤트 기록을 저장하고 불러왔습니다.');render();balanceFlash(Number(H.state.balance)-old);}catch(e){if(H.owner!==owner||H.refreshSeq!==refreshSeq)return;const local=restoreEventProgress(owner);H.loaded=local;say(local?'서버 연결을 기다리는 동안 기기에 저장된 기록으로 계속할 수 있습니다.':errorText(e),!local);render();}}
 async function open(tab='lobby'){installUI();H.tab=['lobby','gs','shop'].includes(tab)?tab:'lobby';switchScreen('screen-halloween');if(H.owner!==accountUser?.id){H.state=null;H.loaded=false;}restoreEventProgress();render();await refresh();if(savedResults().length)flushSavedResults();if(H.tab==='shop'&&H.loaded)recoverPurchase();clearTimeout(H.timer);const poll=async()=>{if(!$('screen-halloween').classList.contains('active')||document.hidden)return;await refresh();H.timer=setTimeout(poll,60000);};H.timer=setTimeout(poll,60000);}
 async function sync(){if(!accountUser?.id||!window.yfmAccountReady)throw Error('LOGIN_REQUIRED');return null;}
-function pending(kind,pack){const key=cacheKey(kind),old=read(key);if(old&&(!pack||old.pack===pack))return old;if(old)throw Error('이전 구매 결과를 먼저 확인해 주세요. 같은 선수팩을 다시 눌러 확인할 수 있습니다.');const x={request_id:walletRequestId(),...(pack?{pack}:{})};localStorage.setItem(key,JSON.stringify(x));return x;}
+function pending(kind,pack){const key=cacheKey(kind),old=read(key);if(old)return old;const x={request_id:walletRequestId(),...(pack?{pack}:{})};localStorage.setItem(key,JSON.stringify(x));return x;}
 async function startRun(){if(savedResults().length){flushSavedResults();say('기기에 보관된 경기 결과를 서버에 반영한 뒤 도전할 수 있습니다.',true);return;}if(H.busy)return;H.busy=true;render();try{await sync();const p=pending('entry');const data=await rpc('start',p);if(data.ordinary_balance!=null)applyServerWallet(Number(data.ordinary_balance));localStorage.removeItem(cacheKey('entry'));await refresh();}catch(e){say(errorText(e),true);}finally{H.busy=false;render();}}
 async function playStage(){if(H.busy||gameSessionBlocked)return;try{restoreEventProgress();if(!H.loaded)await refresh();if(!H.loaded||H.state?.run?.status!=='active')return;openPrematch('halloween',enemy());flushSavedResults();}catch(e){say(errorText(e),true);}}
 async function beginMatch(setup){if(H.busy||gameSessionBlocked)return;H.busy=true;try{saveData();restoreEventProgress();localStorage.removeItem(cacheKey('match'));const m=pendingMatch;if(!m||m.mode!=='halloween')throw Error('경기 설정을 확인해 주세요.');const selectedEnemy=m.e||enemy();if(!H.loaded)await refresh();if(!H.loaded||H.state?.run?.status!=='active')throw Error('도전 상태를 다시 확인해 주세요.');if(selectedEnemy.eventRunId!==H.state.run.id||Number(selectedEnemy.eventStage)!==Number(H.state.run.stage))throw Error('도전 단계가 갱신되었습니다. 경기 준비 창을 닫고 다시 시작해 주세요.');const eventEnemy={...selectedEnemy,eventRunId:H.state.run.id,eventStage:Number(H.state.run.stage)};closePrematch();prepareMatch('halloween',eventEnemy,JSON.parse(JSON.stringify(setup)));if(currentMatchState?.mode==='halloween'){currentMatchState.eventRunId=eventEnemy.eventRunId;currentMatchState.eventStage=eventEnemy.eventStage;currentMatchState.eventFinishRequestId=walletRequestId();}}catch(e){say(errorText(e),true);managerToast(errorText(e));}finally{H.busy=false;}}
@@ -70812,11 +70812,89 @@ function retryFinish(){continueSavedEventResult();}
 async function flushSavedResults(){if(H.finishPending&&currentMatchState?.mode==='halloween')return;const owner=accountUser?.id;if(H.resultSyncing||!owner||!window.yfmAccountReady||!savedResults(owner).length)return;H.resultSyncing=true;try{for(const entry of savedResults(owner)){if(accountUser?.id!==owner)break;const verdict=await rpc('finish_local',entry.payload),cp=eventCheckpoint(owner);cp.base=cp.base||{ok:true,balance:0,run:null,ready:true};cp.base.balance=Number(verdict.balance??cp.base.balance);if(verdict.run&&(!cp.base.run||cp.base.run.id===verdict.run.id))cp.base.run=verdict.run;cp.acknowledged=[...(cp.acknowledged||[]),entry.payload.request_id];cp.queue=cp.queue.filter(x=>x.payload?.request_id!==entry.payload.request_id);await writeEventCheckpoint(cp,owner);const request=read(cacheKey('finish',owner));if(request?.request_id===entry.payload.request_id)localStorage.removeItem(cacheKey('finish',owner));if(accountUser?.id!==owner)break;H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;H.finishError=null;restoreEventProgress(owner);}if(accountUser?.id===owner&&$('screen-halloween')?.classList.contains('active'))await refresh();}catch(e){H.finishError=errorText(e);if(accountUser?.id===owner){restoreEventProgress(owner);say('기기 저장 완료 · 다음 단계 진행 가능. 서버 동기화 대기: '+H.finishError,true);if($('screen-halloween')?.classList.contains('active'))render();}}finally{H.resultSyncing=false;}}
 
 async function adoptPurchase(receipt,before,owner){if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');const accepted=receipt.save_data;if(!accepted?.data||!receipt.card?.id||!Number.isSafeInteger(accepted.sync_revision))throw Error('구매 기록을 확인하지 못했습니다.');
- if(!players.some(p=>String(p.id)===String(receipt.card.id)))players.push(ensure({...receipt.card}));
+ const stillOwned=receipt.owned!==false&&JSON.parse(accepted.data.fm_players||'[]').some(p=>String(p.id)===String(receipt.card.id));
+ if(stillOwned&&!players.some(p=>String(p.id)===String(receipt.card.id)))players.push(ensure({...receipt.card}));
  const checkpoint=eventCheckpoint(owner);if(checkpoint.base){checkpoint.base.balance=Number(receipt.balance);await writeEventCheckpoint(checkpoint,owner);restoreEventProgress(owner);}else H.state={...(H.state||{}),balance:Number(receipt.balance)};H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;saveData();const current=accountSnapshot(),merged=mergeAutomaticSave(current,accepted,accountSyncBase);if(cloudSnapshotFingerprint(merged.snapshot)===cloudSnapshotFingerprint(current)){accountSyncBase=accepted;accountLastSnapshot=canonData(accepted.data);await durableStore.checkpoint(owner,current,accepted);}accountLastWrite=Date.now();await preservePendingSave(owner);await durableLocalTail;
 }
-async function buy(id,recover=false){if(H.busy||HauntedPack.active)return;const pack=PACKS.find(p=>p.id===id);if(!pack)return;H.busy=true;HauntedPack.prime();render();const owner=accountUser?.id;try{if(savedResults(owner).length)await flushSavedResults();const p=pending('purchase',id),before=accountSnapshot();const result=await serializeSaveAction(()=>rpc('purchase',p));await adoptPurchase(result,before,owner);localStorage.setItem(cacheKey('result',owner),JSON.stringify({pack:id,card:result.card,request_id:p.request_id}));localStorage.removeItem(cacheKey('purchase',owner));render();balanceFlash(-pack.price);HauntedPack.play(pack,ensure({...result.card}),ASSETS,()=>{localStorage.removeItem(cacheKey('result',owner));refresh();});}catch(e){HauntedPack.close();say(errorText(e),true);}finally{H.busy=false;if($('screen-halloween').classList.contains('active'))render();}}
-function recoverPurchase(){if(H.busy||HauntedPack.active)return;const result=read(cacheKey('result'));if(result){const p=PACKS.find(p=>p.id===result.pack);if(p)HauntedPack.play(p,ensure({...result.card}),ASSETS,()=>{localStorage.removeItem(cacheKey('result'));refresh();});return;}const p=read(cacheKey('purchase'));if(p)say('확인되지 않은 구매가 있습니다. '+(PACKS.find(x=>x.id===p.pack)?.name||'같은 팩')+' 구매 버튼으로 결과를 다시 확인할 수 있습니다.');}
+function validPurchaseId(value){return typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);}
+async function archivePurchase(record,owner,reason){
+ await enqueueLocalSave(()=>durableStore.mutate(owner,a=>{a.purchaseRecoveryArchive=a.purchaseRecoveryArchive||[];if(!a.purchaseRecoveryArchive.some(x=>x.reason===reason&&JSON.stringify(x.record)===JSON.stringify(record)))a.purchaseRecoveryArchive.push({record,reason,at:Date.now()});return a;}));
+}
+async function retireLegacyPurchase(owner,requestId){
+ for(const op of await durableStore.operations(owner)){
+  if(op.kind==='yfm_halloween_rpc'&&op.payload?.p_action==='purchase'&&op.payload?.p_payload?.request_id===requestId&&!['reviewed','rejected'].includes(op.status))
+   await durableStore.updateOperation({...op,status:'reviewed',reviewReason:'event-purchase-recovery'});
+ }
+}
+async function previousPurchase(owner){
+ const cached=read(cacheKey('purchase',owner))||read(cacheKey('result',owner));if(cached)return cached;
+ const op=(await durableStore.operations(owner)).find(o=>o.kind==='yfm_halloween_rpc'&&o.payload?.p_action==='purchase'&&!['reviewed','rejected','superseded'].includes(o.status));
+ return op?.payload?.p_payload||null;
+}
+async function purchaseRequest(packId,owner){
+ let old=await previousPurchase(owner);
+ if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');
+ while(old&&!validPurchaseId(old.request_id)){await archivePurchase(old,owner,'invalid-legacy-request');await retireLegacyPurchase(owner,old.request_id);localStorage.removeItem(cacheKey('purchase',owner));localStorage.removeItem(cacheKey('result',owner));old=await previousPurchase(owner);if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');}
+ if(old){
+  const status=await rpc('purchase_status',{request_id:old.request_id});
+  if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');
+  if(status.found)return {receipt:status};
+  // Keep the same transaction ID even when the player chooses a different pack.
+  // A late old request and the replacement can never both charge this ID.
+  await archivePurchase(old,owner,'uncommitted-legacy-request');
+  await retireLegacyPurchase(owner,old.request_id);
+ }
+ if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');
+ const request={request_id:old?.request_id||walletRequestId(),pack:packId};
+ localStorage.setItem(cacheKey('purchase',owner),JSON.stringify(request));
+ localStorage.removeItem(cacheKey('result',owner));return {request};
+}
+async function purchaseOrRecover(request,owner){
+ if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');
+ try{return await rpc('purchase',request);}catch(error){
+  // A response can disappear after payment, or an old in-flight pack can win the race.
+  try{if(accountUser?.id!==owner)throw error;const status=await rpc('purchase_status',{request_id:request.request_id});if(status.found)return status;}catch(_){}
+  throw error;
+ }
+}
+async function buy(id,recover=false){
+ if(H.busy||HauntedPack.active)return;const selected=PACKS.find(p=>p.id===id);if(!selected)return;
+ H.busy=true;HauntedPack.prime();render();const owner=accountUser?.id;
+ try{
+  if(savedResults(owner).length)await flushSavedResults();
+  const before=accountSnapshot();const result=await serializeSaveAction(async()=>{
+   const resolved=await purchaseRequest(id,owner);return resolved.receipt||purchaseOrRecover(resolved.request,owner);
+  });
+  await adoptPurchase(result,before,owner);await retireLegacyPurchase(owner,result.request_id);
+  const actual=PACKS.find(p=>p.id===(result.pack||id))||selected;
+  localStorage.setItem(cacheKey('result',owner),JSON.stringify({pack:actual.id,card:result.card,request_id:result.request_id}));
+  localStorage.removeItem(cacheKey('purchase',owner));render();
+  if(!result.duplicate)balanceFlash(-actual.price);
+  if(result.owned===false){HauntedPack.close();localStorage.removeItem(cacheKey('result',owner));say('이전 구매 내역을 자동으로 정리했습니다.');}
+  else HauntedPack.play(actual,ensure({...result.card}),ASSETS,()=>{if(accountUser?.id===owner){localStorage.removeItem(cacheKey('result',owner));refresh();}});
+ }catch(e){HauntedPack.close();say(errorText(e),true);}
+ finally{H.busy=false;if($('screen-halloween').classList.contains('active'))render();}
+}
+async function recoverPurchase(){
+ if(H.busy||HauntedPack.active)return;const owner=accountUser?.id;if(!owner)return;H.busy=true;render();
+ try{
+  const old=await previousPurchase(owner);if(accountUser?.id!==owner)return;if(!old)return;
+  if(!validPurchaseId(old.request_id)){await archivePurchase(old,owner,'invalid-legacy-request');localStorage.removeItem(cacheKey('purchase',owner));localStorage.removeItem(cacheKey('result',owner));return;}
+  const status=await serializeSaveAction(()=>{if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');return rpc('purchase_status',{request_id:old.request_id});});
+  if(accountUser?.id!==owner)return;
+  if(status.found){
+   await adoptPurchase(status,null,owner);await retireLegacyPurchase(owner,old.request_id);
+   localStorage.removeItem(cacheKey('purchase',owner));localStorage.removeItem(cacheKey('result',owner));
+   say('이전 구매 내역을 복구했습니다. 추가 토큰 차감은 없습니다.');
+  }else{
+   await archivePurchase(old,owner,'uncommitted-legacy-request');await retireLegacyPurchase(owner,old.request_id);
+   localStorage.setItem(cacheKey('purchase',owner),JSON.stringify({request_id:old.request_id,pack:old.pack}));
+   localStorage.removeItem(cacheKey('result',owner));say('');
+  }
+ }catch(e){if(accountUser?.id===owner)say('연결을 기다리고 있습니다. 구매 기록은 보관되어 있습니다.',false);}
+ finally{H.busy=false;if(accountUser?.id===owner&&$('screen-halloween')?.classList.contains('active'))render();}
+}
+
 async function odds(id){const host=$('he-odds');if(!host)return;try{if(!H.packs&&accountUser?.id&&window.yfmAccountReady)H.packs=(await rpc('catalogue')).packs;}catch(_){}
  const pack=(H.packs||[]).find(p=>p.id===id)||(()=>{const p=PACKS.find(p=>p.id===id);return {...p,players:p.pool.map(o=>({...CONFIG.catalogue.find(c=>c.key===o.key),percent:o.percent}))};})();
  host.innerHTML=`<section class="he-odds"><div class="he-inline" style="justify-content:space-between"><h3>${esc(pack.name)} · ${pack.players.length}장</h3><button type="button" class="he-btn" onclick="document.getElementById('he-odds').replaceChildren()">닫기</button></div><p>팩 안의 전체 선수를 하나의 풀에서 추첨합니다. ${pack.id==='70'?'OVR 105 선수별 0.1%':pack.id==='gs'?'OVR 105 선수별 2.5%':'OVR 105 선수별 1%'}. 각 구매는 독립적이며 횟수 제한이나 확률 락이 없습니다.<br>표시는 소수점 넷째 자리 반올림으로, 표시값 합계에는 미세한 오차가 있을 수 있습니다.${!H.packs?'<br>현재 파일에 포함된 확률표입니다. 실제 구매는 서버의 선수풀로만 처리합니다.':''}</p><div class="he-odds-scroll"><table><thead><tr><th>선수</th><th>시즌</th><th>포지션</th><th>OVR</th><th>확률</th></tr></thead><tbody>${pack.players.slice().sort((a,b)=>b.ovr-a.ovr||a.name.localeCompare(b.name,'ko')).map(p=>`<tr><td>${esc(p.name)}</td><td>${p.seasonId==='science2026'?'GS':p.eventSeason===HALLOWEEN_SEASON?'할로윈':'기존'}</td><td>${positionLabel(p.pos2||p.position)}</td><td>${p.ovr}</td><td>${Number(p.percent).toFixed(4)}%</td></tr>`).join('')}</tbody></table></div><p>전체 확률 합계 ${pack.players.reduce((s,p)=>s+Number(p.percent),0).toFixed(6)}%</p></section>`;host.scrollIntoView({block:'nearest',behavior:'smooth'});}
