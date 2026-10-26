@@ -1083,6 +1083,19 @@ root.YFMDurableStore=YFMDurableStore;
 }
 @media(max-width:360px){#screen-recruit>main{grid-template-columns:minmax(0,1fr)}#screen-recruit .orb-card-gacha{width:130px}}
 </style>
+<style id="yfm-rs-season-style">
+/* RS-only 1080 x 1080 coordinates; all dimensions scale with the card width. */
+.player-card.rs-card{position:relative;aspect-ratio:1/1;height:auto!important;min-height:0;container-type:inline-size;background:transparent;border:0;border-radius:0;overflow:hidden;scale:1;isolation:isolate}
+.rs-card-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.player-card.rs-card .card-background{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:0;clip-path:none;border-radius:0}
+.rs-card .rs-photo-window{position:absolute;left:32.407407%;top:25%;width:42.592593%;height:41.203704%;overflow:hidden;z-index:1}
+.rs-card .rs-photo-fade{position:absolute;inset:0;overflow:hidden;-webkit-mask-image:linear-gradient(to right,transparent 0%,#000 3%,#000 97%,transparent 100%),linear-gradient(to bottom,transparent 0%,#000 3%,#000 100%);mask-image:linear-gradient(to right,transparent 0%,#000 3%,#000 97%,transparent 100%),linear-gradient(to bottom,transparent 0%,#000 3%,#000 100%);-webkit-mask-composite:source-in;mask-composite:intersect}
+.rs-card .rs-photo{display:block;position:absolute;left:0;width:100%;height:auto;aspect-ratio:1/1;object-fit:contain;user-select:none}
+.player-card.rs-card .card-ovr,.player-card.rs-card .card-position,.player-card.rs-card .card-name{position:absolute;transform:translate(-50%,-50%);font-family:'NexonLv1GothicCard',sans-serif;font-weight:700;line-height:1.2;text-align:center;white-space:nowrap;text-shadow:none;background:none;border:0;padding:0;width:auto;z-index:2;letter-spacing:0;text-indent:0}
+.player-card.rs-card .card-ovr{left:33.148148%;top:28.703704%;font-size:8.333333cqw;color:#fff}
+.player-card.rs-card .card-position{left:33.148148%;top:37.037037%;font-size:6.481481cqw;color:#fff}
+.player-card.rs-card .card-name{left:50%;top:74.537037%;font-size:4.629630cqw;max-width:65%;overflow:hidden;color:#FFF5DE}
+</style>
 <style id="yfm-science-season-style">
 /* One square template, shared unchanged by every portrait. Coordinates are fractions of 1080. */
 /* Compensate for the square artwork's transparent side margins while keeping the shared template coordinates. */
@@ -2865,27 +2878,38 @@ root.YFMDurableStore=YFMDurableStore;
             const list=leagueRewardQueue(owner);if(!list.some(x=>x.requestId===requestId))list.push({owner,amount,requestId});writeLeagueRewardQueue(list,owner);
         }
         var leagueRewardRetryTimer=null;
-        function showLeagueRewardStatus(){
-            let box=document.getElementById('league-reward-pending');
-            const list=accountUser?.id?leagueRewardQueue(accountUser.id):[];
-            if(!list.length||!window.yfmAccountReady){if(box)box.remove();return;}
-            if(!box){
-                box=document.createElement('div');box.id='league-reward-pending';
-                box.style.cssText='position:fixed;right:12px;bottom:12px;z-index:9999;max-width:320px;padding:12px 16px;border:1px solid #fbbf24;border-radius:12px;background:#172033;color:#fff;font-size:13px;box-shadow:0 4px 20px #0008';
-                document.body.appendChild(box);
-            }
-            box.replaceChildren();
-            const label=document.createElement('div');
-            label.textContent='리그 보상 '+list.reduce((n,x)=>n+Number(x.amount),0).toLocaleString()+'T · '+(leagueRewardSyncBusy?'서버 지급 확인 중':'미지급 보관 중 · 자동 재시도');
-            box.appendChild(label);
-            const button=document.createElement('button');button.textContent='지급 다시 확인';button.disabled=leagueRewardSyncBusy;button.style.cssText='margin-top:8px;color:#fbbf24;font-weight:bold';
-            button.onclick=()=>settleLeagueRewards();box.appendChild(button);
-        }
+        function showLeagueRewardStatus(){document.getElementById('league-reward-pending')?.remove();}
         function scheduleLeagueRewardRetry(){
             if(leagueRewardRetryTimer)clearTimeout(leagueRewardRetryTimer);
             leagueRewardRetryTimer=null;
             if(accountUser?.id&&window.yfmAccountReady&&leagueRewardQueue(accountUser.id).length)
                 leagueRewardRetryTimer=setTimeout(()=>{leagueRewardRetryTimer=null;settleLeagueRewards();},15000);
+        }
+        async function recoverLeagueReward(item,owner){
+            // Payment has its own immutable request ID. A stale full-save operation
+            // must not gate the wallet, nor be replayed after its payment is confirmed.
+            return queueWalletOperation(()=>serializeSaveAction(async()=>{
+                if(accountUser?.id!==owner||!window.yfmAccountReady)return false;
+                let response;
+                const args={p_amount:Math.floor(Number(item.amount)),p_source:'league_reward',p_request_id:item.requestId};
+                try{response=await durableRawRpc('yfm_wallet_credit',args,{maxAttempts:2,timeoutMs:12000});}
+                catch(e){
+                    if(!/SESSION_REQUIRED/.test(String(e.message))||isReplacedGameSession(e))throw e;
+                    const beat=await durableRawRpc('yfm_session_heartbeat',{}, {maxAttempts:1,timeoutMs:8000});
+                    if(!beat.data?.ok)throw e;
+                    response=await durableRawRpc('yfm_wallet_credit',args,{maxAttempts:1,timeoutMs:12000});
+                }
+                if(accountUser?.id!==owner)return false;
+                const {data,error}=response;if(error)throw error;if(!data?.ok)return false;
+                applyServerWallet(data.balance);
+                for(const op of await durableStore.operations(owner)){
+                    if(op.kind==='yfm_wallet_credit'&&op.payload?.p_source==='league_reward'&&op.payload?.p_request_id===item.requestId){
+                        await durableStore.updateOperation({...op,status:'reviewed',reviewReason:'league-payment-confirmed'});
+                        await durableStore.mutate(owner,a=>{if(a.receipt?.operationId===op.id)a.receipt.handled=true;return a;});
+                    }
+                }
+                return true;
+            }));
         }
         async function settleLeagueRewards(){
             if(leagueRewardSyncBusy||!accountUser?.id||!window.yfmAccountReady)return;
@@ -2894,7 +2918,7 @@ root.YFMDurableStore=YFMDurableStore;
             try{
                 for(const item of leagueRewardQueue(owner)){
                     if(accountUser?.id!==owner||!window.yfmAccountReady)break;
-                    const paid=await awardTokens(item.amount,'league_reward',item.requestId);
+                    const paid=await recoverLeagueReward(item,owner);
                     if(!paid)break;
                     // Keep the request until the server confirms payment. Reuse its ID on every retry.
                     writeLeagueRewardQueue(leagueRewardQueue(owner).filter(x=>x.requestId!==item.requestId),owner);
@@ -3397,6 +3421,32 @@ root.YFMDurableStore=YFMDurableStore;
             {name:'정상명',ovr:94,photo:'jeongsangmyeong'},
             {name:'김현수',ovr:90,pos:'RB',photo:'kimhyunsu'}
         ].map(p => Object.freeze({...p,pos:p.pos || FIXED_PLAYER_POSITIONS[p.name],seasonId:SCIENCE_SEASON})));
+        // RS is an admin-only catalogue. Never insert it into recruitment/event pools.
+        const RS_SEASON='risingstar2026';
+        const RS_BACKGROUND='https://github.com/user-attachments/assets/8721fe72-6745-452c-a30a-944a292349a3';
+        const RS_PLAYERS=Object.freeze([{"name":"김사헌","ovr":100,"photo":"https://github.com/user-attachments/assets/b72c9767-9909-4e70-9f47-180d556393d3","photoTop":2.4074074074074074},{"name":"김서후","ovr":97,"photo":"https://github.com/user-attachments/assets/e50c3f2d-857c-42a7-92de-e43c756e53d1","photoTop":2.9629629629629632},{"name":"소병준","ovr":102,"photo":"https://github.com/user-attachments/assets/51b8d59e-2a00-46e0-b934-500f0dac35de","photoTop":1.0185185185185186},{"name":"김태영","ovr":101,"photo":"https://github.com/user-attachments/assets/be7d0581-e450-4f1b-84b6-960f7d1a0fdf","photoTop":0.0},{"name":"이성언","ovr":97,"photo":"https://github.com/user-attachments/assets/f9160e5e-39af-4280-b7e7-d5850f026a58","photoTop":0.0,"pos":"LW"},{"name":"신정민","ovr":104,"photo":"https://github.com/user-attachments/assets/45883a1e-fbc8-41e8-8380-eb8ead12c162","photoTop":0.0},{"name":"윤준상","ovr":100,"photo":"https://github.com/user-attachments/assets/b7c85265-2f5e-403d-b088-254ef0961592","photoTop":1.1111111111111112},{"name":"김중근","ovr":96,"photo":"https://github.com/user-attachments/assets/8a3ea098-c2c3-4b65-9ddb-a4d6aad3a43f","photoTop":0.0,"pos":"RW"},{"name":"이현성","ovr":105,"photo":"https://github.com/user-attachments/assets/4e9d671f-8690-4413-8a8b-5d2153ce493e","photoTop":2.314814814814815},{"name":"정민재","ovr":105,"photo":"https://github.com/user-attachments/assets/f475a5ed-f787-4d3e-a020-56a0402c4610","photoTop":4.62962962962963}].map(d=>Object.freeze({...d,pos:d.pos||FIXED_PLAYER_POSITIONS[d.name],seasonId:RS_SEASON})));
+        function isRisingStarPlayer(p){return !!p&&(p.seasonId===RS_SEASON||p.eventSeason===RS_SEASON);}
+        function risingStarDefinition(p){return RS_PLAYERS.find(d=>normalizedPlayerName(d.name)===normalizedPlayerName(p?.name));}
+        function applyRisingStarPlayer(p){
+            if(!isRisingStarPlayer(p))return p;const d=risingStarDefinition(p);if(!d)return p;
+            const delta=d.ovr-(Number(p.ovr)||d.ovr);
+            if(delta&&p.attr)Object.keys(p.attr).forEach(k=>{if(Number.isFinite(p.attr[k]))p.attr[k]+=delta;});
+            if(delta&&Number.isFinite(p.pot))p.pot+=delta;
+            p.ovr=d.ovr;p.position=sciencePositionGroup(d.pos);p.pos2=d.pos==='AM'?'CAM':d.pos==='DM'?'CDM':d.pos;
+            p.seasonId=RS_SEASON;p.eventSeason=RS_SEASON;p.tier=3;return ensurePersonIdentity(p);
+        }
+        function createRisingStarSeasonCard(name){
+            const d=RS_PLAYERS.find(x=>normalizedPlayerName(x.name)===normalizedPlayerName(name));
+            if(!d)throw new Error('등록되지 않은 RS 시즌 선수입니다.');
+            const p=applyRisingStarPlayer({id:newPlayerCardId('p_rs'),name:d.name,ovr:d.ovr,seasonId:RS_SEASON,level:0,evo:0,cond:100,inj:0,isStarting:false,slotIndex:-1});
+            p.attr=genAttr(p.ovr,p.position,RS_SEASON+':'+p.name);p.pot=p.ovr+8;return ensure(p);
+        }
+        function risingStarCardMarkup(p,options,escape){
+            const d=risingStarDefinition(p),name=String(options.name??p.name),pos=p.pos2||d?.pos||originalPlayerPosition(p);
+            const ovr=options.ovrLabel??options.ovr??getCalculatedOvr(p);
+            const photo=d?`<div class="rs-photo-window"><div class="rs-photo-fade"><img class="rs-photo" src="${escape(d.photo)}" style="top:-${d.photoTop}%" alt="" loading="lazy" decoding="async" draggable="false"></div></div>`:'';
+            return `<div class="player-card rs-card${options.className?' '+escape(options.className):''}" data-season-id="${RS_SEASON}" data-player-name="${escape(name)}" aria-label="${escape(name)} RS ${escape(pos)} OVR ${escape(ovr)}"><div class="rs-card-canvas"><img class="card-background" src="${RS_BACKGROUND}" alt="" loading="lazy" decoding="async" draggable="false">${photo}<span class="card-ovr">${escape(ovr)}</span><span class="card-position">${escape(positionLabel(pos))}</span><span class="card-name">${escape(name)}</span></div></div>`;
+        }
         const DUPLICATE_SEASON_MESSAGE = '동일한 선수의 다른 시즌 카드가 이미 스쿼드에 등록되어 있습니다.';
         function normalizedPlayerName(value) { return String(value || '').normalize('NFKC').trim().replace(/\s+/g,' '); }
         function playerIdentityKey(p) {
@@ -3526,7 +3576,7 @@ root.YFMDurableStore=YFMDurableStore;
             watchPlayerCardNames(body);
         }
         // Card construction is available for a future acquisition route, without granting cards or altering odds.
-        window.YFMSeasons=Object.freeze({science:Object.freeze({id:SCIENCE_SEASON,players:SCIENCE_PLAYERS,createCard:createScienceSeasonCard}),samePlayer:sameBasePlayer});
+        window.YFMSeasons=Object.freeze({science:Object.freeze({id:SCIENCE_SEASON,players:SCIENCE_PLAYERS,createCard:createScienceSeasonCard}),risingStar:Object.freeze({id:RS_SEASON,players:RS_PLAYERS,createCard:createRisingStarSeasonCard}),samePlayer:sameBasePlayer});
 
         const HALLOWEEN_SEASON='halloween2026';
         const HALLOWEEN_PLAYERS=[
@@ -3551,6 +3601,7 @@ root.YFMDurableStore=YFMDurableStore;
             const nameClass = length <= 2 ? 'short-name' : length === 3 ? '' : length === 4 ? 'long-name' : 'extra-long-name';
             const cardClass = options.className ? ' ' + options.className : '';
             const tier = options.tier ?? orbTierForPlayer(p);
+            if(isRisingStarPlayer(p)) return risingStarCardMarkup(p,options,escape);
             if(isSciencePlayer(p)) return scienceCardMarkup(p,options,escape);
             if(isHalloweenPlayer(p)){
                 const image=HALLOWEEN_PLAYERS.find(x=>x.name===p.name)?.image;
@@ -3673,6 +3724,7 @@ root.YFMDurableStore=YFMDurableStore;
         recoverCond();
         players.forEach(p => {
             ensurePersonIdentity(p);
+            if(isRisingStarPlayer(p)){applyRisingStarPlayer(p);return;}
             if(isSciencePlayer(p)){applySciencePlayer(p);return;}
             if(isHalloweenPlayer(p)){p.ovr=70;p.position='FW';p.pos2='ST';return;}
             const value = fixedOvr(p.name);
@@ -6475,7 +6527,7 @@ async function durableFinancialRpc(name,args,options={}){
         function rnd(seed, i) { let x = (seed + i * 374761393) >>> 0; x = Math.imul(x ^ (x >>> 13), 1274126177) >>> 0; return ((x ^ (x >>> 16)) >>> 0) / 4294967296; }
         function genAttr(ovr, pos, seed) { if (pos === 'GK') { const keys = ['pac','sho','pas','dri','def','sta','phy'], h = hash(seed), delta = Object.fromEntries(keys.map((k,i) => [k, (rnd(h,i) - .5) * 10])); return balancedPlayerStats(ovr,delta); } const h = hash(seed), a = {}; ATTRS.forEach((k, i) => { a[k] = Math.max(20, Math.round(ovr + PROF[pos][k] + (rnd(h, i) - 0.5) * 10)); }); return a; }
         function natPos(pos, seed) { const r = rnd(hash(seed), 20); if (pos === 'GK') return 'GK'; if (pos === 'DF') return r < 0.6 ? 'CB' : r < 0.8 ? 'LB' : 'RB'; if (pos === 'MF') return r < 0.35 ? 'CM' : r < 0.55 ? 'CDM' : r < 0.75 ? 'CAM' : r < 0.875 ? 'LM' : 'RM'; return r < 0.5 ? 'ST' : r < 0.75 ? 'LW' : 'RW'; }
-        function ensure(p) { ensurePersonIdentity(p); applySciencePlayer(p); applyFixedPlayerPosition(p); applyPlayerProfile(p); if (p.trait === undefined) p.trait = traitOf(p.id, p.position); if (p.traitV !== 2) { if (p.trait == null) p.trait = traitOf(p.id + '#v2', p.position); p.traitV = 2; } if (!p.attr) { p.attr = genAttr(p.ovr, p.position, p.id); p.pot = p.ovr + Math.round(3 + rnd(hash(p.id), 30) * 12); } if (p.name === '이주진' && !isSciencePlayer(p)) p.attr = { pac: 100, sho: 65, pas: 75, dri: 75, def: 10, sta: 72, phy: 72 }; if (!p.pos2) p.pos2 = natPos(p.position, p.id); return p; }
+        function ensure(p) { ensurePersonIdentity(p); applySciencePlayer(p); applyRisingStarPlayer(p); applyFixedPlayerPosition(p); applyPlayerProfile(p); if (p.trait === undefined) p.trait = traitOf(p.id, p.position); if (p.traitV !== 2) { if (p.trait == null) p.trait = traitOf(p.id + '#v2', p.position); p.traitV = 2; } if (!p.attr) { p.attr = genAttr(p.ovr, p.position, p.id); p.pot = p.ovr + Math.round(3 + rnd(hash(p.id), 30) * 12); } if (p.name === '이주진' && !isSciencePlayer(p)) p.attr = { pac: 100, sho: 65, pas: 75, dri: 75, def: 10, sta: 72, phy: 72 }; if (!p.pos2) p.pos2 = natPos(p.position, p.id); return p; }
         function effAttrs(p) { ensure(p); const d = getCalculatedOvr(p) - p.ovr, o = {}; ATTRS.forEach(k => o[k] = p.attr[k] + d); return o; }
         function actF(p) { const st = currentMatchState; return st && st.samun && p.isHome && st.time >= st.samun ? 1.08 : 1; }   // 서포터즈 응원: 활동량 +8%
         function talkF(p) { const st = currentMatchState; return st && p.isHome && st.talkF && st.htDone ? st.talkF : 1; }                // 하프타임 팀 토크
@@ -10797,7 +10849,7 @@ async function durableFinancialRpc(name,args,options={}){
         let sellSelection = [];
 
         function getPlayerTier(p) {
-            if(isSciencePlayer(p))return 3;
+            if(isSciencePlayer(p)||isRisingStarPlayer(p))return 3;
             if(isHalloweenPlayer(p))return 2;
             if (p.tf || p.tier) return orbTierFromOvr(p.ovr);   // 기존 영입 선수: 뽑기와 같은 기준 (80+ 종건급 · 70+ 노말급)
             let baseName = p.name.replace(/ \d+세$/, '');
@@ -13022,18 +13074,20 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   }
   for(const p of HALLOWEEN_PLAYERS)out.push({key:'halloween:'+p.name,label:`할로윈 · ${p.name} · ST`,name:p.name,position:'FW',pos2:'ST',ovr:70,eventSeason:HALLOWEEN_SEASON});
   for(const p of SCIENCE_PLAYERS)out.push({key:'science:'+p.name,label:`GS 신규 시즌 · ${p.name} · ${p.pos}`,name:p.name,position:sciencePositionGroup(p.pos),pos2:p.pos,ovr:p.ovr,seasonId:SCIENCE_SEASON,eventSeason:SCIENCE_SEASON});
+  for(const p of RS_PLAYERS)out.push({key:'rs:'+p.name,label:`RS 신규 시즌 · ${p.name} · ${p.pos}`,name:p.name,position:sciencePositionGroup(p.pos),pos2:p.pos,ovr:p.ovr,seasonId:RS_SEASON,eventSeason:RS_SEASON});
   return out.sort((a,b)=>a.label.localeCompare(b.label,'ko'));
  }
  function buildAdminGiftCard(template,level,evo){
   if(!template||!Number.isInteger(level)||level<0||level>10||!Number.isInteger(evo)||evo<0||evo>EVO_MAX)throw new Error('선수와 강화·진화 단계를 확인해 주세요.');
-  const p=template.seasonId===SCIENCE_SEASON?YFMSeasons.science.createCard(template.name):{id:'p_admin_'+walletRequestId(),name:template.name,ovr:template.ovr,position:template.position,isStarting:false,level:0,evo:0,cond:100,inj:0,slotIndex:-1};
+  const p=template.seasonId===RS_SEASON?YFMSeasons.risingStar.createCard(template.name):template.seasonId===SCIENCE_SEASON?YFMSeasons.science.createCard(template.name):{id:'p_admin_'+walletRequestId(),name:template.name,ovr:template.ovr,position:template.position,isStarting:false,level:0,evo:0,cond:100,inj:0,slotIndex:-1};
   p.level=level;p.evo=evo;p.isStarting=false;p.cond=100;p.inj=0;p.slotIndex=-1;
   if(template.eventSeason===HALLOWEEN_SEASON){p.eventSeason=template.eventSeason;p.pos2='ST';}
   if(template.seasonId===SCIENCE_SEASON){p.seasonId=SCIENCE_SEASON;p.eventSeason=SCIENCE_SEASON;p.pos2=template.pos2;}
+  if(template.seasonId===RS_SEASON){p.seasonId=RS_SEASON;p.eventSeason=RS_SEASON;p.pos2=template.pos2;}
   ensure(p);if(template.eventSeason===HALLOWEEN_SEASON)p.pos2='ST';return p;
  }
  function readPendingCardGift(){try{const p=JSON.parse(localStorage.getItem('yfm_admin_card_gift_'+accountUser?.id)||'null');return p?.owner===accountUser?.id?p:null;}catch(_){return null;}}
- function cardGiftMarkup(){return `<details id="yfm-admin-section-cards" class="mt-4 p-3 rounded-xl border border-purple-700"><summary class="font-bold cursor-pointer">스쿼드 카드 조회 · 카드 지급</summary><div class="mt-3"><div class="flex flex-wrap gap-2"><input id="yfm-admin-roster-search" placeholder="보유 선수 이름 검색" class="flex-1 min-w-0 bg-gray-900 border border-gray-600 rounded p-2"><button id="yfm-admin-roster-refresh" class="px-3 py-2 rounded bg-purple-700">최신 스쿼드 조회</button></div><p id="yfm-admin-roster-count" class="text-xs my-3 text-purple-200"></p><div id="yfm-admin-roster-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px"></div><div class="flex justify-between mt-3"><button id="yfm-admin-roster-prev" class="px-3 py-2 rounded bg-gray-700">이전</button><button id="yfm-admin-roster-next" class="px-3 py-2 rounded bg-gray-700">다음</button></div></div><div class="mt-5 p-3 rounded-xl bg-purple-950"><h4 class="font-bold mb-2">복구용 카드 지급</h4><input id="yfm-admin-card-search" placeholder="지급할 선수 이름 검색" class="w-full p-2 bg-gray-900 border border-gray-600 rounded"><select id="yfm-admin-card-player" aria-label="지급할 선수" class="w-full mt-2 p-2 bg-gray-900 border border-gray-600 rounded"></select><div class="flex flex-wrap gap-3 mt-3"><label>강화 <select id="yfm-admin-card-level" class="p-2 bg-gray-900 rounded">${Array.from({length:11},(_,i)=>`<option value="${i}">${i}강</option>`).join('')}</select></label><label>진화 <select id="yfm-admin-card-evo" class="p-2 bg-gray-900 rounded">${Array.from({length:EVO_MAX+1},(_,i)=>`<option value="${i}">${i}단계</option>`).join('')}</select></label></div><p id="yfm-admin-card-preview" class="text-sm text-purple-200 mt-3"></p><p id="yfm-admin-card-pending-note" class="text-sm text-orange-300 mt-2"></p><button id="yfm-admin-card-give" data-admin-write class="w-full mt-3 px-4 py-3 rounded bg-emerald-700 font-bold">선택한 카드 1장 지급</button><p class="text-xs mt-2 text-gray-400">위 변경 사유를 입력하세요. 새 카드는 선발을 바꾸지 않고 보유 선수에 추가됩니다.</p></div></details>`;}
+ function cardGiftMarkup(){return `<details id="yfm-admin-section-cards" class="mt-4 p-3 rounded-xl border border-purple-700"><summary class="font-bold cursor-pointer">스쿼드 카드 조회 · 카드 지급</summary><div class="mt-3"><div class="flex flex-wrap gap-2"><input id="yfm-admin-roster-search" placeholder="보유 선수 이름 검색" class="flex-1 min-w-0 bg-gray-900 border border-gray-600 rounded p-2"><button id="yfm-admin-roster-refresh" class="px-3 py-2 rounded bg-purple-700">최신 스쿼드 조회</button></div><p id="yfm-admin-roster-count" class="text-xs my-3 text-purple-200"></p><div id="yfm-admin-roster-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px"></div><div class="flex justify-between mt-3"><button id="yfm-admin-roster-prev" class="px-3 py-2 rounded bg-gray-700">이전</button><button id="yfm-admin-roster-next" class="px-3 py-2 rounded bg-gray-700">다음</button></div></div><div class="mt-5 p-3 rounded-xl bg-purple-950"><h4 class="font-bold mb-2">복구용 카드 지급</h4><input id="yfm-admin-card-search" placeholder="지급할 선수 이름 검색" class="w-full p-2 bg-gray-900 border border-gray-600 rounded"><select id="yfm-admin-card-player" aria-label="지급할 선수" class="w-full mt-2 p-2 bg-gray-900 border border-gray-600 rounded"></select><div class="flex flex-wrap gap-3 mt-3"><label>강화 <select id="yfm-admin-card-level" class="p-2 bg-gray-900 rounded">${Array.from({length:11},(_,i)=>`<option value="${i}">${i}강</option>`).join('')}</select></label><label>진화 <select id="yfm-admin-card-evo" class="p-2 bg-gray-900 rounded">${Array.from({length:EVO_MAX+1},(_,i)=>`<option value="${i}">${i}단계</option>`).join('')}</select></label></div><p id="yfm-admin-card-preview" class="text-sm text-purple-200 mt-3"></p><div id="yfm-admin-card-art" style="max-width:260px;margin:10px auto"></div><p id="yfm-admin-card-pending-note" class="text-sm text-orange-300 mt-2"></p><button id="yfm-admin-card-give" data-admin-write class="w-full mt-3 px-4 py-3 rounded bg-emerald-700 font-bold">선택한 카드 1장 지급</button><p class="text-xs mt-2 text-gray-400">위 변경 사유를 입력하세요. 새 카드는 선발을 바꾸지 않고 보유 선수에 추가됩니다.</p></div></details>`;}
  function renderAdminRoster(){
   const container=$('yfm-admin-roster-cards');if(!container)return;
   let list=[];try{list=JSON.parse(A.detail?.save?.data?.fm_players||'[]');}catch(_){}
@@ -13042,7 +13096,7 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
   adminRosterPage=Math.max(0,Math.min(adminRosterPage,Math.max(0,Math.ceil(filtered.length/24)-1)));
   let bench=[];try{bench=JSON.parse(A.detail?.save?.data?.fm_bench||'[]');}catch(_){}
   $('yfm-admin-roster-count').textContent=`보유 ${all.length}장 · 선발 ${all.filter(p=>p.isStarting).length}명 · 검색 ${filtered.length}장 · ${adminRosterPage+1}페이지`;
-  container.innerHTML=filtered.slice(adminRosterPage*24,adminRosterPage*24+24).map(p=>`<article class="yfm-admin-roster-card"><div style="height:190px;display:flex;align-items:center;justify-content:center">${playerCardMarkup(p,{ovr:adminCardOvr(p),tier:getPlayerTier(p)})}</div><b class="block mt-2 text-sm">${esc(p.name)}</b><div class="text-xs text-purple-200">${esc(isHalloweenPlayer(p)?'할로윈':p.tf?'이적 선수':'일반')} · ${esc(isHalloweenPlayer(p)?'ST':originalPlayerPosition({...p}))}<br>${Number(p.level)||0}강 · 진화 ${Number(p.evo)||0}단계 · OVR ${adminCardOvr(p)}<br>${p.isStarting?'선발':Array.isArray(bench)&&bench.includes(p.id)?'벤치':'보유'} · 체력 ${Number(p.cond??100)}%</div><button type="button" data-remove-player="${esc(p.id)}" class="mt-2 w-full rounded-lg bg-red-900 px-2 py-2 text-xs font-bold text-red-100">이 유저의 카드 삭제</button></article>`).join('')||'<p class="text-sm text-gray-400">해당 카드가 없습니다.</p>';
+  container.innerHTML=filtered.slice(adminRosterPage*24,adminRosterPage*24+24).map(p=>`<article class="yfm-admin-roster-card"><div style="height:190px;display:flex;align-items:center;justify-content:center">${playerCardMarkup(p,{ovr:adminCardOvr(p),tier:getPlayerTier(p)})}</div><b class="block mt-2 text-sm">${esc(p.name)}</b><div class="text-xs text-purple-200">${esc(isRisingStarPlayer(p)?'RS 신규 시즌':isSciencePlayer(p)?'GS 신규 시즌':isHalloweenPlayer(p)?'할로윈':p.tf?'이적 선수':'일반')} · ${esc(isHalloweenPlayer(p)?'ST':originalPlayerPosition({...p}))}<br>${Number(p.level)||0}강 · 진화 ${Number(p.evo)||0}단계 · OVR ${adminCardOvr(p)}<br>${p.isStarting?'선발':Array.isArray(bench)&&bench.includes(p.id)?'벤치':'보유'} · 체력 ${Number(p.cond??100)}%</div><button type="button" data-remove-player="${esc(p.id)}" class="mt-2 w-full rounded-lg bg-red-900 px-2 py-2 text-xs font-bold text-red-100">이 유저의 카드 삭제</button></article>`).join('')||'<p class="text-sm text-gray-400">해당 카드가 없습니다.</p>';
   $('yfm-admin-roster-prev').disabled=adminRosterPage===0;$('yfm-admin-roster-next').disabled=(adminRosterPage+1)*24>=filtered.length;
  }
  function renderAdminGiftOptions(){
@@ -13055,6 +13109,7 @@ window.addEventListener('beforeunload',e=>{if(active()&&!currentMatchState.ended
  function previewAdminGift(){
   const template=adminCardCatalog().find(p=>p.key===$('yfm-admin-card-player')?.value);
   $('yfm-admin-card-preview').textContent=template?`${template.label} · ${$('yfm-admin-card-level').value}강 · 진화 ${$('yfm-admin-card-evo').value}단계 · 지급 OVR ${adminCardOvr({...template,level:Number($('yfm-admin-card-level').value),evo:Number($('yfm-admin-card-evo').value)})}`:'검색에 해당하는 선수가 없습니다.';
+  const art=$('yfm-admin-card-art');if(art){art.innerHTML=template?.seasonId===RS_SEASON?playerCardMarkup({...template,level:Number($('yfm-admin-card-level').value),evo:Number($('yfm-admin-card-evo').value)},{ovr:adminCardOvr({...template,level:Number($('yfm-admin-card-level').value),evo:Number($('yfm-admin-card-evo').value)})}):'';if(art.firstElementChild){art.firstElementChild.style.width='100%';watchPlayerCardNames(art);}}
   const pending=readPendingCardGift();
   $('yfm-admin-card-pending-note').textContent=pending?`결과 미확인 지급 · ${pending.targetName||pending.target}: ${pending.player.name} ${pending.player.level}강 / 진화 ${pending.player.evo}단계. 버튼을 누르면 이 지급 결과를 다시 확인합니다.`:'';
   $('yfm-admin-card-give').textContent=pending?'이전 카드 지급 결과 확인':'선택한 카드 1장 지급';
