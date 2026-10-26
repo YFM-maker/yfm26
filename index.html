@@ -4377,9 +4377,10 @@ root.YFMDurableStore=YFMDurableStore;
                 ?Object.fromEntries(Object.keys(value).sort().map(k=>[k,sorted(value[k])])):value;
             const data={};
             for(const key of Object.keys(snapshot?.data||{}).sort()) {
-                if(key==='fm_tokens'||key==='fm_completed_match_at'||key==='fm_active_match_v1')continue;
+                if(key==='fm_tokens'||key==='fm_completed_match_at'||key==='fm_active_match_v1'||key==='fm_halloween_progress')continue;
                 let value=snapshot.data[key];
                 if(typeof value==='string'&&/^[\[{]/.test(value.trim())){try{value=JSON.parse(value);}catch(_){}}
+                if(key==='fm_players'&&Array.isArray(value))value=[...value].sort((a,b)=>String(a.id).localeCompare(String(b.id)));
                 data[key]=sorted(value);
             }
             const canonical=JSON.stringify(data);
@@ -4448,10 +4449,11 @@ root.YFMDurableStore=YFMDurableStore;
             }catch(e){noteServerOverload(e);console.warn('다른 기기 진행도 확인 실패:',e);}finally{cloudProgressReading=false;}
         }
         function accountSnapshot() {
-            const data = {};
+            const localOnly=new Set(['fm_halloween_progress','fm_active_match_v1','fm_completed_match_at']);
+            const data = Object.fromEntries(Object.entries(accountSyncBase?.data||{}).filter(([key])=>localOnly.has(key)));
             for (let i=0;i<localStorage.length;i++) {
                 const key=localStorage.key(i);
-                if (key?.startsWith('fm_') && key !== 'fm_items') {let value=localStorage.getItem(key);if(key==='fm_halloween_progress'){try{const event=JSON.parse(value);delete event.updatedAt;value=JSON.stringify(event);}catch(_){}}data[key]=value;}
+                if (key?.startsWith('fm_') && key !== 'fm_items' && !localOnly.has(key)) {let value=localStorage.getItem(key);if(key==='fm_halloween_progress'){try{const event=JSON.parse(value);delete event.updatedAt;value=JSON.stringify(event);}catch(_){}}data[key]=value;}
             }
             if(accountUser?.id&&Number.isSafeInteger(tokenWalletBalance)&&tokenWalletBalance>=0)data.fm_tokens=String(tokenWalletBalance);
             return {app:'YFM',v:22,schemaVersion:3,at:new Date().toISOString(),data:compactTournamentLogos(data)};
@@ -4482,9 +4484,12 @@ root.YFMDurableStore=YFMDurableStore;
         function restoreAccountSnapshot(snapshot,owner) {
             if (snapshot?.app!=='YFM' || !snapshot.data || !Array.isArray(JSON.parse(snapshot.data.fm_players||'null'))) throw new Error('서버 저장 데이터가 올바르지 않아.');
             window.__restoreLock=false;
-            const keepStats=owner&&localStorage.getItem(accountDeviceKey)===owner?localStorage.getItem('fm_stats'):null;   // 같은 계정의 기기 기록만 합친다
+            const keepStats=owner&&localStorage.getItem(accountDeviceKey)===owner?localStorage.getItem('fm_stats'):null;
+            const deviceOnly=['fm_halloween_progress','fm_active_match_v1','fm_completed_match_at'];
+            const ownDevice=owner&&localStorage.getItem(accountDeviceKey)===owner?Object.fromEntries(deviceOnly.map(k=>[k,localStorage.getItem(k)]).filter(([,v])=>v!==null)):{};   // 같은 계정의 기기 기록만 합친다
             Object.keys(localStorage).filter(k=>k.startsWith('fm_')).forEach(k=>localStorage.removeItem(k));
-            Object.entries(expandTournamentLogos(snapshot.data)).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && typeof v==='string') localStorage.setItem(k,v);});
+            Object.entries(expandTournamentLogos(snapshot.data)).forEach(([k,v])=>{if(k.startsWith('fm_') && k !== 'fm_items' && !deviceOnly.includes(k) && typeof v==='string') localStorage.setItem(k,v);});
+            Object.entries(ownDevice).forEach(([k,v])=>localStorage.setItem(k,v));
             // No counter/inventory merge during authoritative restore; old data remains in IndexedDB quarantine.
             window.__restoreLock=true;window.__wiping=true;   // 복원 뒤에는 항상 새로고침한다
         }
@@ -4652,17 +4657,54 @@ async function durableFinancialRpc(name,args,options={}){
             }
             return {snapshot:result,conflicts};
         }
+        function mergeAutomaticSave(local,remote,base){
+            const result=mergeSaveChanges(local,remote,base),parse=(v,f)=>{try{return JSON.parse(v);}catch(_){return f;}};
+            const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+            const mergeCounters=(a,b)=>{
+                if(typeof a==='number'&&typeof b==='number')return Math.max(a,b);
+                if(a===true||b===true)return true;
+                if(Array.isArray(a)&&Array.isArray(b))return [...new Map([...b,...a].map(x=>[JSON.stringify(x),x])).values()];
+                if(a&&b&&typeof a==='object'&&typeof b==='object'&&!Array.isArray(a)&&!Array.isArray(b)){const o={...b};for(const k of Object.keys(a))o[k]=k in b?mergeCounters(a[k],b[k]):a[k];return o;}
+                return b===undefined?a:b;
+            };
+            for(const key of result.conflicts){
+                const mine=local?.data?.[key],theirs=remote?.data?.[key],before=base?.data?.[key];
+                if(key==='fm_players'){
+                    const L=parse(mine,[]),R=parse(theirs,[]),B=new Map(parse(before,[]).map(p=>[String(p.id),p])),lm=new Map(L.map(p=>[String(p.id),p]));
+                    const out=R.map(p=>{const l=lm.get(String(p.id)),b=B.get(String(p.id));if(!l||!b)return p;const next={...p};for(const k of Object.keys(l))if(!equal(l[k],b[k])&&(equal(p[k],b[k])||['cond','inj','isStarting','slotIndex'].includes(k)))next[k]=l[k];return next;});
+                    const ids=new Set(out.map(p=>String(p.id)));for(const p of L)if(!ids.has(String(p.id))&&!B.has(String(p.id))){out.push(p);ids.add(String(p.id));}
+                    result.snapshot.data[key]=JSON.stringify(out);
+                }else if(key==='fm_stats')result.snapshot.data[key]=JSON.stringify(mergeCounters(parse(mine,{}),parse(theirs,{})));
+                else if(key==='fm_league_v2'&&compareLeagueSnapshots(local,remote)>0)result.snapshot.data[key]=mine;
+                else if(key==='fm_achievements')result.snapshot.data[key]=JSON.stringify(mergeCounters(parse(mine,{}),parse(theirs,{})));
+                else if(key==='fm_daily'){const l=parse(mine,{}),r=parse(theirs,{});result.snapshot.data[key]=JSON.stringify(l.date===r.date?mergeCounters(l,r):String(l.date)>String(r.date)?l:r);}
+                // For overlapping currency/inventory values the committed value wins,
+                // while the entire local predecessor is archived before applying it.
+            }
+            result.conflicts=[];return result;
+        }
+        let automaticSaveRecovery=null;
         function showSaveConflict(owner,remote,conflicts){
-            if(accountUser?.id!==owner)return;
-            accountSaveConflict={owner,remote,conflicts};saveStatus('저장 충돌 · 미전송 기록은 기기에 보관됩니다',true);
-            if(document.getElementById('yfm-save-conflict'))return;
-            const box=document.createElement('div');box.id='yfm-save-conflict';box.style.cssText='position:fixed;bottom:50px;right:10px;z-index:100002;padding:16px;max-width:94vw;background:#21142e;color:white;border:2px solid #fd9f28;border-radius:12px';
-            const text=document.createElement('p');text.textContent='다른 저장 버전과 충돌했습니다. 미전송 기록은 보존하며 선수·재화를 자동 합산하지 않습니다.';
-            const button=document.createElement('button');button.textContent='서버 기록으로 다시 열기 · 기기 기록은 복구용으로 보관';button.onclick=async()=>{
-                button.disabled=true;try{await durableLocalTail;for(const op of await durableStore.operations(owner)){if(op.status==='quarantined'){op.status='reviewed';await durableStore.updateOperation(op);}}await durableStore.mutate(owner,a=>{archiveLocalSave(a,{pending:a.pending,base:a.base,conflict:a.conflict,event:a.event});if(a.event)a.event={...a.event,queue:[]};a.pending=null;a.conflict=null;return a;});
-                // Quarantined operations are intentionally retained for receipt lookup / review.
-                rememberCloudRestore(owner,remote);restoreAccountSnapshot(remote,owner);reloadForAccountRestore();}catch(e){button.disabled=false;saveStatus('복구 준비 실패: '+e.message,true);}
-            };box.append(text,button);document.body.append(box);
+            if(accountUser?.id!==owner||!remote?.data)return Promise.resolve();
+            document.getElementById('yfm-save-conflict')?.remove();
+            accountSaveConflict=null;
+            if(automaticSaveRecovery)return automaticSaveRecovery;
+            if(cloudMatchInProgress()){accountPendingRemote={owner,snapshot:remote};saveStatus('기기 저장 완료 · 경기 종료 후 자동 동기화');return Promise.resolve();}
+            automaticSaveRecovery=(async()=>{
+                await durableLocalTail;
+                const response=await boundedProgressRead(owner);if(response.error)throw response.error;
+                const latest=response.data?.save_data||remote;
+                if(accountUser?.id!==owner||window.__wiping)return;
+                const journal=await durableStore.account(owner),local=journal?.pending||accountSnapshot();
+                const merged=mergeAutomaticSave(local,latest,journal?.base||accountSyncBase);
+                await durableStore.mutate(owner,a=>{archiveLocalSave(a,{pending:a.pending||local,base:a.base,conflict:{keys:conflicts},event:a.event});a.pending=merged.snapshot;a.base=latest;a.conflict=null;return a;});
+                for(const op of await durableStore.operations(owner)){
+                    if(op.result?.conflict||op.kind==='snapshot'&&op.status==='quarantined')await durableStore.tx(['operations'],'readwrite',s=>s.operations.delete([owner,op.id]));
+                }
+                if(cloudSnapshotFingerprint(merged.snapshot)===cloudSnapshotFingerprint(accountSnapshot())){accountSyncBase=latest;accountLastSnapshot=canonData(latest.data);accountDirty=true;await durableStore.checkpoint(owner,accountSnapshot(),latest);planDurableSave();return;}
+                rememberCloudRestore(owner,merged.snapshot);restoreAccountSnapshot(merged.snapshot,owner);reloadForAccountRestore();
+            })().catch(e=>{saveStatus('기기 저장 완료 · 연결 후 자동 동기화',false);if(accountUser?.id===owner)clearTimeout(accountSaveTimer),accountSaveTimer=setTimeout(()=>showSaveConflict(owner,remote,conflicts),15000);console.warn('자동 저장 조정 대기:',e);}).finally(()=>{automaticSaveRecovery=null;});
+            return automaticSaveRecovery;
         }
         function uploadAccountSnapshot(force=false,initialSave=false){return serializeSaveAction(()=>uploadAccountSnapshotUnlocked(force,initialSave));}
         async function uploadAccountSnapshotUnlocked(force=false,initialSave=false){
@@ -4815,15 +4857,15 @@ async function durableFinancialRpc(name,args,options={}){
             }
             journal=await durableStore.account(user.id);
             if(journal.receipt&&!journal.receipt.handled&&remote){
-                const recovered=mergeSaveChanges(journal.pending||remote,remote,journal.receipt.before||journal.base);
+                const recovered=mergeAutomaticSave(journal.pending||remote,remote,journal.receipt.before||journal.base);
                 if(recovered.conflicts.length){showSaveConflict(user.id,remote,recovered.conflicts);throw Error('거래 복구 기록을 확인해 주세요.');}
                 await durableStore.mutate(user.id,a=>{if(a.pending)archiveLocalSave(a,{pending:a.pending,base:a.base,reason:'receipt-recovery'});a.pending=cloudSnapshotFingerprint(recovered.snapshot)!==cloudSnapshotFingerprint(remote)?recovered.snapshot:null;a.receipt={...a.receipt,handled:true};a.base=remote;return a;});journal=await durableStore.account(user.id);
             }
-            if(remote&&(await durableStore.operations(user.id)).some(op=>op.status==='quarantined'))showSaveConflict(user.id,remote,['이전 접속의 미전송 작업']);
-            if(!journal.base&&!journal.pending&&journal.legacySource?.snapshot?.data?.fm_players&&remote){const old=journal.legacySource;validateAccountSave(old.snapshot);if(cloudSnapshotFingerprint(old.snapshot)!==cloudSnapshotFingerprint(remote)){if(old.revision!==String(remote.sync_revision)){await durableStore.mutate(user.id,a=>{archiveLocalSave(a,{pending:old.snapshot,reason:'legacy-revision-unknown'});return a;});showSaveConflict(user.id,remote,['기존 기기 기록의 버전 불일치']);throw Error('기존 기기 기록을 보관하고 자동 업로드를 중단했습니다.');}journal=await durableStore.mutate(user.id,a=>({...a,base:remote,pending:old.snapshot}));}}
+            if(remote&&(await durableStore.operations(user.id)).some(op=>op.status==='quarantined')){await showSaveConflict(user.id,remote,['이전 접속의 미전송 작업']);return;}
+            if(!journal.base&&!journal.pending&&journal.legacySource?.snapshot?.data?.fm_players&&remote){const old=journal.legacySource;validateAccountSave(old.snapshot);if(cloudSnapshotFingerprint(old.snapshot)!==cloudSnapshotFingerprint(remote)){if(old.revision!==String(remote.sync_revision)){await durableStore.mutate(user.id,a=>{archiveLocalSave(a,{pending:old.snapshot,reason:'legacy-revision-unknown'});return a;});await showSaveConflict(user.id,remote,['기존 기기 기록의 버전 불일치']);return;}journal=await durableStore.mutate(user.id,a=>({...a,base:remote,pending:old.snapshot}));}}
             let pending=journal.pending;
             if(pending&&remote&&journal.base?.sync_revision!==remote.sync_revision){
-                const merged=mergeSaveChanges(pending,remote,journal.base);
+                const merged=mergeAutomaticSave(pending,remote,journal.base);
                 if(merged.conflicts.length){await durableStore.mutate(user.id,a=>{a.conflict={remote,keys:merged.conflicts};return a;});showSaveConflict(user.id,remote,merged.conflicts);throw Error('저장 버전 충돌: 기기 기록은 보관되었습니다. 충돌 안내에서 서버 기록으로 다시 열 수 있습니다.');}
                 pending=merged.snapshot;await storeSaveRecord(user.id,{base:remote,pending});
             }
@@ -4950,7 +4992,7 @@ async function durableFinancialRpc(name,args,options={}){
                 if (owner && window.yfmAccountReady) {
                     await uploadAccountSnapshot(true);
                     if (accountUser?.id === owner) {
-                        if (accountSaveConflict) saveStatus('기기 저장 완료 · 서버 저장 충돌 안내를 확인해 주세요.', true);
+                        if (accountSaveConflict) saveStatus('기기 저장 완료 · 자동 동기화 대기');
                         else if (accountDirty) saveStatus('기기 저장 완료 · 서버 저장 대기 중입니다.');
                         else saveStatus('현재 진행 기록을 기기와 서버에 저장했습니다.');
                     }
@@ -5577,6 +5619,7 @@ async function durableFinancialRpc(name,args,options={}){
         function flushFinishedMatchSave() {
             if (!accountUser?.id || window.__wiping) return;
             accountDirty=true;
+            if(accountPendingRemote?.owner===accountUser.id&&!cloudMatchInProgress()){const pending=accountPendingRemote;accountPendingRemote=null;showSaveConflict(pending.owner,pending.snapshot,[]);return;}
             if (accountSaving) { setTimeout(flushFinishedMatchSave,250); return; }
             uploadAccountSnapshot(true);
         }
@@ -70723,7 +70766,17 @@ function say(text,error=false){H.status=text;H.error=error;const e=$('he-status'
 function errorText(e){const s=String(e?.message||e||'');if(/PGRST202|Could not find.*function|does not exist/i.test(s)||e?.code==='PGRST202')return '이벤트 서버 설치가 아직 완료되지 않았습니다.';if(/CHALLENGE_STAGE_MISMATCH/.test(s))return '서버의 도전 단계와 기기에 저장된 경기 단계가 다릅니다. 경기 결과는 기기에 보관되어 있습니다.';if(/INSUFFICIENT_HALLOWEEN/.test(s))return '할로윈 토큰이 부족합니다.';if(/INSUFFICIENT_TOKENS/.test(s))return '일반 토큰 1,000T가 필요합니다.';if(/REFEREE_OFFLINE|Failed to fetch|NetworkError|fetch failed|Abort/.test(s))return '이벤트 결과 저장에 실패했습니다. 연결 후 결과 확인을 다시 눌러 주세요.';if(/SAVE_CONFLICT|저장|SERVER_SAVE/.test(s))return '진행도를 서버에 저장한 뒤 다시 시도해 주세요.';if(/SESSION|LOGIN_REQUIRED|로그인/.test(s))return '로그인 상태를 확인한 뒤 다시 시도해 주세요.';return s.slice(0,180)||'이벤트 요청을 확인하지 못했습니다. 같은 요청으로 다시 확인할 수 있습니다.';}
 function cacheKey(suffix,owner=accountUser?.id){return 'yfm_halloween_'+suffix+'_'+(owner||'guest');}
 function read(key,fallback=null){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch(_){return fallback;}}
-async function rpc(action,payload={}){const owner=accountUser?.id;if(!owner||!window.yfmAccountReady)throw Error('LOGIN_REQUIRED');const {data,error}=await walletRpcWithRetry('yfm_halloween_rpc',{p_action:action,p_payload:payload},{maxAttempts:2,timeoutMs:12000});if(error)throw error;if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');if(!data?.ok)throw Error('이벤트 응답을 확인하지 못했습니다.');return data;}
+async function rpc(action,payload={}){
+ const owner=accountUser?.id;if(!owner||!window.yfmAccountReady)throw Error('LOGIN_REQUIRED');
+ const args={p_action:action,p_payload:payload};let response;
+ try{response=await durableRawRpc('yfm_halloween_rpc',args,{maxAttempts:2,timeoutMs:12000});}
+ catch(e){if(!/SESSION_REQUIRED/.test(String(e.message))||isReplacedGameSession(e))throw e;
+  const heartbeat=await durableRawRpc('yfm_session_heartbeat',{}, {maxAttempts:1,timeoutMs:8000});
+  if(!heartbeat.data?.ok)throw e;
+  response=await durableRawRpc('yfm_halloween_rpc',args,{maxAttempts:1,timeoutMs:12000});
+ }
+ const {data,error}=response;if(error)throw error;if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');if(!data?.ok)throw Error('이벤트 응답을 확인하지 못했습니다.');return data;
+}
 function installUI(){if($('screen-halloween'))return;const screen=document.createElement('div');screen.id='screen-halloween';screen.className='screen';screen.innerHTML='<div class="he-shell"><header class="he-top"><div><div class="he-kicker">YFM SEASONAL EVENT · HALLOWEEN</div><h1>저주받은 그라운드</h1><p>승리를 모으고, 봉인을 깨우세요.</p></div><div class="he-wallet">'+coin+'<div><b id="he-balance">0</b><small>할로윈 토큰</small></div></div></header><nav class="he-breadcrumb" aria-label="이벤트 메뉴"></nav><main id="he-main"></main><p id="he-status" class="he-status" role="status"></p></div>';document.body.append(screen);}
 function tabs(){const labels=[['lobby','이벤트 로비'],['gs','GS 경기'],['shop','이벤트 상점']];$('screen-halloween').querySelector('.he-breadcrumb').innerHTML='<button class="he-tab" type="button" onclick="switchScreen(\'screen-mode-select\')">경기 · 대회</button>'+labels.map(([id,label])=>`<button class="he-tab" type="button" aria-current="${H.tab===id}" onclick="YFMHalloween.open('${id}')">${label}</button>`).join('');}
 function balanceFlash(delta){$('he-balance').textContent=Number(H.state?.balance||0).toLocaleString();const box=$('screen-halloween').querySelector('.he-wallet');box.classList.remove('he-credit','he-debit');if(delta){void box.offsetWidth;box.classList.add(delta>0?'he-credit':'he-debit');const p=document.createElement('div');p.className='he-coin-pop';p.textContent=(delta>0?'+':'')+delta.toLocaleString();document.body.append(p);setTimeout(()=>p.remove(),1300);}}
@@ -70734,8 +70787,8 @@ function gs(){const run=H.state?.run,active=run?.status==='active',stage=active?
 function shop(){return `<div class="he-panel"><h2>봉인된 선수팩</h2><p>낮은 OVR 선수일수록 등장 확률이 높습니다.<br>70 이상 팩의 OVR 105 선수는 각 0.1%, 3,000T GS 단독 선수팩은 각 2.5% 확률로 등장합니다. 매 구매는 독립 추첨이며 횟수 조건이나 확률 보정은 없습니다.</p></div><div class="he-packs">${PACKS.map(p=>`<article class="he-pack"><div class="he-kicker">${p.id==='gs'?'FORBIDDEN SUMMON':p.id==='90'?'AWAKENING OF THE DEAD':'PUMPKIN SEAL'}</div><img src="${ASSETS[p.image]}" alt="${p.name}" decoding="async"><h3>${p.name}</h3><div class="he-price">${p.price.toLocaleString()}<small>할로윈 토큰</small></div><button type="button" class="he-btn ${p.id==='gs'?'primary':'orange'}" onclick="YFMHalloween.buy('${p.id}')" ${H.busy||!H.loaded?'disabled':''}>${H.busy?'구매 확인 중…':'선수팩 구매'}</button><button type="button" class="he-odds-btn" onclick="YFMHalloween.odds('${p.id}')">선수 목록 및 실제 확률</button></article>`).join('')}</div><div id="he-odds"></div>`;}
 function render(){installUI();tabs();const queued=savedResults().length;$('he-main').innerHTML=(queued?'<section class="he-panel"><h3>기기 저장으로 진행 중</h3><p>서버 반영을 기다리는 결과 '+queued+'건이 있습니다. 기기에 저장된 결과로 다음 단계에 참여할 수 있습니다. 서버 동기화는 자동으로 재시도합니다. 미반영 보상은 동기화 후 상점에서 사용할 수 있습니다.</p><button class="he-btn" type="button" onclick="YFMHalloween.retrySavedResults()">서버 저장 재시도</button></section>':'')+(H.tab==='gs'?gs():H.tab==='shop'?shop():lobby());balanceFlash(0);say(H.status,H.error);watchPlayerCardNames($('he-main'));}
 async function refresh(){const owner=accountUser?.id,refreshSeq=H.refreshSeq=(H.refreshSeq||0)+1,epoch=H.eventMutationEpoch||0;H.owner=owner||null;const restored=restoreEventProgress(owner);H.loaded=restored;if(!owner||!window.yfmAccountReady){if(!owner)H.state=null;say(restored?'기기에 보관된 이벤트 기록을 불러왔습니다.':'로그인 후 이벤트를 이용할 수 있습니다.');render();return;}if(restored)render();try{const data=await rpc('state');if(H.owner!==owner||H.refreshSeq!==refreshSeq||(H.eventMutationEpoch||0)!==epoch)return;const old=Number(H.state?.balance||0),cp=eventCheckpoint(owner);cp.base=data;await writeEventCheckpoint(cp,owner);restoreEventProgress(owner);say(savedResults(owner).length?'기기에 저장된 결과로 다음 단계에 참여할 수 있습니다. 서버에 자동 동기화합니다.':'이벤트 기록을 저장하고 불러왔습니다.');render();balanceFlash(Number(H.state.balance)-old);}catch(e){if(H.owner!==owner||H.refreshSeq!==refreshSeq)return;const local=restoreEventProgress(owner);H.loaded=local;say(local?'서버 연결을 기다리는 동안 기기에 저장된 기록으로 계속할 수 있습니다.':errorText(e),!local);render();}}
-async function open(tab='lobby'){installUI();H.tab=['lobby','gs','shop'].includes(tab)?tab:'lobby';switchScreen('screen-halloween');if(H.owner!==accountUser?.id){H.state=null;H.loaded=false;}restoreEventProgress();render();await refresh();if(savedResults().length)flushSavedResults();if(H.tab==='shop'&&H.loaded)recoverPurchase();clearTimeout(H.timer);const poll=async()=>{if(!$('screen-halloween').classList.contains('active')||document.hidden)return;await refresh();H.timer=setTimeout(poll,15000);};H.timer=setTimeout(poll,15000);}
-async function sync(){if(!accountUser?.id||!window.yfmAccountReady)throw Error('LOGIN_REQUIRED');saveData();await uploadAccountSnapshot(true);if(accountDirty||accountSaveConflict||!accountSyncBase?.sync_revision)throw Error('SERVER_SAVE_REQUIRED');return String(accountSyncBase.sync_revision);}
+async function open(tab='lobby'){installUI();H.tab=['lobby','gs','shop'].includes(tab)?tab:'lobby';switchScreen('screen-halloween');if(H.owner!==accountUser?.id){H.state=null;H.loaded=false;}restoreEventProgress();render();await refresh();if(savedResults().length)flushSavedResults();if(H.tab==='shop'&&H.loaded)recoverPurchase();clearTimeout(H.timer);const poll=async()=>{if(!$('screen-halloween').classList.contains('active')||document.hidden)return;await refresh();H.timer=setTimeout(poll,60000);};H.timer=setTimeout(poll,60000);}
+async function sync(){if(!accountUser?.id||!window.yfmAccountReady)throw Error('LOGIN_REQUIRED');return null;}
 function pending(kind,pack){const key=cacheKey(kind),old=read(key);if(old&&(!pack||old.pack===pack))return old;if(old)throw Error('이전 구매 결과를 먼저 확인해 주세요. 같은 선수팩을 다시 눌러 확인할 수 있습니다.');const x={request_id:walletRequestId(),...(pack?{pack}:{})};localStorage.setItem(key,JSON.stringify(x));return x;}
 async function startRun(){if(savedResults().length){flushSavedResults();say('기기에 보관된 경기 결과를 서버에 반영한 뒤 도전할 수 있습니다.',true);return;}if(H.busy)return;H.busy=true;render();try{await sync();const p=pending('entry');const data=await rpc('start',p);if(data.ordinary_balance!=null)applyServerWallet(Number(data.ordinary_balance));localStorage.removeItem(cacheKey('entry'));await refresh();}catch(e){say(errorText(e),true);}finally{H.busy=false;render();}}
 async function playStage(){if(H.busy||gameSessionBlocked)return;try{restoreEventProgress();if(!H.loaded)await refresh();if(!H.loaded||H.state?.run?.status!=='active')return;openPrematch('halloween',enemy());flushSavedResults();}catch(e){say(errorText(e),true);}}
@@ -70747,7 +70800,7 @@ async function writeEventCheckpoint(value,owner=accountUser?.id){
   const previous=account.event?.owner===owner?account.event:null;const acknowledged=[...new Set([...(previous?.acknowledged||[]),...(incoming.acknowledged||[])])];const queue=new Map();for(const entry of [...(previous?.queue||[]),...(incoming.queue||[])])if(!acknowledged.includes(entry.payload?.request_id))queue.set(entry.payload?.request_id,entry);
   let base=incoming.base||previous?.base||null;const old=previous?.base;if(old?.run&&base?.run&&old.run.id===base.run.id&&(Number(old.run.stage)>Number(base.run.stage)||old.run.status!=='active'&&base.run.status==='active'))base=old;
   account.event={...incoming,version:1,owner,base,acknowledged,queue:[...queue.values()],updatedAt:Date.now()};return account;
- }));const next=committed.event;try{localStorage.setItem(cacheKey('checkpoint',owner),JSON.stringify(next));localStorage.setItem('fm_halloween_progress',JSON.stringify(next));}catch(e){await durableStore.log(owner,null,'legacy-event-mirror',e);}accountDirty=true;return next;
+ }));const next=committed.event;try{localStorage.setItem(cacheKey('checkpoint',owner),JSON.stringify(next));localStorage.setItem('fm_halloween_progress',JSON.stringify(next));}catch(e){await durableStore.log(owner,null,'legacy-event-mirror',e);}return next;
 }
 function projectEventProgress(cp){if(!cp?.base)return null;const data=JSON.parse(JSON.stringify(cp.base));data.localPendingReward=0;const applied=new Set();for(const entry of cp.queue){const p=entry.payload,r=data.run;if(!p||!r||(p.run_id&&p.run_id!==r.id)||r.status!=='active'||Number(p.stage)!==Number(r.stage))continue;const key=r.id+':'+p.stage;if(applied.has(key))continue;applied.add(key);const won=!p.forfeit&&(Number(p.home)>Number(p.away)||Number(p.home)===Number(p.away)&&p.penWinner==='home'),reward=won?STAGES[Number(p.stage)-1]?.reward||0:0;r.earned=Number(r.earned||0)+reward;r.status=won?(Number(r.stage)===5?'complete':'active'):'lost';if(won&&Number(r.stage)<5)r.stage=Number(r.stage)+1;data.localPendingReward+=reward;}return data;}
 function restoreEventProgress(owner=accountUser?.id){if(!owner)return false;const data=projectEventProgress(eventCheckpoint(owner));if(!data)return false;H.owner=owner;H.state=data;H.loaded=true;return true;}
@@ -70756,13 +70809,13 @@ async function queueResult(st){const owner=accountUser?.id;if(!owner)throw Error
 async function finishLocalMatch(st){try{await queueResult(st);H.finishPending=st;H.finishError=null;showEventResult({reward:0,won:!st.forfeit&&(st.scoreHome>st.scoreAway||st.scoreHome===st.scoreAway&&st.penWinner==='home')},st,true);return true;}catch(e){H.finishPending=st;H.finishError=errorText(e);showEventResult({reward:0,won:false},st,true);return false;}}
 async function continueSavedEventResult(){const st=H.finishPending||(currentMatchState?.mode==='halloween'?currentMatchState:null);try{if(st&&!st.localResultSaved)await queueResult(st);}catch(e){H.finishError=errorText(e);$('match-end-growth').textContent=H.finishError;return;}H.finishPending=null;$('match-end-overlay').classList.replace('flex','hidden');if(currentMatchState?.mode==='halloween')currentMatchState=null;open('gs').catch(e=>say(errorText(e),true));setTimeout(flushSavedResults,0);}
 function retryFinish(){continueSavedEventResult();}
-async function flushSavedResults(){if(H.finishPending&&currentMatchState?.mode==='halloween')return;const owner=accountUser?.id;if(H.resultSyncing||!owner||!window.yfmAccountReady||!savedResults(owner).length)return;H.resultSyncing=true;try{for(const entry of savedResults(owner)){if(accountUser?.id!==owner)break;const verdict=await rpc('finish_local',entry.payload),cp=eventCheckpoint(owner);cp.base=cp.base||{ok:true,balance:0,run:null,ready:true};cp.base.balance=Number(verdict.balance??cp.base.balance);if(verdict.run&&(!cp.base.run||cp.base.run.id===verdict.run.id))cp.base.run=verdict.run;cp.acknowledged=[...(cp.acknowledged||[]),entry.payload.request_id];cp.queue=cp.queue.filter(x=>x.payload?.request_id!==entry.payload.request_id);await writeEventCheckpoint(cp,owner);await consumeDurableReceipt(owner);const request=read(cacheKey('finish',owner));if(request?.request_id===entry.payload.request_id)localStorage.removeItem(cacheKey('finish',owner));if(accountUser?.id!==owner)break;H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;H.finishError=null;restoreEventProgress(owner);}if(accountUser?.id===owner&&$('screen-halloween')?.classList.contains('active'))await refresh();}catch(e){H.finishError=errorText(e);if(accountUser?.id===owner){restoreEventProgress(owner);say('기기 저장 완료 · 다음 단계 진행 가능. 서버 동기화 대기: '+H.finishError,true);if($('screen-halloween')?.classList.contains('active'))render();}}finally{H.resultSyncing=false;}}
+async function flushSavedResults(){if(H.finishPending&&currentMatchState?.mode==='halloween')return;const owner=accountUser?.id;if(H.resultSyncing||!owner||!window.yfmAccountReady||!savedResults(owner).length)return;H.resultSyncing=true;try{for(const entry of savedResults(owner)){if(accountUser?.id!==owner)break;const verdict=await rpc('finish_local',entry.payload),cp=eventCheckpoint(owner);cp.base=cp.base||{ok:true,balance:0,run:null,ready:true};cp.base.balance=Number(verdict.balance??cp.base.balance);if(verdict.run&&(!cp.base.run||cp.base.run.id===verdict.run.id))cp.base.run=verdict.run;cp.acknowledged=[...(cp.acknowledged||[]),entry.payload.request_id];cp.queue=cp.queue.filter(x=>x.payload?.request_id!==entry.payload.request_id);await writeEventCheckpoint(cp,owner);const request=read(cacheKey('finish',owner));if(request?.request_id===entry.payload.request_id)localStorage.removeItem(cacheKey('finish',owner));if(accountUser?.id!==owner)break;H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;H.finishError=null;restoreEventProgress(owner);}if(accountUser?.id===owner&&$('screen-halloween')?.classList.contains('active'))await refresh();}catch(e){H.finishError=errorText(e);if(accountUser?.id===owner){restoreEventProgress(owner);say('기기 저장 완료 · 다음 단계 진행 가능. 서버 동기화 대기: '+H.finishError,true);if($('screen-halloween')?.classList.contains('active'))render();}}finally{H.resultSyncing=false;}}
 
 async function adoptPurchase(receipt,before,owner){if(accountUser?.id!==owner)throw Error('LOGIN_REQUIRED');const accepted=receipt.save_data;if(!accepted?.data||!receipt.card?.id||!Number.isSafeInteger(accepted.sync_revision))throw Error('구매 기록을 확인하지 못했습니다.');
- players=JSON.parse(accepted.data.fm_players).map(p=>ensure(p));
- const checkpoint=eventCheckpoint(owner);if(checkpoint.base){checkpoint.base.balance=Number(receipt.balance);await writeEventCheckpoint(checkpoint,owner);restoreEventProgress(owner);}else H.state={...(H.state||{}),balance:Number(receipt.balance)};H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;saveData();accountLastSnapshot=canonData(accepted.data);accountLastWrite=Date.now();localStorage.setItem('yfm_sync_at',accepted.at||'');localStorage.setItem('yfm_sync_revision',String(accepted.sync_revision));accountDirty=confirmDurableSave(owner,accepted);
+ if(!players.some(p=>String(p.id)===String(receipt.card.id)))players.push(ensure({...receipt.card}));
+ const checkpoint=eventCheckpoint(owner);if(checkpoint.base){checkpoint.base.balance=Number(receipt.balance);await writeEventCheckpoint(checkpoint,owner);restoreEventProgress(owner);}else H.state={...(H.state||{}),balance:Number(receipt.balance)};H.eventMutationEpoch=(H.eventMutationEpoch||0)+1;saveData();const current=accountSnapshot(),merged=mergeAutomaticSave(current,accepted,accountSyncBase);if(cloudSnapshotFingerprint(merged.snapshot)===cloudSnapshotFingerprint(current)){accountSyncBase=accepted;accountLastSnapshot=canonData(accepted.data);await durableStore.checkpoint(owner,current,accepted);}accountLastWrite=Date.now();await preservePendingSave(owner);await durableLocalTail;
 }
-async function buy(id,recover=false){if(H.busy||HauntedPack.active)return;const pack=PACKS.find(p=>p.id===id);if(!pack)return;H.busy=true;HauntedPack.prime();render();const owner=accountUser?.id;try{const p=pending('purchase',id),revision=await sync(),before=accountSnapshot();const result=await rpc('purchase',{...p,revision});await adoptPurchase(result,before,owner);await consumeDurableReceipt(owner);localStorage.setItem(cacheKey('result',owner),JSON.stringify({pack:id,card:result.card,request_id:p.request_id}));localStorage.removeItem(cacheKey('purchase',owner));render();balanceFlash(-pack.price);HauntedPack.play(pack,ensure({...result.card}),ASSETS,()=>{localStorage.removeItem(cacheKey('result',owner));refresh();});}catch(e){HauntedPack.close();say(errorText(e),true);}finally{H.busy=false;if($('screen-halloween').classList.contains('active'))render();}}
+async function buy(id,recover=false){if(H.busy||HauntedPack.active)return;const pack=PACKS.find(p=>p.id===id);if(!pack)return;H.busy=true;HauntedPack.prime();render();const owner=accountUser?.id;try{if(savedResults(owner).length)await flushSavedResults();const p=pending('purchase',id),before=accountSnapshot();const result=await serializeSaveAction(()=>rpc('purchase',p));await adoptPurchase(result,before,owner);localStorage.setItem(cacheKey('result',owner),JSON.stringify({pack:id,card:result.card,request_id:p.request_id}));localStorage.removeItem(cacheKey('purchase',owner));render();balanceFlash(-pack.price);HauntedPack.play(pack,ensure({...result.card}),ASSETS,()=>{localStorage.removeItem(cacheKey('result',owner));refresh();});}catch(e){HauntedPack.close();say(errorText(e),true);}finally{H.busy=false;if($('screen-halloween').classList.contains('active'))render();}}
 function recoverPurchase(){if(H.busy||HauntedPack.active)return;const result=read(cacheKey('result'));if(result){const p=PACKS.find(p=>p.id===result.pack);if(p)HauntedPack.play(p,ensure({...result.card}),ASSETS,()=>{localStorage.removeItem(cacheKey('result'));refresh();});return;}const p=read(cacheKey('purchase'));if(p)say('확인되지 않은 구매가 있습니다. '+(PACKS.find(x=>x.id===p.pack)?.name||'같은 팩')+' 구매 버튼으로 결과를 다시 확인할 수 있습니다.');}
 async function odds(id){const host=$('he-odds');if(!host)return;try{if(!H.packs&&accountUser?.id&&window.yfmAccountReady)H.packs=(await rpc('catalogue')).packs;}catch(_){}
  const pack=(H.packs||[]).find(p=>p.id===id)||(()=>{const p=PACKS.find(p=>p.id===id);return {...p,players:p.pool.map(o=>({...CONFIG.catalogue.find(c=>c.key===o.key),percent:o.percent}))};})();
